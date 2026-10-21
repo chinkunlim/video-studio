@@ -5,20 +5,22 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-10-21 17:49 UTC`
+- **最後更新時間**: `2026-10-21 17:58 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `580fcb8 chore(migration): finalize migration and complete verification [agent:antigravity]`
+- **最新 Git Commit**: `c31a508 test: add comprehensive end-to-end workflow tests for all services (TASK-005) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
-|---|---|---|---|---|---|---|
-| **TASK-005**<br/>完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
+> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-10-21 17:58 UTC] 完成任務 `TASK-005` — 完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Completed comprehensive workflow tests for extract_audio, narrate, video, job/sv and openwebui adapter with full passing test suite.
 
 ### [2026-10-21 17:49 UTC] 建立任務 `TASK-005`: 完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） (by `antigravity`)
 - **狀態**: `in_progress`
