@@ -213,7 +213,10 @@ def check_dependencies() -> int:
     missing = {
         mod: where
         for mod, where in imported_top_level_modules(roots).items()
-        if not is_stdlib(mod) and mod not in local and mod.lower().replace("_", "-") not in declared
+        if not is_stdlib(mod)
+        and mod not in local
+        and mod.lower().replace("_", "-") not in declared
+        and IMPORT_HINTS.get(mod, mod).lower().replace("_", "-") not in declared
     }
     if not missing:
         print("✅ 所有第三方 import 都已宣告在 pyproject.toml / requirements.txt。")

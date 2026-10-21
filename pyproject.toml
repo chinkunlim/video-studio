@@ -17,7 +17,11 @@ dependencies = [
 video-studio = "video_studio.entrypoints.cli:main"
 
 [dependency-groups]
-dev = ["ruff>=0.6.0", "mypy>=1.11"]  # add with `uv add --dev <package>`
+dev = [
+    "ruff>=0.6.0",
+    "mypy>=1.11",
+    "lxml-stubs>=0.5.1",
+]  # add with `uv add --dev <package>`
 
 [build-system]
 requires = ["setuptools>=68.0"]
@@ -45,3 +49,11 @@ python_version = "3.11"
 files = ["src"]
 mypy_path = "src"
 strict = true
+
+[[tool.mypy.overrides]]
+module = [
+    "fitz",
+    "faster_whisper",
+    "opencc",
+]
+ignore_missing_imports = true

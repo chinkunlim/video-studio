@@ -8,6 +8,7 @@ All notable changes to **video-studio** are documented here
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)
 - refactor(services): conform services layer to architecture and typing standards (TASK-002) (`TASK-002`, by `@antigravity`)
+- refactor(templates): move templates and configs, remove legacy directory and starter greeting (TASK-004) (`TASK-004`, by `@antigravity`)
 
 ### Documentation
 - docs: migrate design specs and update project architecture documentation (TASK-003) (`TASK-003`, by `@antigravity`)

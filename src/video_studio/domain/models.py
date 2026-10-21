@@ -6,24 +6,32 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class GreetingRequest:
-    """A request to greet one user.
+class JobSummary:
+    """Summary information for a studio job.
 
     Attributes:
-        user_name: Name typed by the user (may contain surrounding spaces).
+        job_type: Type of the job (extract, dub, generate).
+        name: Unique job name.
+        title: Human-readable title.
+        output_version: Latest output version, or empty.
     """
 
-    user_name: str
+    job_type: str
+    name: str
+    title: str
+    output_version: str = ""
 
 
 @dataclass(frozen=True)
-class GreetingResult:
-    """The greeting produced by the service layer.
+class CueItem:
+    """A subtitle cue item.
 
     Attributes:
-        message: Final greeting text.
-        environment: Environment the greeting was produced in.
+        start: Start timestamp in seconds.
+        end: End timestamp in seconds.
+        text: Subtitle text content.
     """
 
-    message: str
-    environment: str
+    start: float
+    end: float
+    text: str

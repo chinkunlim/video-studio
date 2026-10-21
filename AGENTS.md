@@ -118,6 +118,11 @@ video-studio/
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── video_studio/
+├── templates/
+│   ├── dub/
+│   ├── extract/
+│   ├── generate/
+│   └── shared/
 └── tests/                                  # 【測試層】單元與整合測試
 ```
 <!-- TREE_END -->

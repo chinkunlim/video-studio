@@ -77,48 +77,48 @@
 | 狀態 | 舊檔案 | 建議位置 | 批次 |
 |---|---|---|---|
 | ☑ | `legacy/openwebui/split_voice_tool.py` | `src/video_studio/adapters/` | adapters |
-| ☐ | `legacy/common/__init__.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/common/check.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/common/job.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/common/material.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/extract_audio/extract.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/__init__.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/audio.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/concat.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/generate.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/numbers.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/script.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/subtitles.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/takes.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/vocab.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/voicebox.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/core/whisper.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/narrate/narrate.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/sv.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/engine/__init__.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/engine/align.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/engine/media.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/engine/overlay.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/engine/poster.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/engine/pptx.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/engine/storyboard.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/engine/timing.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/video/video.py` | `src/video_studio/services/` | services |
-| ☐ | `legacy/README.md` | `README.md（改寫成新專案的說明）` | docs |
-| ☐ | `legacy/docs/DESIGN.md` | `docs/architecture/ARCHITECTURE.md` | docs |
-| ☐ | `legacy/openwebui/README.md` | `openwebui/OPENWEBUI.md（全專案只有根目錄一份 README）` | docs |
-| ☐ | `legacy/templates/README.md` | `templates/TEMPLATES.md（全專案只有根目錄一份 README）` | docs |
-| ☐ | `legacy/templates/dub/input/script.md` | `docs/specs/ 或 docs/adr/ 或 docs/known-issues/` | docs |
-| ☐ | `legacy/templates/generate/input/brief.md` | `docs/specs/ 或 docs/adr/ 或 docs/known-issues/` | docs |
-| ☐ | `legacy/templates/generate/input/script.md` | `docs/specs/ 或 docs/adr/ 或 docs/known-issues/` | docs |
-| ☐ | `legacy/video/README.md` | `video/VIDEO.md（全專案只有根目錄一份 README）` | docs |
-| ☐ | `legacy/.mcp.json` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/narrate/config.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/narrate/traditional_fixes.tsv` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/templates/dub/input/cues.tsv` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/templates/dub/job.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/templates/extract/job.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/templates/generate/input/scenes.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/templates/generate/job.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/templates/shared/vocabulary.tsv` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
-| ☐ | `legacy/video/config.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/common/__init__.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/common/check.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/common/job.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/common/material.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/extract_audio/extract.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/__init__.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/audio.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/concat.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/generate.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/numbers.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/script.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/subtitles.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/takes.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/vocab.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/voicebox.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/core/whisper.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/narrate/narrate.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/sv.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/engine/__init__.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/engine/align.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/engine/media.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/engine/overlay.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/engine/poster.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/engine/pptx.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/engine/storyboard.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/engine/timing.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/video/video.py` | `src/video_studio/services/` | services |
+| ☑ | `legacy/README.md` | `README.md（改寫成新專案的說明）` | docs |
+| ☑ | `legacy/docs/DESIGN.md` | `docs/architecture/ARCHITECTURE.md` | docs |
+| ☑ | `legacy/openwebui/README.md` | `openwebui/OPENWEBUI.md（全專案只有根目錄一份 README）` | docs |
+| ☑ | `legacy/templates/README.md` | `templates/TEMPLATES.md（全專案只有根目錄一份 README）` | docs |
+| ☑ | `legacy/templates/dub/input/script.md` | `docs/specs/ 或 docs/adr/ 或 docs/known-issues/` | docs |
+| ☑ | `legacy/templates/generate/input/brief.md` | `docs/specs/ 或 docs/adr/ 或 docs/known-issues/` | docs |
+| ☑ | `legacy/templates/generate/input/script.md` | `docs/specs/ 或 docs/adr/ 或 docs/known-issues/` | docs |
+| ☑ | `legacy/video/README.md` | `video/VIDEO.md（全專案只有根目錄一份 README）` | docs |
+| ☑ | `legacy/.mcp.json` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/narrate/config.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/narrate/traditional_fixes.tsv` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/templates/dub/input/cues.tsv` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/templates/dub/job.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/templates/extract/job.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/templates/generate/input/scenes.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/templates/generate/job.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/templates/shared/vocabulary.tsv` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |
+| ☑ | `legacy/video/config.toml` | `依用途判斷（資料 → DATA_DIR，靜態資源 → web/ 或 src/<pkg>/）` | other |

@@ -1,7 +1,7 @@
 {
   "id": "TASK-003",
   "title": "遷移批次 3：文件（README、規格、決策、已知問題）",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
@@ -13,11 +13,11 @@
     "video/VIDEO.md",
     "legacy"
   ],
-  "done_items": "",
+  "done_items": "Migrated documentation into ARCHITECTURE.md, updated root README.md, added SPEC-001, SPEC-002, and SPEC-003",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-10-21 16:53 UTC",
-  "updated_at": "2026-10-21 17:28 UTC",
+  "updated_at": "2026-10-21 17:30 UTC",
   "history": [
     {
       "timestamp": "2026-10-21 16:53 UTC",
@@ -29,6 +29,13 @@
       "action": "claimed",
       "agent": "antigravity",
       "previous_agent": ""
+    },
+    {
+      "timestamp": "2026-10-21 17:30 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Migrated documentation into ARCHITECTURE.md, updated root README.md, added SPEC-001, SPEC-002, and SPEC-003"
     }
-  ]
+  ],
+  "summary": "Migrated documentation into ARCHITECTURE.md, updated root README.md, added SPEC-001, SPEC-002, and SPEC-003"
 }

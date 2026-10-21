@@ -22,7 +22,7 @@ from video_studio.services.common.check import check_job
 
 logger = logging.getLogger(__name__)
 
-TEMPLATES = PROJECT_ROOT / "legacy" / "templates"
+TEMPLATES = PROJECT_ROOT / "templates"
 INPUT_README = {
     "extract": "把要提取声音的影片放在这里，档名填进 ../job.toml 的 [inputs] video。",
     "dub": "放影片（必填）和讲稿 script.md（选填）。原片没有人声时，另外放 cues.tsv。范例在 templates/。",

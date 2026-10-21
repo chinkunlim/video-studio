@@ -1,8 +1,19 @@
 # video-studio
 
-AI-assisted software project with standard structure and agent handoff.
+AI 語音配音、字幕生成與影片製作工作站（整合 Voicebox、ffmpeg、Whisper 與 PowerPoint/海報鏡頭動畫）。
 
-> 請把上面兩行改寫成這個專案的說明（`agentctl finish` 會檢查）。以下是開發環境與日常操作。
+本專案提供講稿配音、音訊切分提取、多格式字幕產生（YouTube SRT、PowerPoint VTT、VLC ASS）以及畫面合成。支援命令列 CLI 與 Open WebUI 本機工具整合。
+
+## 功能模組與 CLI 指令
+
+| 子命令 | 用途 | 範例 |
+|---|---|---|
+| `video-studio job` | 工作管理（建立、清單、檢查、核可草稿） | `uv run video-studio job list` |
+| `video-studio extract` | 從影片提取音訊、切分聲音樣本 | `uv run video-studio extract video.mp4 --samples samples/` |
+| `video-studio narrate` | 講稿配音、單句試聽、組裝字幕 | `uv run video-studio narrate build my-job` |
+| `video-studio video` | 配音與畫面合成、海報分鏡渲染、PPTX 匯出 | `uv run video-studio video poster my-job` |
+
+Open WebUI 使用者可直接載入 `src/video_studio/adapters/openwebui_tool.py` 作為 Tool。詳細規格請參閱 [`docs/specs/`](docs/specs/) 與 [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)。
 
 ## 第一次在這台電腦使用
 

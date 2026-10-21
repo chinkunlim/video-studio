@@ -146,7 +146,9 @@ video-studio/
 │       │   │   │   ├── voicebox.py
 │       │   │   │   └── whisper.py
 │       │   │   ├── __init__.py
-│       │   │   └── narrate.py
+│       │   │   ├── config.toml
+│       │   │   ├── narrate.py
+│       │   │   └── traditional_fixes.tsv
 │       │   ├── video/
 │       │   │   ├── engine/
 │       │   │   │   ├── __init__.py
@@ -158,20 +160,37 @@ video-studio/
 │       │   │   │   ├── storyboard.py
 │       │   │   │   └── timing.py
 │       │   │   ├── __init__.py
+│       │   │   ├── config.toml
 │       │   │   └── video.py
 │       │   ├── __init__.py
-│       │   ├── greeting.py
 │       │   └── sv.py
 │       └── __init__.py
+├── templates/
+│   ├── dub/
+│   │   ├── input/
+│   │   │   ├── cues.tsv
+│   │   │   └── script.md
+│   │   └── job.toml
+│   ├── extract/
+│   │   └── job.toml
+│   ├── generate/
+│   │   ├── input/
+│   │   │   ├── brief.md
+│   │   │   ├── scenes.toml
+│   │   │   └── script.md
+│   │   └── job.toml
+│   ├── shared/
+│   │   └── vocabulary.tsv
+│   └── TEMPLATES.md
 ├── tests/                                  # 【測試層】單元與整合測試
 │   ├── __init__.py
 │   ├── test_cli.py
-│   ├── test_greeting.py
 │   ├── test_openwebui_tool.py
 │   └── test_services_core.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取
+├── .mcp.json                               # [AI 工具] Claude Code 的專案 MCP 設定（uv run <名稱>-mcp）
 ├── .python-version                         # [Python 版本釘選] 供 uv / pyenv / mise 自動讀取
 ├── AGENTS.md                               # [AI 協作憲法・唯一規則來源] 所有 AI Agent 共用的開發原則與 Skills 路由
 ├── CHANGELOG.md                            # [版本歷史] commit 寫入 Unreleased；agentctl finish --tag 發布版本
