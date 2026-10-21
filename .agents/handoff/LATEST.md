@@ -5,16 +5,16 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-10-21 16:53 UTC`
-- **最近操作 Agent**: `system`
+- **最後更新時間**: `2026-10-21 17:00 UTC`
+- **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `(尚無 Commit)`
+- **最新 Git Commit**: `887aba5 chore(migrate): apply project template and migration plan (46 legacy files) [agent:migrate_project]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-001**<br/>遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O） | ⚪ `open` | `-` | `-` | `src/video_studio/adapters/`, `legacy` | - | - |
+| **TASK-001**<br/>遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O） | 🟢 `in_progress` | `antigravity` | `-` | `src/video_studio/adapters/`, `legacy` | - | - |
 | **TASK-002**<br/>遷移批次 2：services 層（業務流程） | ⚪ `open` | `-` | `-` | `src/video_studio/services/`, `legacy` | - | - |
 | **TASK-003**<br/>遷移批次 3：文件（README、規格、決策、已知問題） | ⚪ `open` | `-` | `-` | `docs/architecture/ARCHITECTURE.md`, `docs/specs/`, `openwebui/OPENWEBUI.md`, `templates/TEMPLATES.md`, `video/VIDEO.md`, `legacy` | - | - |
 | **TASK-004**<br/>遷移批次 4：其他（資料、資源、需人工判斷） | ⚪ `open` | `-` | `-` | `legacy`, `legacy` | - | - |
@@ -22,6 +22,9 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-10-21 17:00 UTC] 認領任務 `TASK-001` (遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O）) (by `antigravity`)
+- **相關範圍**: `src/video_studio/adapters/, legacy`
 
 ### [2026-10-21 16:53 UTC] 建立任務 `TASK-004`: 遷移批次 4：其他（資料、資源、需人工判斷） (by `system`)
 - **狀態**: `open`
