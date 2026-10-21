@@ -1,7 +1,7 @@
 {
   "id": "TASK-004",
   "title": "遷移批次 4：其他（資料、資源、需人工判斷）",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
@@ -9,11 +9,11 @@
     "legacy",
     "legacy"
   ],
-  "done_items": "",
+  "done_items": "Moved templates and module config files, updated .mcp.json, removed legacy/ directory, removed starter greeting",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-10-21 16:53 UTC",
-  "updated_at": "2026-10-21 17:30 UTC",
+  "updated_at": "2026-10-21 17:35 UTC",
   "history": [
     {
       "timestamp": "2026-10-21 16:53 UTC",
@@ -25,6 +25,13 @@
       "action": "claimed",
       "agent": "antigravity",
       "previous_agent": ""
+    },
+    {
+      "timestamp": "2026-10-21 17:35 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Moved templates and module config files, updated .mcp.json, removed legacy/ directory, removed starter greeting"
     }
-  ]
+  ],
+  "summary": "Moved templates and module config files, updated .mcp.json, removed legacy/ directory, removed starter greeting"
 }

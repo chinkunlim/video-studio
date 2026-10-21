@@ -335,7 +335,22 @@ def stage_scan_commit(plan: CommitPlan, to_stage: list[str], snapshot: FileSnaps
         Process exit code (0 when the commit was created).
     """
     staged = sorted(set(to_stage))
-    add = subprocess.run(["git", "add", "-A", "--", *staged], cwd=ROOT, text=True, capture_output=True)
+    existing = [p for p in staged if (ROOT / p).exists()]
+    missing = [p for p in staged if not (ROOT / p).exists()]
+    add = (
+        subprocess.run(["git", "add", "-A", "--", *existing], cwd=ROOT, text=True, capture_output=True)
+        if existing
+        else subprocess.CompletedProcess(args=[], returncode=0, stderr="", stdout="")
+    )
+    if missing and add.returncode == 0:
+        rm_res = subprocess.run(
+            ["git", "rm", "-q", "--cached", "--ignore-unmatch", "--", *missing],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        if rm_res.returncode != 0:
+            add = rm_res
     if add.returncode == 0:
         hits = scan_secrets_in_diff(run_git(["diff", "--cached", "--", *staged], check=False))
         if hits:

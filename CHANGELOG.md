@@ -13,6 +13,9 @@ All notable changes to **video-studio** are documented here
 ### Documentation
 - docs: migrate design specs and update project architecture documentation (TASK-003) (`TASK-003`, by `@antigravity`)
 
+### Chore
+- chore(migration): finalize migration and complete verification (by `@antigravity`)
+
 ## [0.1.0] - 2026-10-22
 ### Added
 - Initial project scaffold (framework v3.3.0).
