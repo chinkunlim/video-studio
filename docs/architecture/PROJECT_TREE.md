@@ -60,7 +60,8 @@ video-studio/
 │   │   ├── TASK-002-2-services.json
 │   │   ├── TASK-003-3-readme.json
 │   │   ├── TASK-004-4.json
-│   │   └── TASK-005-extract-narrate-video-job-sv-ope.json
+│   │   ├── TASK-005-extract-narrate-video-job-sv-ope.json
+│   │   └── TASK-006-markdown.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
@@ -79,12 +80,17 @@ video-studio/
 │       └── 00-project-constitution.md
 ├── docs/                                   # 【工程知識庫】架構、規格、決策、已知問題、維運、規範
 │   ├── adr/                                # [架構決策庫] 一決定一檔案
+│   │   ├── 001-openwebui-adapter-architecture.md
+│   │   ├── 002-workspace-isolation-and-review.md
+│   │   ├── 003-dual-video-rendering-engines.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
 │   │   ├── ARCHITECTURE.md                 # 系統架構總覽 (手動) 與自動報告索引
 │   │   └── PROJECT_TREE.md                 # 完整檔案結構樹 (自動產生)
 │   ├── known-issues/                       # [已知問題庫] 一問題一檔案
+│   │   ├── 001-media-contact-sheet-missing.md
+│   │   ├── 002-host-python-tomllib-detection.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── migration/                          # [遷移紀錄] 舊專案搬移清單、批次與完成標準
@@ -105,7 +111,6 @@ video-studio/
 │   │   ├── PROJECT_RULES.md
 │   │   └── TESTING_AND_QUALITY.md          # 測試金字塔與 DoD 驗收清單
 │   └── TEMPLATE_FEEDBACK.md
-├── legacy/                                 # [遷移中] 舊專案原始檔，逐批搬到新結構後刪除（見 docs/migration/MIGRATION.md）
 ├── scripts/                                # 【專案腳本】agentctl.py 是框架的單一入口；其餘放本專案自己的腳本
 │   └── agentctl.py                         # [單一入口] 轉呼叫 .agents/bin/agentctl.py
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml

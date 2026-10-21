@@ -2,7 +2,7 @@
 
 - **狀態**：Implemented
 - **日期**：2026-10-22
-- **相關任務 / ADR**：TASK-001 / ADR-001
+- **相關任務 / ADR**：TASK-001 / [`ADR-001`](../adr/001-openwebui-adapter-architecture.md)
 
 ## 1. 目標
 

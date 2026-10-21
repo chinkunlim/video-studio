@@ -2,7 +2,7 @@
 
 - **狀態**：Implemented
 - **日期**：2026-10-22
-- **相關任務 / ADR**：TASK-002 / TASK-003
+- **相關任務 / ADR**：TASK-002 / TASK-003 / [`ADR-002`](../adr/002-workspace-isolation-and-review.md)
 
 ## 1. 目標
 

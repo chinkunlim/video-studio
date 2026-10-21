@@ -12,3 +12,6 @@
 
 | ADR | 標題 | 狀態 | 日期 | 相關程式 |
 |---|---|---|---|---|
+| [ADR-001](001-openwebui-adapter-architecture.md) | Open WebUI 工具配接與本地 AI 服務隔離架構 | Accepted | 2026-10-22 | `adapters/openwebui_tool.py` |
+| [ADR-002](002-workspace-isolation-and-review.md) | 工作區結構隔離與素材審核（Review/Approve）機制 | Accepted | 2026-10-22 | `services/common/job.py` |
+| [ADR-003](003-dual-video-rendering-engines.md) | 影片合成渲染引擎之雙模式設計（PowerPoint 動畫與海報鏡頭動畫） | Accepted | 2026-10-22 | `services/video/engine/` |

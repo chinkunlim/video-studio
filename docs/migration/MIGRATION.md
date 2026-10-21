@@ -39,17 +39,17 @@
 
 全部完成才算遷移成功（`python3 scripts/agentctl.py migration --verify` 會逐項檢查）：
 
-- [ ] `legacy/` 已刪除（所有檔案都搬到新結構或確認不需要）。
-- [ ] 舊資料已依 §4.5 複製到 `DATA_DIR`，程式透過 config 讀取路徑，專案資料夾內沒有資料檔。
-- [ ] 沒有 `requirements.txt`、`package-lock.json`、`yarn.lock`、`Pipfile`：依賴只在 `pyproject.toml` + `uv.lock`、`package.json` + `pnpm-lock.yaml`。
-- [ ] `python3 scripts/agentctl.py check` 全部通過（註解、分層、秘密、lint、mypy strict、目錄樹）。
-- [ ] 專案測試全部通過。
-- [ ] 所有遷移任務卡都是 `done`。
-- [ ] 模板的範例程式（`greeting` 相關的 services / domain / cli / api / 資料表 `greetings` 與其 Alembic revision、測試）已刪除或換成真正的程式。
-- [ ] `README.md` 改寫為這個專案的說明；`docs/architecture/ARCHITECTURE.md` 有系統概覽；主要功能在 `docs/specs/` 有規格。
-- [ ] 舊專案已知的問題記在 `docs/known-issues/`；遷移中的重要決策記在 `docs/adr/`。
-- [ ] `.env.example` 列出所有需要的變數（只有名稱）。
-- [ ] 最後執行 `agentctl closeout`（本機對話紀錄＋交接看板記下遷移完成）。
+- [x] `legacy/` 已刪除（所有檔案都搬到新結構或確認不需要）。
+- [x] 舊資料已依 §4.5 複製到 `DATA_DIR`，程式透過 config 讀取路徑，專案資料夾內沒有資料檔。
+- [x] 沒有 `requirements.txt`、`package-lock.json`、`yarn.lock`、`Pipfile`：依賴只在 `pyproject.toml` + `uv.lock`、`package.json` + `pnpm-lock.yaml`。
+- [x] `python3 scripts/agentctl.py check` 全部通過（註解、分層、秘密、lint、mypy strict、目錄樹）。
+- [x] 專案測試全部通過。
+- [x] 所有遷移任務卡都是 `done`。
+- [x] 模板的範例程式（`greeting` 相關的 services / domain / cli / api / 資料表 `greetings` 與其 Alembic revision、測試）已刪除或換成真正的程式。
+- [x] `README.md` 改寫為這個專案的說明；`docs/architecture/ARCHITECTURE.md` 有系統概覽；主要功能在 `docs/specs/` 有規格。
+- [x] 舊專案已知的問題記在 `docs/known-issues/`；遷移中的重要決策記在 `docs/adr/`。
+- [x] `.env.example` 列出所有需要的變數（只有名稱）。
+- [x] 最後執行 `agentctl closeout`（本機對話紀錄＋交接看板記下遷移完成）。
 
 ## 3. 批次
 

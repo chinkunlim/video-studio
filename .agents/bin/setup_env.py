@@ -188,7 +188,12 @@ def is_stdlib(name: str) -> bool:
     Returns:
         True for standard-library (or built-in) modules.
     """
-    if name in getattr(sys, "stdlib_module_names", ()) or name in sys.builtin_module_names or name == "__future__":
+    if (
+        name in getattr(sys, "stdlib_module_names", ())
+        or name in sys.builtin_module_names
+        or name == "__future__"
+        or name in {"tomllib"}
+    ):
         return True
     try:
         spec = importlib.util.find_spec(name)
