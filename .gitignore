@@ -1,0 +1,55 @@
+# === Secrets & Environment (NEVER COMMIT) ===
+.env
+.env.*
+!.env.example
+# clasp login token; `.clasp.json` only holds the script ID and may be committed
+.clasprc.json
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# === Per-machine generated files (rebuilt by `agentctl doctor --fix` / `agentctl sync`) ===
+.claude/skills
+.agents/cache/
+.skills-cache/
+
+# === On-demand reports (`agentctl graph` / `agentctl audit`); git history is the real record ===
+docs/architecture/GRAPH_REPORT.md
+docs/architecture/AGENT_AUDIT_REPORT.md
+
+# === Local conversation records (transcript + summary; delete when the project ends) ===
+.agents/conversations/
+
+# === OS & Editor Files ===
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+# Shared VS Code settings are committed; personal ones are not
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+
+# === Python (project-local .venv managed by uv; commit uv.lock and .python-version) ===
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# === Data never lives in the project: use DATA_DIR (see .env.example) ===
+/data/
+/input/
+/output/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal

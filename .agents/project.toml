@@ -1,0 +1,73 @@
+# ============================================================================
+# .agents/project.toml — per-project settings read by every framework script
+# ============================================================================
+
+[project]
+name = "video-studio"
+description = "AI-assisted software project with standard structure and agent handoff."
+stack = "python"
+addons = []
+languages = ["python"]
+# Monorepo: list workspace folders, e.g. ["apps/api", "packages/core"]
+workspaces = ["."]
+
+[architecture]
+# Folders scanned by build_graph.py and review_guard.py
+source_roots = ["src/video_studio"]
+# Top-down: a layer may import layers BELOW it only
+layers = ["entrypoints", "adapters", "services", "domain", "config"]
+# Only these layers may read environment variables (os.environ / process.env / os.Getenv)
+env_access_layers = ["config"]
+
+[quality]
+max_function_lines = 40        # soft limit -> warning
+hard_max_function_lines = 80   # hard limit -> CRITICAL
+max_params = 4
+max_nesting = 3
+block_on_critical = true
+# File header + function description + every parameter documented (Args: / @param)
+require_docstrings = true
+max_file_lines = 500           # soft limit per file -> warning
+hard_max_file_lines = 800      # hard limit per file -> CRITICAL (split into sub-modules)
+max_commit_file_mb = 10        # pre-commit blocks larger files; data belongs in DATA_DIR
+block_data_files = true        # block PDF/EPUB/archives/media/DB files; set false for document projects
+print_allowed_layers = ["entrypoints"]  # other layers must log with `logging.getLogger(__name__)`, not print
+
+[commands]
+# Python always runs through uv (project .venv, uv-managed Python) — never a global pip
+test = "uv run python -m unittest discover -s tests -v"
+lint = "uv run ruff check . && uv run ruff format --check ."
+# Static type check (mypy strict for Python); leave empty to disable
+typecheck = "uv run mypy"
+# Database migrations up to date and matching the ORM models (Alembic)
+dbcheck = ""
+# Output-quality evaluation (`agentctl check --evals`)
+evals = ""
+
+[skills]
+# Installed skills; `agentctl update` keeps exactly these up to date
+enabled = ["adr-issue-tracker", "api-adapter-scaffold", "code-review-guard", "legacy-migration", "session-closeout", "tdd-bugfix"]
+
+[agents]
+require_agent_attribution = true
+
+[git]
+# Commits add one line under CHANGELOG `## [Unreleased]` (no version bump);
+# `agentctl finish --tag` turns Unreleased into a version, bumps and tags.
+push_reminder_threshold = 5
+
+[release]
+version_files = ["pyproject.toml"]
+
+[tree]
+# Depth of the summary tree embedded in AGENTS.md (full tree: docs/architecture/PROJECT_TREE.md)
+agents_md_depth = 2
+
+[tree.annotations]
+# "src/custom" = "Custom domain module"
+
+[project_rules]
+# Paired calls that must appear together, e.g. [["acquire_lock", "release_lock"]]
+paired_calls = []
+# Modules this project must not import ("module:reason"); checked by code-review-guard
+forbidden_imports = ["flask:新專案一律使用 FastAPI（見 docs/standards/ARCHITECTURE_RULES.md）"]

@@ -1,0 +1,34 @@
+# 工具三（video）的设定。工作区位置沿用 narrate/config.toml 的 [paths] workspace。
+
+[output]
+width = 1920
+height = 1080
+fps = 30
+crf = 18                      # H.264 品质，数字越小越清楚、档案越大
+tail = 1.0                    # 配音结束后，画面多停几秒
+
+[camera]                      # 海报镜头
+move = 0.8                    # 换页时镜头移动的秒数（PDF：每页多 0.8 秒喘息）
+hold_end = 0.4                # 卷动在换页前几秒停下
+background = "#ffffff"        # 海报以外的底色
+raster_width = 3840           # PDF 海报转成图片时的宽度（像素）
+
+[callout]                     # 底部重点提示栏（照原始影片的样式）
+height = 130
+color = "#d9692e"
+text_color = "#ffffff"
+font_size = 44
+prefix = "✓ "
+fade = 0.3
+
+[subtitle]                    # 烧进画面的字幕
+font_size = 46
+color = "#ffffff"
+stroke_color = "#000000"
+stroke_width = 3
+margin_bottom = 40            # 离画面底部；有提示栏时会自动放在提示栏上方
+
+[font]
+# 繁体中文字型（本机）。苹方是系统私有字型，Python 读不到，所以用黑体-繁。
+path = "/System/Library/Fonts/STHeiti Medium.ttc"
+index = 0

@@ -1,0 +1,38 @@
+# 工具二（narrate）的设定。移植到别台电脑时通常只需要改这里。
+
+[paths]
+workspace = "~/Desktop/split-voice-workspace"   # 你的资料：vocabulary.tsv、voice/、vocab_tries/、talks/<讲稿>/
+
+[voicebox]
+url = "http://127.0.0.1:17493"
+profile = "My Voice"          # Voicebox 里复制声音的名称
+language = "zh"
+timeout = 180                 # 每次生成最多等几秒
+cleanup = true                # 音档存进专案后，删掉 Voicebox 里的那一笔生成纪录
+
+[generate]
+tries = 8                     # 每句最多试几种 marker 写法
+accept_similarity = 0.8       # Whisper 听写与原文的相似度门槛
+
+[whisper]
+model = "small"               # faster-whisper 模型；第一次执行会下载约 480 MB
+
+[pause]                       # 句与句之间的停顿（秒），依这句结尾的标点决定
+paragraph = 0.85              # 段落结束（讲稿里的空行）
+sentence = 0.5                # 。！？
+semicolon = 0.4               # ；：
+comma = 0.25                  # ，、（一句拆成两行时）
+slide = 0.85                  # 换投影片时至少停这么久
+
+[audio]
+loudness = -16                # LUFS。YouTube 建议 -14，简报 -16 ~ -18
+sample_rate = 48000
+
+[subtitle]
+max_width = 18                # 每条字幕最多几个字宽（英文字母算半个）
+lead = 0.05                   # 字幕比声音早出现几秒
+tail = 0.25                   # 字幕比声音晚消失几秒
+min_duration = 0.8            # 每条字幕至少显示几秒
+opencc = "s2tw"               # 简转繁的标准（台湾）
+font = "PingFang TC"          # VLC 用的 ASS 字幕字型
+font_size = 64

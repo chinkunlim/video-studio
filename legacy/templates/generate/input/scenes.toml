@@ -1,0 +1,61 @@
+# ============================================================
+# 每一幕要怎样（scenes.toml）
+#
+# 用途：告诉程式每一幕的画面从哪里来、要看哪里、画面上写什么。
+#       没有这个档案时，程式会依 pptx／海报自动起草到 review/scenes.toml，你确认后搬进 input/。
+#
+# 规则：
+# - 每一幕一个 [[scene]] 区块；slide 对应 script.md 的「## 投影片 N」，每一页都要有。
+# - 只改「=」右边的值；不要改栏位名称；文字要加双引号；不需要的栏位留预设值。
+# - visual 只能是下面其中一个：
+#     poster       用海报画面，看 region 指定的区域（镜头移动、太高会卷动）
+#     pptx-slide   用 pptx 第 pptx_slide 页当分镜（读它的裁切位置和提示栏）
+#     pptx-export  这一页直接用 PowerPoint 汇出的画面（保留动画）
+#     html         AI 依 on_screen 的文字做版面
+#     image        用 input/ 里的一张图片（media）
+#     video        用 input/ 里的一段影片（media）
+#     ai-clip      用生成式影片服务产生（prompt），只适合插播
+# - region = [x, y, 宽, 高]：占海报宽、高的比例（0～1）。[0, 0, 1, 1] 是整张海报。
+# - 存档后执行检查指令；格式错误会告诉你第几幕、哪个栏位、该怎么改。
+# ============================================================
+
+[defaults]
+visual = "poster"                 # 没写 visual 的幕都用这个
+callout_prefix = "✓"              # 提示栏开头的符号；不要就写 ""
+
+[[scene]]
+slide = 1                         # 必填
+intent = "开场：整张海报的标题区，介绍自己"   # 这一幕想要怎样（给 AI 和你自己看，不会出现在画面）
+visual = "poster"
+region = [0.0, 0.0, 1.0, 0.13]    # visual = "poster" 时必填
+callout = ""                      # 底部提示栏的文字；留空不显示
+notes = ""                        # 其他备注
+
+[[scene]]
+slide = 2
+intent = "介绍文献与 BART 的全名"
+visual = "pptx-slide"
+pptx_slide = 2                    # visual = "pptx-slide" 或 "pptx-export" 时必填
+callout = "BART：气球类比冒险作业"
+
+[[scene]]
+slide = 3
+intent = "研究目的：两点依序出现"
+visual = "html"
+on_screen = ["研究目的", "1. 检查 BART 的实验特性", "2. 看 BART 和风险行为的关联"]   # visual = "html" 时必填
+callout = ""
+
+[[scene]]
+slide = 4
+intent = "示范 BART 的画面"
+visual = "image"
+media = "bart_screenshot.png"     # visual = "image" 或 "video" 时必填：input/ 里的档名
+callout = ""
+
+[[scene]]
+slide = 5
+intent = "片头插播：气球被打气到爆的慢动作"
+visual = "ai-clip"
+prompt = "slow motion close-up of a red balloon being inflated until it pops, studio lighting"   # 英文效果较好
+duration = 4                      # 插播几秒（插在这一幕的开头）
+callout = ""

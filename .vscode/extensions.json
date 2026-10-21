@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "ms-python.mypy-type-checker"
+  ]
+}

@@ -1,0 +1,40 @@
+[project]
+name = "video-studio"
+version = "0.1.0"
+description = "AI-assisted software project with standard structure and agent handoff."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []  # add with `uv add <package>` (never `pip install`)
+
+[project.scripts]
+video-studio = "video_studio.entrypoints.cli:main"
+
+[dependency-groups]
+dev = ["ruff>=0.6.0", "mypy>=1.11"]  # add with `uv add --dev <package>`
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+# Use uv's own downloaded Python (see .python-version), never the system / Homebrew one
+python-preference = "only-managed"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+src = ["src", "tests"]
+# Framework-managed files (updated by `agentctl update`) and non-Python folders are not linted here
+extend-exclude = ["scripts", ".agents", "gas", "web", "legacy", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+mypy_path = "src"
+strict = true

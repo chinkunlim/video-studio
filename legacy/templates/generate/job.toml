@@ -1,0 +1,32 @@
+# ============================================================
+# 完整生成（generate）的工作设定：先配音，再依配音长度做画面
+# 规则：只改「=」右边的值；不要改栏位名称；文字要加双引号；没有就写 ""
+# 你给的素材都放在这份工作的 input/ 资料夹
+# ============================================================
+
+[job]
+type = "generate"                 # 固定，不要改
+title = "心研法海報：BART 研究介绍"  # 中文标题，随意
+
+[inputs]                          # 有的就填 input/ 里的档名，没有就 ""
+script = "script.md"              # 讲稿；没有时会依下面的素材起草到 review/script.md
+brief = ""                        # 主题说明 brief.md（没有讲稿也没有素材时必填）
+pptx = ""                         # PowerPoint，例如 "slides.pptx"
+poster = ""                       # 海报（PDF 最好，或高解析 PNG），例如 "poster.pdf"
+scenes = "scenes.toml"            # 每一幕要怎样；没有时会自动起草到 review/scenes.toml
+
+[visual]
+mode = "auto"                     # auto | pptx-export | pptx-storyboard | poster | html | none
+                                  # auto：依上面有哪些素材自动决定（见 docs/DESIGN.md 3.3）
+                                  # none：只要配音和字幕，不做影片
+
+[voice]
+profile = "My Voice"              # Voicebox 里复制声音的名称
+
+[subtitles]
+formats = ["youtube", "powerpoint", "vlc"]   # 要哪几种，可删
+burn_in = true                    # true = 另外输出字幕烧进画面的版本
+
+[output]
+loudness = -16                    # YouTube 用 -14，简报用 -16
+backup_dir = ""                   # 成品另外复制到这里（完整路径），不需要就 ""

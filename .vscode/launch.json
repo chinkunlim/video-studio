@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "video-studio: CLI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "video_studio.entrypoints.cli",
+      "args": [
+        "--name",
+        "Debug"
+      ],
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+# ============================================================
+# 我给影片，Voicebox 配音（dub）的工作设定
+# 画面保留原片，新配音要塞进原片的时间里。
+# 规则：只改「=」右边的值；不要改栏位名称；文字要加双引号；没有就写 ""
+# ============================================================
+
+[job]
+type = "dub"                      # 固定，不要改
+title = "期末报告 重新配音"         # 中文标题，随意
+
+[inputs]
+video = "video.mp4"               # 必填：input/ 里的影片档名
+script = "script.md"              # 有讲稿就填；没有写 ""，会先用原片逐字稿起草到 review/script.md 让你校对
+cues = ""                         # 原片没有人声时必填：input/cues.tsv（每一段的开始时间）
+
+[voice]
+profile = "My Voice"              # Voicebox 里复制声音的名称
+
+[timing]                          # 配音塞不进原片时间时怎么办（依序尝试）
+min_speed = 0.9                   # 最慢 0.9 倍
+max_speed = 1.1                   # 最快 1.1 倍
+allow_freeze = false              # true = 允许原片停格来补时间（会改变画面节奏）
+keep_background = false           # true = 保留原片背景声并压低音量（原片有人声时不要开）
+
+[subtitles]
+formats = ["youtube", "powerpoint", "vlc"]   # 要哪几种，可删
+burn_in = true                    # true = 另外输出字幕烧进画面的版本
+
+[output]
+loudness = -16                    # YouTube 用 -14，简报用 -16
+backup_dir = ""                   # 成品另外复制到这里（完整路径），不需要就 ""

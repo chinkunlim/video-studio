@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# =============================================================================
+# pre-push — version-controlled git hook (installed via `git config core.hooksPath .agents/hooks`)
+#
+# Purpose:
+#   Local-first workflow: nothing leaves this computer unless the user explicitly agreed.
+#   A plain `git push` is blocked; the push goes through only with ALLOW_PUSH=1, which
+#   `agentctl commit --push` / `closeout --push` set after the user said yes.
+#
+# Manual push after approving it yourself: ALLOW_PUSH=1 git push
+# =============================================================================
+if [ "${ALLOW_PUSH:-0}" = "1" ]; then
+  exit 0
+fi
+echo "❌ [PRE-PUSH BLOCKED] This project is local-first: push only after the user explicitly agrees."
+echo "   Approved?  ALLOW_PUSH=1 git push"
+exit 1

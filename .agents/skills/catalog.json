@@ -1,0 +1,48 @@
+{
+  "_comment": "Skill tiers used by the template's scripts/init_project.py and update_framework.py. tier=core: always installed; tier=stack: installed when the project's base stack or an add-on (web, gas) is listed in `stacks`; tier=optional: installed only with `--skills <name>` or when listed in [skills].enabled.",
+  "skills": {
+    "session-closeout": {
+      "tier": "core",
+      "trigger": "使用者說「結束對話 / 收工 / wrap up」時",
+      "command": "python3 scripts/agentctl.py closeout --agent <name> --goal ... --issues ... --next ..."
+    },
+    "code-review-guard": {
+      "tier": "core",
+      "trigger": "寫完或重構程式碼後、commit 前",
+      "command": "python3 .agents/skills/code-review-guard/scripts/review_guard.py"
+    },
+    "tdd-bugfix": {
+      "tier": "core",
+      "trigger": "實作新功能或修 bug 時（先寫失敗測試）",
+      "command": "python3 .agents/skills/tdd-bugfix/scripts/tdd_runner.py"
+    },
+    "adr-issue-tracker": {
+      "tier": "core",
+      "trigger": "做出架構取捨、或發現需記錄的 bug/坑時",
+      "command": "python3 .agents/skills/adr-issue-tracker/scripts/tracker_cli.py --add-adr <slug> --title <標題>"
+    },
+    "api-adapter-scaffold": {
+      "tier": "stack",
+      "stacks": [
+        "python"
+      ],
+      "trigger": "串接新的外部 API / 服務時",
+      "command": "python3 .agents/skills/api-adapter-scaffold/scripts/scaffold_adapter.py"
+    },
+    "frontend-design": {
+      "tier": "stack",
+      "stacks": [
+        "node",
+        "gas",
+        "web"
+      ],
+      "trigger": "建立、美化或審查網頁 UI / 元件時（含視覺品味 Anti-Slop 審查）",
+      "command": "python3 .agents/skills/frontend-design/scripts/frontend_tool.py --check web/（品味：scripts/taste_auditor.py --audit web/）"
+    },
+    "legacy-migration": {
+      "tier": "optional",
+      "trigger": "專案有 docs/migration/MIGRATION.md，要繼續或完成舊專案遷移時",
+      "command": "python3 scripts/agentctl.py migration [--verify]"
+    }
+  }
+}
