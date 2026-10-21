@@ -107,7 +107,8 @@ video-studio/
 ├── src/                                    # 【核心原始碼層】分層與依賴方向定義於 .agents/project.toml
 │   └── video_studio/
 │       ├── adapters/
-│       │   └── __init__.py
+│       │   ├── __init__.py
+│       │   └── openwebui_tool.py
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── logging_setup.py
