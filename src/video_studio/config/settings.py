@@ -77,7 +77,20 @@ class AppConfig:
     log_to_file: bool = True
     timeout_seconds: int = 15
     ollama_base_url: str = "http://127.0.0.1:11434"
+    voicebox_url: str = "http://127.0.0.1:17493"
+    workspace_dir: Path | None = None
     data_dir: Path = resolve_data_dir(DEFAULT_DATA_DIR)
+
+    def process_env(self) -> dict[str, str]:
+        """Produce an environment variable dictionary for subprocesses.
+
+        Returns:
+            Dictionary containing current system environment variables with overrides.
+        """
+        env = dict(os.environ)
+        if self.workspace_dir:
+            env["SPLIT_VOICE_WORKSPACE"] = str(self.workspace_dir)
+        return env
 
     @property
     def input_dir(self) -> Path:
@@ -160,11 +173,15 @@ def load_config() -> AppConfig:
     """
     load_dotenv_file(PROJECT_ROOT / ".env")
     data_dir = resolve_data_dir(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR))
+    ws_env = os.environ.get("SPLIT_VOICE_WORKSPACE", "").strip()
+    workspace_dir = Path(ws_env).expanduser() if ws_env else None
     return AppConfig(
         app_env=os.environ.get("APP_ENV", "development").strip(),
         log_level=os.environ.get("LOG_LEVEL", "INFO").strip().upper(),
         log_to_file=_flag(os.environ.get("LOG_TO_FILE", "true")),
         timeout_seconds=int(os.environ.get("API_TIMEOUT_SECONDS", "15")),
         ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/"),
+        voicebox_url=os.environ.get("VOICEBOX_URL", "http://127.0.0.1:17493").strip().rstrip("/"),
+        workspace_dir=workspace_dir,
         data_dir=data_dir,
     )

@@ -1,7 +1,7 @@
 {
   "id": "TASK-001",
   "title": "遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O）",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
@@ -9,11 +9,11 @@
     "src/video_studio/adapters/",
     "legacy"
   ],
-  "done_items": "",
+  "done_items": "完成批次 1：遷移並重構 openwebui_tool adapter 與 runner，補齊完整型別與測試",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-10-21 16:53 UTC",
-  "updated_at": "2026-10-21 17:00 UTC",
+  "updated_at": "2026-10-21 17:07 UTC",
   "history": [
     {
       "timestamp": "2026-10-21 16:53 UTC",
@@ -25,6 +25,13 @@
       "action": "claimed",
       "agent": "antigravity",
       "previous_agent": ""
+    },
+    {
+      "timestamp": "2026-10-21 17:07 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "完成批次 1：遷移並重構 openwebui_tool adapter 與 runner，補齊完整型別與測試"
     }
-  ]
+  ],
+  "summary": "完成批次 1：遷移並重構 openwebui_tool adapter 與 runner，補齊完整型別與測試"
 }

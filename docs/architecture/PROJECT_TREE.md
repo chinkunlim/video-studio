@@ -121,8 +121,44 @@ video-studio/
 │       │   ├── __init__.py
 │       │   └── cli.py
 │       ├── services/
+│       │   ├── common/
+│       │   │   ├── __init__.py
+│       │   │   ├── check.py
+│       │   │   ├── job.py
+│       │   │   └── material.py
+│       │   ├── extract_audio/
+│       │   │   ├── __init__.py
+│       │   │   └── extract.py
+│       │   ├── narrate/
+│       │   │   ├── core/
+│       │   │   │   ├── __init__.py
+│       │   │   │   ├── audio.py
+│       │   │   │   ├── concat.py
+│       │   │   │   ├── generate.py
+│       │   │   │   ├── numbers.py
+│       │   │   │   ├── script.py
+│       │   │   │   ├── subtitles.py
+│       │   │   │   ├── takes.py
+│       │   │   │   ├── vocab.py
+│       │   │   │   ├── voicebox.py
+│       │   │   │   └── whisper.py
+│       │   │   ├── __init__.py
+│       │   │   └── narrate.py
+│       │   ├── video/
+│       │   │   ├── engine/
+│       │   │   │   ├── __init__.py
+│       │   │   │   ├── align.py
+│       │   │   │   ├── media.py
+│       │   │   │   ├── overlay.py
+│       │   │   │   ├── poster.py
+│       │   │   │   ├── pptx.py
+│       │   │   │   ├── storyboard.py
+│       │   │   │   └── timing.py
+│       │   │   ├── __init__.py
+│       │   │   └── video.py
 │       │   ├── __init__.py
-│       │   └── greeting.py
+│       │   ├── greeting.py
+│       │   └── sv.py
 │       └── __init__.py
 ├── tests/                                  # 【測試層】單元與整合測試
 │   ├── __init__.py

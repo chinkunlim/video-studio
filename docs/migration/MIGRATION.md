@@ -76,7 +76,7 @@
 
 | 狀態 | 舊檔案 | 建議位置 | 批次 |
 |---|---|---|---|
-| ☐ | `legacy/openwebui/split_voice_tool.py` | `src/video_studio/adapters/` | adapters |
+| ☑ | `legacy/openwebui/split_voice_tool.py` | `src/video_studio/adapters/` | adapters |
 | ☐ | `legacy/common/__init__.py` | `src/video_studio/services/` | services |
 | ☐ | `legacy/common/check.py` | `src/video_studio/services/` | services |
 | ☐ | `legacy/common/job.py` | `src/video_studio/services/` | services |
