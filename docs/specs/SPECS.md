@@ -10,3 +10,6 @@
 
 | 規格 | 狀態 | 說明 |
 |---|---|---|
+| [`001-openwebui-tool.md`](001-openwebui-tool.md) | Implemented | Open WebUI 工具整合規範與 Valves 參數設定 |
+| [`002-video-engine.md`](002-video-engine.md) | Implemented | 影片合成與渲染引擎（PowerPoint 與海報分鏡模式） |
+| [`003-templates-and-inputs.md`](003-templates-and-inputs.md) | Implemented | 工作範本與輸入規格（job.toml、script.md、scenes.toml） |

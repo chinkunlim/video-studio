@@ -89,6 +89,9 @@ video-studio/
 │   ├── migration/                          # [遷移紀錄] 舊專案搬移清單、批次與完成標準
 │   │   └── MIGRATION.md
 │   ├── specs/                              # [功能規格書] PRD / API Contract
+│   │   ├── 001-openwebui-tool.md
+│   │   ├── 002-video-engine.md
+│   │   ├── 003-templates-and-inputs.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)

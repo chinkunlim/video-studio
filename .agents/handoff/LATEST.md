@@ -5,22 +5,28 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-10-21 17:07 UTC`
+- **最後更新時間**: `2026-10-21 17:28 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `2208c67 refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) [agent:antigravity]`
+- **最新 Git Commit**: `457cf46 refactor(services): conform services layer to architecture and typing standards (TASK-002) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-002**<br/>遷移批次 2：services 層（業務流程） | 🟢 `in_progress` | `antigravity` | `-` | `src/video_studio/services/`, `legacy` | - | - |
-| **TASK-003**<br/>遷移批次 3：文件（README、規格、決策、已知問題） | ⚪ `open` | `-` | `-` | `docs/architecture/ARCHITECTURE.md`, `docs/specs/`, `openwebui/OPENWEBUI.md`, `templates/TEMPLATES.md`, `video/VIDEO.md`, `legacy` | - | - |
+| **TASK-003**<br/>遷移批次 3：文件（README、規格、決策、已知問題） | 🟢 `in_progress` | `antigravity` | `-` | `docs/architecture/ARCHITECTURE.md`, `docs/specs/`, `openwebui/OPENWEBUI.md`, `templates/TEMPLATES.md`, `video/VIDEO.md`, `legacy` | - | - |
 | **TASK-004**<br/>遷移批次 4：其他（資料、資源、需人工判斷） | ⚪ `open` | `-` | `-` | `legacy`, `legacy` | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-10-21 17:28 UTC] 認領任務 `TASK-003` (遷移批次 3：文件（README、規格、決策、已知問題）) (by `antigravity`)
+- **相關範圍**: `docs/architecture/ARCHITECTURE.md, docs/specs/, openwebui/OPENWEBUI.md, templates/TEMPLATES.md, video/VIDEO.md, legacy`
+
+### [2026-10-21 17:27 UTC] 完成任務 `TASK-002` — 遷移批次 2：services 層（業務流程） (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Migrated and refactored 27 services files into src/video_studio/services/, unified entrypoints CLI, added unit tests, passed mypy strict and review guard
 
 ### [2026-10-21 17:07 UTC] 認領任務 `TASK-002` (遷移批次 2：services 層（業務流程）) (by `antigravity`)
 - **相關範圍**: `src/video_studio/services/, legacy`
