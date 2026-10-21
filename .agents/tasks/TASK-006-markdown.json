@@ -1,12 +1,12 @@
 {
   "id": "TASK-006",
   "title": "更新所有 Markdown 文件與架構決策紀錄",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "",
+  "done_items": "更新並同步所有 Markdown 文件（規格超連結、ADR-001/002/003、ISSUE-001/002、MIGRATION 完成清單、PROJECT_RULES 領域規則、TEMPLATES 連結修復與反向同步）",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-10-21 18:14 UTC",
@@ -22,6 +22,13 @@
       "action": "claimed",
       "agent": "antigravity",
       "previous_agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-10-21 18:14 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "更新並同步所有 Markdown 文件（規格超連結、ADR-001/002/003、ISSUE-001/002、MIGRATION 完成清單、PROJECT_RULES 領域規則、TEMPLATES 連結修復與反向同步）"
     }
-  ]
+  ],
+  "summary": "更新並同步所有 Markdown 文件（規格超連結、ADR-001/002/003、ISSUE-001/002、MIGRATION 完成清單、PROJECT_RULES 領域規則、TEMPLATES 連結修復與反向同步）"
 }
