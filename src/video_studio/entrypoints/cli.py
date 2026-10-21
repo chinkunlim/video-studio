@@ -9,12 +9,14 @@ from __future__ import annotations
 import argparse
 import logging
 from collections.abc import Sequence
+from pathlib import Path
 
 from video_studio.config.logging_setup import setup_logging
 from video_studio.config.settings import load_config
 from video_studio.services.common import job as J
 from video_studio.services.extract_audio import extract as extract_mod
 from video_studio.services.narrate import narrate as narrate_mod
+from video_studio.services.narrate.core import script, vocab
 from video_studio.services.sv import approve_file, check_job_status, init_job, list_jobs
 from video_studio.services.video import video as video_mod
 
@@ -78,6 +80,39 @@ def _handle_narrate(args: argparse.Namespace) -> int:
         Exit code (0 on success).
     """
     cmd = args.narrate_cmd
+    if cmd == "format":
+        content = Path(args.file).read_text(encoding="utf-8")
+        print(script.split_sentences(content))
+        return 0
+    if cmd == "vocab":
+        voc_path = J.vocabulary_path()
+        voc = vocab.load(voc_path)
+        if args.action == "list":
+            for k, v in voc.items():
+                print(
+                    f"{{{{{k}}}}}\t{v.get('type', '')}\t字幕「{v.get('subtitle', '')}」\t"
+                    f"念「{v.get('tts', '')}」\t"
+                    f"{'试听 ' + v.get('tested', '') if v.get('tested') else '未试听'}\t{v.get('note', '')}"
+                )
+            return 0
+        if args.action == "set":
+            if not args.key:
+                print("请提供词汇 key")
+                return 1
+            old = voc.get(args.key)
+            row = old or {k: "" for k in vocab.FIELDS}
+            row["key"] = args.key
+            for f in ("type", "subtitle", "tts", "tested", "note"):
+                val = getattr(args, f, None)
+                if val:
+                    row[f] = val
+            row["tts"] = row.get("tts") or row.get("subtitle") or args.key
+            row["tts_lang"] = row.get("tts_lang") or "zh"
+            voc[args.key] = row
+            vocab.save(voc_path, voc)
+            print(f"已更新词汇表：{{{{{args.key}}}}} -> {row.get('subtitle', '')} ({row.get('tts', '')})")
+            return 0
+
     if cmd in ("lines", "scan", "build", "audition", "pick"):
         job = J.find(args.job)
         if cmd == "lines":
@@ -116,6 +151,12 @@ def _handle_video(args: argparse.Namespace) -> int:
         return 0
     if cmd == "poster":
         print(video_mod.render_poster_video(args.job, args.version))
+        return 0
+    if cmd == "mux":
+        print(video_mod.mux_external_video(args.job, args.video, args.version, args.reserve_bottom))
+        return 0
+    if cmd == "check":
+        print(video_mod.check_video(args.job, args.version))
         return 0
     return 0
 
@@ -166,6 +207,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp_pick.add_argument("job")
     sp_pick.add_argument("line", type=int)
     sp_pick.add_argument("take", type=int)
+    sp_fmt = nar_sub.add_parser("format", help="整理讲稿格式")
+    sp_fmt.add_argument("file")
+    sp_voc = nar_sub.add_parser("vocab", help="词汇表管理")
+    sp_voc.add_argument("action", choices=["list", "set"])
+    sp_voc.add_argument("key", nargs="?")
+    sp_voc.add_argument("--subtitle", default="")
+    sp_voc.add_argument("--tts", default="")
+    sp_voc.add_argument("--type", dest="type", default="")
+    sp_voc.add_argument("--tested", default="")
+    sp_voc.add_argument("--note", default="")
 
     # video
     p_vid = sub.add_parser("video", help="影片合成")
@@ -180,6 +231,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp_pos = vid_sub.add_parser("poster")
     sp_pos.add_argument("job")
     sp_pos.add_argument("--version")
+    sp_mux = vid_sub.add_parser("mux")
+    sp_mux.add_argument("job")
+    sp_mux.add_argument("--video", required=True)
+    sp_mux.add_argument("--reserve-bottom", type=int, default=0)
+    sp_mux.add_argument("--version")
+    sp_chk = vid_sub.add_parser("check")
+    sp_chk.add_argument("job")
+    sp_chk.add_argument("--version")
 
     return parser
 

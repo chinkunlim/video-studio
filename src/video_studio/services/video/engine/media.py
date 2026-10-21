@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from video_studio.services.video.engine import overlay
 
@@ -285,5 +285,31 @@ def check(
         if mv < -40.0:
             ok = False
             report.append("❌ 声音几乎是静音")
+
+    work_path = Path(work)
+    work_path.mkdir(parents=True, exist_ok=True)
+    thumbs: list[tuple[int, Path]] = []
+    for s in slides:
+        t = getattr(s, "start", 0.0) + min(getattr(s, "duration", 1.0) / 2.0, 3.0)
+        thumb_path = work_path / f"thumb_{getattr(s, 'slide', 1):02d}.jpg"
+        ff("-ss", f"{t:.2f}", "-i", video, "-frames:v", "1", "-vf", "scale=480:-1", thumb_path)
+        thumbs.append((getattr(s, "slide", 1), thumb_path))
+
+    if thumbs and thumbs[0][1].exists():
+        cols = 4
+        with Image.open(thumbs[0][1]) as first_img:
+            w, h = first_img.size
+        rows = (len(thumbs) + cols - 1) // cols
+        canvas = Image.new("RGB", (cols * w, rows * (h + 36)), "white")
+        draw = ImageDraw.Draw(canvas)
+        for k, (n, p) in enumerate(thumbs):
+            x, y = (k % cols) * w, (k // cols) * (h + 36)
+            with Image.open(p) as img:
+                canvas.paste(img, (x, y + 36))
+            draw.text((x + 8, y + 8), f"slide {n}", fill="black")
+        Path(sheet).parent.mkdir(parents=True, exist_ok=True)
+        canvas.save(sheet, quality=85)
+        report.append(f"缩图总览：{sheet}（每一页抽一格，请用眼睛确认画面）")
+
     report.append("✅ 验收通过" if ok else "⚠️ 验收有项目未通过")
     return ok, report

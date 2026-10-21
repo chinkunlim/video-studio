@@ -13,6 +13,9 @@ All notable changes to **video-studio** are documented here
 ### Documentation
 - docs: migrate design specs and update project architecture documentation (TASK-003) (`TASK-003`, by `@antigravity`)
 
+### Testing
+- test: add comprehensive end-to-end workflow tests for all services (TASK-005) (`TASK-005`, by `@antigravity`)
+
 ### Chore
 - chore(migration): finalize migration and complete verification (by `@antigravity`)
 

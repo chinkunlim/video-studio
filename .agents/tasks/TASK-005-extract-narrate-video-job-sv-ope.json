@@ -1,0 +1,21 @@
+{
+  "id": "TASK-005",
+  "title": "完整測試所有工作流程（extract, narrate, video, job/sv, openwebui）",
+  "status": "in_progress",
+  "agent": "antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-10-21 17:49 UTC",
+  "updated_at": "2026-10-21 17:49 UTC",
+  "history": [
+    {
+      "timestamp": "2026-10-21 17:49 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    }
+  ]
+}

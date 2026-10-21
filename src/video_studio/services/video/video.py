@@ -245,6 +245,48 @@ def draft_scenes(job_name: str, source: str = "auto", force: bool = False) -> st
     return f"{msg}\n区域预览已产生：{preview_path}"
 
 
+def finish_video(
+    cfg: dict[str, Any],
+    job: J.Job,
+    v: Path,
+    slides: list[timing.Slide],
+    picture: Path,
+    reserve_bottom: int = 0,
+) -> tuple[bool, list[str]]:
+    """完成配音合成、燒錄字幕與影片驗收共用流程。
+
+    Args:
+        cfg: 設定字典。
+        job: 工作物件。
+        v: 版本目錄。
+        slides: Slide 列表。
+        picture: 畫面影片路徑。
+        reserve_bottom: 底部保留高度（像素）。
+
+    Returns:
+        (是否全數通過驗收, 驗收報告列表) 元組。
+    """
+    work = job.work / "video"
+    work.mkdir(parents=True, exist_ok=True)
+    out = v / "video.mp4"
+    logger.info("合成配音至 %s", out)
+    media.mux(picture, v / "narration.wav", out, slides[-1].end, cfg)
+
+    burn = job.cfg.get("subtitles", {}).get("burn_in", True)
+    if burn:
+        sub_srt = v / "subtitles_vlc.srt"
+        if sub_srt.exists():
+            logger.info("燒錄字幕至 %s", v / "video_subtitled.mp4")
+            media.burn_subtitles(out, sub_srt, v / "video_subtitled.mp4", cfg, work / "subs", reserve_bottom)
+
+    logger.info("執行影片驗收與縮圖生成")
+    ok, report = media.check(out, v / "narration.wav", slides, v / "video_contact_sheet.jpg", work / "thumbs")
+    write_timing_tsv(v, slides)
+    (v / "video_check.txt").write_text("\n".join(report), encoding="utf-8")
+    shutil.rmtree(work, ignore_errors=True)
+    return ok, report
+
+
 def render_poster_video(job_name: str, version: str | None = None) -> str:
     """海报影片渲染流程。
 
@@ -268,16 +310,69 @@ def render_poster_video(job_name: str, version: str | None = None) -> str:
     poster.render(cfg, img, scenes, slides, picture)
     has_bar = any(s.get("callout") for s in scenes.values())
     bottom_res = cfg.get("callout", {}).get("height", 0) if has_bar else 0
-    out = v / "video.mp4"
-    media.mux(picture, v / "narration.wav", out, slides[-1].end, cfg)
-    burn = job.cfg.get("subtitles", {}).get("burn_in", True)
-    if burn:
-        sub_srt = v / "subtitles_vlc.srt"
-        if sub_srt.exists():
-            media.burn_subtitles(out, sub_srt, v / "video_subtitled.mp4", cfg, work / "subs", bottom_res)
-    ok, report = media.check(out, v / "narration.wav", slides, v / "video_contact_sheet.jpg", work / "thumbs")
-    write_timing_tsv(v, slides)
-    shutil.rmtree(work, ignore_errors=True)
+    ok, report = finish_video(cfg, job, v, slides, picture, bottom_res)
     report_text = "\n".join(report)
     status_str = "完成" if ok else "完成（但验收有项目未通过）"
     return f"{status_str}：{v}/\n{report_text}"
+
+
+def mux_external_video(
+    job_name: str,
+    video_file: str | Path,
+    version: str | None = None,
+    reserve_bottom: int = 0,
+) -> str:
+    """外部畫面影片與配音合成。
+
+    Args:
+        job_name: 工作名稱。
+        video_file: 畫面影片路徑或 input/ 內的檔名。
+        version: 指定版本。
+        reserve_bottom: 底部避開高度（像素）。
+
+    Returns:
+        合成與驗收結果說明字串。
+    """
+    cfg, job, v, nd, slides = video_context(job_name, version)
+    pic = Path(video_file).expanduser()
+    if not pic.is_absolute():
+        pic = job.input / pic
+    if not pic.exists():
+        raise FileNotFoundError(f"找不到畫面影片：{pic}")
+
+    pd = media.duration(pic)
+    logger.info("畫面影片：%s (%.2f 秒)，配音：%.2f 秒", pic, pd, nd)
+    ok, report = finish_video(cfg, job, v, slides, pic, reserve_bottom)
+    report_text = "\n".join(report)
+    status_str = "已合成" if ok else "已合成（但驗收有項目未通過）"
+    return f"{status_str}：{v}/\n{report_text}"
+
+
+def check_video(job_name: str, version: str | None = None) -> str:
+    """驗收最新的 video.mp4 並輸出報告。
+
+    Args:
+        job_name: 工作名稱。
+        version: 指定版本。
+
+    Returns:
+        驗收報告文字。
+    """
+    _, job, v, _, slides = video_context(job_name, version)
+    video_path = v / "video.mp4"
+    if not video_path.exists():
+        raise FileNotFoundError(f"{v} 裡還沒有 video.mp4")
+
+    work_thumbs = job.work / "video" / "thumbs"
+    work_thumbs.mkdir(parents=True, exist_ok=True)
+    ok, report = media.check(
+        video_path,
+        v / "narration.wav",
+        slides,
+        v / "video_contact_sheet.jpg",
+        work_thumbs,
+    )
+    shutil.rmtree(job.work / "video", ignore_errors=True)
+    report_text = f"驗收影片：{video_path}\n" + "\n".join(report)
+    (v / "video_check.txt").write_text(report_text, encoding="utf-8")
+    return report_text

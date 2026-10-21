@@ -59,7 +59,8 @@ video-studio/
 │   │   ├── TASK-001-1-adapters-api-i-o.json
 │   │   ├── TASK-002-2-services.json
 │   │   ├── TASK-003-3-readme.json
-│   │   └── TASK-004-4.json
+│   │   ├── TASK-004-4.json
+│   │   └── TASK-005-extract-narrate-video-job-sv-ope.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
@@ -186,7 +187,12 @@ video-studio/
 │   ├── __init__.py
 │   ├── test_cli.py
 │   ├── test_openwebui_tool.py
-│   └── test_services_core.py
+│   ├── test_services_core.py
+│   ├── test_workflow_extract.py
+│   ├── test_workflow_job.py
+│   ├── test_workflow_narrate.py
+│   ├── test_workflow_openwebui.py
+│   └── test_workflow_video.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取
