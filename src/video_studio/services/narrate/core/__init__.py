@@ -1,1 +1,1 @@
-"""narrate 工具二的核心模组。"""
+"""Core processing units for narration synthesis, alignment, and formatting."""

@@ -1,1 +1,1 @@
-"""三个工具共用的模组。"""
+"""Common domain and job management utilities for video-studio."""

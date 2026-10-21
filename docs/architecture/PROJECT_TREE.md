@@ -162,8 +162,10 @@ video-studio/
 │       └── __init__.py
 ├── tests/                                  # 【測試層】單元與整合測試
 │   ├── __init__.py
+│   ├── test_cli.py
 │   ├── test_greeting.py
-│   └── test_openwebui_tool.py
+│   ├── test_openwebui_tool.py
+│   └── test_services_core.py
 ├── .editorconfig
 ├── .env.example                            # [設定範本] 環境變數清單與預設值說明
 ├── .gitignore                              # [版控排除] 排除依賴、機密 .env、憑證與執行期快取
