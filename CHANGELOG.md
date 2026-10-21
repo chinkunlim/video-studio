@@ -5,6 +5,9 @@ All notable changes to **video-studio** are documented here
 
 ## [Unreleased]
 
+### Changed
+- refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)
+
 ## [0.1.0] - 2026-10-22
 ### Added
 - Initial project scaffold (framework v3.3.0).
