@@ -29,6 +29,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ProviderError(Exception):
@@ -77,12 +80,14 @@ def parse_{name}_payload(raw_text: str) -> list[{cls}Item]:
     try:
         data = json.loads(raw_text)
     except ValueError as exc:
+        logger.warning("{name}: response is not valid JSON (%d chars)", len(raw_text))
         raise ProviderError("{name}: response is not valid JSON", retryable=True) from exc
     items = []
     for item in data.get("items", []):
         title, url = str(item.get("title", "")).strip(), str(item.get("url", "")).strip()
         if title and url:
             items.append({cls}Item(title=title, url=url))
+    logger.debug("{name}: parsed %d items", len(items))
     return items
 '''
 

@@ -3,7 +3,7 @@
   "skills": {
     "session-closeout": {
       "tier": "core",
-      "trigger": "使用者說「結束對話 / 收工 / wrap up」時",
+      "trigger": "使用者說「結束對話 / 收工 / wrap up」時（先更新所有 md，收尾會 commit 並推送到 GitHub）",
       "command": "python3 scripts/agentctl.py closeout --agent <name> --goal ... --issues ... --next ..."
     },
     "code-review-guard": {

@@ -15,7 +15,10 @@ Checks (thresholds come from `.agents/project.toml`):
         * HTML: a `<!-- ... -->` comment right after `<!DOCTYPE>`; CSS/SCSS: a `/* ... */` header.
     - Layering: only `[architecture] env_access_layers` may read environment variables.
     - Logging: Python code in a layer outside `[quality] print_allowed_layers` (default
-      `entrypoints`) must use a module logger instead of `print`.
+      `entrypoints`) must use a module logger instead of `print`. With `[quality] require_logger`,
+      every source file in a layer (except `logger_exempt_layers` and tests) that defines functions
+      must create a module logger (CRITICAL): Python `logging.getLogger(__name__)`, JS/TS
+      `createLogger(...)`, Go `slog.With/New/Default(...)`, Rust `use log::` / `tracing::`.
     - Secrets: hard-coded API keys / tokens / private keys.
     - Size: function length, parameter count and nesting depth; file length (`max_file_lines`
       warning, `hard_max_file_lines` CRITICAL — split big files into sub-modules).
@@ -67,8 +70,26 @@ SKIP_DIRS = {"node_modules", "__pycache__", ".venv", "venv", "dist", "build", "t
 DEFAULT_CONFIG = {
     "architecture": {"source_roots": ["src"], "layers": [], "env_access_layers": ["config"]},
     "quality": {"max_function_lines": 30, "hard_max_function_lines": 50, "max_params": 4, "max_nesting": 3,
-                "block_on_critical": True, "require_docstrings": True},
+                "block_on_critical": True, "require_docstrings": True, "require_logger": False},
     "project_rules": {"paired_calls": []},
+}
+
+# How each language creates a module logger (`[quality] require_logger`) and the fix shown to the agent
+JS_LOGGER_RE = re.compile(
+    r"^\s*(?:export\s+)?(?:const|let|var)\s+[\w$]+\s*(?::[^=]+)?=\s*(?:[\w$]+\.)?(?:createLogger|getLogger)\s*\("
+    r"|^\s*(?:export\s+)?(?:async\s+)?function\s+createLogger\b",
+    re.M,
+)
+BRACE_LOGGER_RES = {
+    **{ext: JS_LOGGER_RE for ext in JS_EXTS},
+    ".go": re.compile(r"\bslog\.(?:With|New|Default)\("),
+    ".rs": re.compile(r"^\s*use\s+(?:log|tracing)::|\b(?:log|tracing)::\w+!", re.M),
+}
+LOGGER_FIX = {
+    ".py": "加上 `import logging` 與 `logger = logging.getLogger(__name__)`",
+    ".js": "加上 `const logger = createLogger(\"<模組名>\")`（從專案的 logger 模組 import）",
+    ".go": "加上 `var logger = slog.With(\"module\", \"<名稱>\")`（import \"log/slog\"）",
+    ".rs": "加上 `use log::{info, warn, error};` 並用 `info!` / `error!` 記 log（log crate）",
 }
 
 
@@ -161,6 +182,60 @@ def check_fn_metrics(rel: str, name: str, lineno: int, sizes: tuple[int, int, in
     if depth > int(quality.get("max_nesting", 3)) + 1:
         issues.append(_issue("IMPORTANT", rel, lineno, f"[Nesting] 函式 `{name}` 巢狀 {depth} 層，建議改用 early return。"))
     return issues
+
+
+# ---------------------------------------------------------------------------
+# Module logger (`[quality] require_logger`)
+# ---------------------------------------------------------------------------
+
+
+def logger_required(rel: str, layer: str | None, config: dict) -> bool:
+    """Tell whether a file must create a module logger.
+
+    Args:
+        rel: Repo-relative file path.
+        layer: Architectural layer of the file (None when outside layers).
+        config: Loaded project configuration.
+
+    Returns:
+        True when `require_logger` is on and the file is a non-test file in a non-exempt layer.
+    """
+    quality = config["quality"]
+    exempt = set(quality.get("logger_exempt_layers", []))
+    return bool(quality.get("require_logger", False)) and layer is not None and layer not in exempt and not is_test_file(rel)
+
+
+def missing_logger_issue(rel: str, layer: str) -> dict:
+    """Build the CRITICAL finding for a file without a module logger.
+
+    Args:
+        rel: Repo-relative file path.
+        layer: Architectural layer of the file.
+
+    Returns:
+        Finding with the language-specific fix.
+    """
+    suffix = Path(rel).suffix
+    fix = LOGGER_FIX.get(".js" if suffix in JS_EXTS else suffix, "建立模組 logger")
+    return _issue("CRITICAL", rel, 1, f"[Logging] `{layer}` 層的程式檔有函式卻沒有建立模組 logger：{fix}。")
+
+
+def python_has_module_logger(tree: ast.Module) -> bool:
+    """Check for a module-level `x = logging.getLogger(...)` / `get_logger(...)` assignment.
+
+    Args:
+        tree: Parsed module.
+
+    Returns:
+        True when the module creates a logger at import time.
+    """
+    for node in tree.body:
+        value = node.value if isinstance(node, (ast.Assign, ast.AnnAssign)) else None
+        func = value.func if isinstance(value, ast.Call) else None
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+        if name in ("getLogger", "get_logger"):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -284,6 +359,9 @@ def audit_python_file(text: str, rel: str, layer: str | None, config: dict) -> l
     if config["quality"].get("require_docstrings", True) and not is_test_file(rel):
         issues += python_docstring_issues(tree, rel)
     issues += forbidden_import_issues(tree, rel, config)
+    has_functions = any(isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) for n in ast.walk(tree))
+    if layer and has_functions and logger_required(rel, layer, config) and not python_has_module_logger(tree):
+        issues.append(missing_logger_issue(rel, layer))
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             end = getattr(node, "end_lineno", node.lineno)
@@ -457,6 +535,10 @@ def audit_brace_file(text: str, rel: str, layer: str | None, config: dict) -> li
     env_layers = set(config["architecture"].get("env_access_layers", ["config"]))
     check_docs = config["quality"].get("require_docstrings", True) and not is_test_file(rel)
     issues = []
+    has_functions = any(p.match(ln) for ln in lines for p in BRACE_LANG_PATTERNS.get(suffix, []))
+    logger_re = BRACE_LOGGER_RES.get(suffix)
+    if layer and has_functions and logger_re and logger_required(rel, layer, config) and not logger_re.search(text):
+        issues.append(missing_logger_issue(rel, layer))
     if check_docs and not has_file_header(lines):
         issues.append(_issue("CRITICAL", rel, 1, "[Docs] 檔案開頭缺少用途說明註解。"))
     for idx, line in enumerate(lines):

@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 CONFIG_RELATIVE_PATH = Path(".agents") / "project.toml"
-FRAMEWORK_VERSION = "3.3.0"
+FRAMEWORK_VERSION = "3.4.0"
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "framework": {"version": FRAMEWORK_VERSION},
@@ -54,6 +54,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "block_data_files": True,
         # Only these layers may `print` (a CLI's real output); every other layer logs.
         "print_allowed_layers": ["entrypoints"],
+        # Every source file in a layer that defines functions must create a module logger
+        # (off when absent so older projects are not blocked; new projects turn it on).
+        "require_logger": False,
+        "logger_exempt_layers": [],
     },
     "commands": {"test": "", "lint": "", "typecheck": "", "dbcheck": "", "evals": ""},
     "skills": {"enabled": []},  # empty list = every skill installed in .agents/skills

@@ -55,6 +55,8 @@ python3 scripts/agentctl.py task handoff TASK-001 --agent claude-code --to curso
 
 ## 5. 收尾（使用者說「結束對話 / 收工」）
 
+先**全面更新所有 Markdown 文件**（README、CHANGELOG、ARCHITECTURE、specs、ADR / known-issues、PROJECT_RULES …，清單見 `session-closeout` skill §1），再執行收尾；收尾會 commit 並**推送到 GitHub**（`--no-push` 只留在本機）。
+
 ```bash
 python3 scripts/agentctl.py closeout --agent <你> --model <模型> \
   --goal "..." --decisions "..." --issues "錯誤 → 根因 → 修正" --next "..."

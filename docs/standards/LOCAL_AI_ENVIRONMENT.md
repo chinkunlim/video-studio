@@ -14,6 +14,7 @@
 | **Open WebUI** | `http://127.0.0.1:8080`，**原生安裝、不是 Docker**，`launchd` 開機常駐 | `uv tool install open-webui` | OpenAPI 工具伺服器或 MCP（Streamable HTTP），見 §3 |
 | **Claude Code**（本 App 的 Code 分頁）、**Claude Desktop** | — | App | MCP：專案根目錄 `.mcp.json`；Desktop 用自己的設定檔 |
 | **Antigravity**（App + `agy` CLI） | — | App、官方腳本 | MCP：專案 `.agents/mcp_config.json`（CLI / IDE）；App 在 Settings → Customizations |
+| **graphify** | CLI / Agent Skill | `uv tool install graphifyy` | 在專案內執行 `graphify .` 產生架構圖譜；Agent 對話直接輸入 `/graphify` |
 | **OpenCode v2**（CLI + 桌面版） | 背景服務 | `brew install anomalyco/tap/opencode-v2` | MCP：專案 `opencode.json`（`mcp → servers → 名稱`） |
 | **Open Design** | `127.0.0.1:7456` | App | 透過 `agy` 呼叫工具 |
 | （日後）Hermes Agent、OpenClaw | — | — | MCP，最低權限 |
@@ -38,6 +39,10 @@ opencode --version
 
 ```bash
 agy --version
+```
+
+```bash
+graphify --version
 ```
 
 ### 已知的環境陷阱

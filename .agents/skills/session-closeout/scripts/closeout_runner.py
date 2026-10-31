@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-of-session closeout: verify, record what happened, and commit.
+"""End-of-session closeout: verify, check the docs, record what happened, commit and push.
 
 Purpose:
     When the user says "結束對話" / "收工" / "wrap up", the active agent runs this script
@@ -10,13 +10,17 @@ Steps:
     1. Run the configured test command (`[commands] test` in `.agents/project.toml`)
        and `code-review-guard` — stop if either fails.
     2. Refresh generated docs: agent adapters, directory tree, dependency graph.
-    3. Write the local conversation record (git-ignored, deletable when the project ends):
+    3. Markdown check: list the project's own `.md` files that this session (uncommitted changes
+       plus unpushed commits) did not touch, so the agent confirms every document is up to date.
+       The agent updates the documents BEFORE running closeout (see SKILL.md §1).
+    4. Write the local conversation record (git-ignored, deletable when the project ends):
        `.agents/conversations/YYYY-MM-DD-HHMM-<agent>-transcript.md` (full, secrets masked) and
        `...-summary.md` (goal, decisions, errors and root causes, next steps, changed files).
-    4. Append a closeout entry to `.agents/handoff/LATEST.md` (in git): one line each for goal,
+    5. Append a closeout entry to `.agents/handoff/LATEST.md` (in git): one line each for goal,
        errors and next step, so another computer still knows where things stand.
-    5. Commit via `.agents/bin/auto_commit.py --closeout` (limited to the agent's active task
-       when exactly one is in progress) and refresh the audit report.
+    6. Commit via `.agents/bin/auto_commit.py --closeout` (limited to the agent's active task
+       when exactly one is in progress), then push to the upstream branch. The user decided that
+       closing a session means pushing; `--no-push` keeps everything local.
 
 Usage:
     python3 .agents/skills/session-closeout/scripts/closeout_runner.py --agent claude-code \
@@ -29,11 +33,15 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 
 SCRIPT_ROOT = Path(__file__).resolve().parents[4]
+# Markdown files kept up to date by tools (or by the template), not by the session's agent
+GENERATED_MD = {"CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md", "docs/architecture/PROJECT_TREE.md"}
+GENERATED_MD_PREFIXES = (".agents/", ".cursor/", ".windsurf/", "legacy/", "node_modules/")
 
 
 def find_root() -> Path:
@@ -118,6 +126,115 @@ def refresh_generated_docs(root: Path) -> None:
         script = root / ".agents" / "bin" / name
         if script.exists():
             subprocess.run([sys.executable, str(script)], cwd=root, check=False)
+
+
+def git_lines(root: Path, *args: str) -> list[str]:
+    """Run a git command and return its non-empty output lines.
+
+    Args:
+        root: Repository root.
+        *args: git arguments.
+
+    Returns:
+        Output lines (empty when the command fails).
+    """
+    res = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
+    return [line.strip() for line in res.stdout.splitlines() if line.strip()] if res.returncode == 0 else []
+
+
+def upstream_of(root: Path) -> str:
+    """Return the upstream branch of the current branch.
+
+    Args:
+        root: Repository root.
+
+    Returns:
+        Upstream such as `origin/main`, or an empty string when none is set.
+    """
+    found = git_lines(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+    return found[0] if found else ""
+
+
+def is_project_markdown(rel: str) -> bool:
+    """Tell whether a Markdown file is written by the project's agents (not generated or framework-managed).
+
+    Args:
+        rel: Repo-relative POSIX path.
+
+    Returns:
+        True for documents the session's agent must keep up to date.
+    """
+    if not rel.endswith(".md") or rel in GENERATED_MD or rel.startswith(GENERATED_MD_PREFIXES):
+        return False
+    if rel.endswith("/_TEMPLATE.md"):
+        return False
+    return not rel.startswith("docs/standards/") or rel == "docs/standards/PROJECT_RULES.md"
+
+
+def session_changed_files(root: Path, lib) -> set[str]:
+    """Files changed in this session: uncommitted changes plus commits not pushed yet.
+
+    Args:
+        root: Repository root.
+        lib: The `project_config` module (None when missing).
+
+    Returns:
+        Repo-relative paths.
+    """
+    changed = {p for _, p in lib.git_changed_files(root)} if lib else set()
+    upstream = upstream_of(root)
+    if upstream:
+        changed.update(git_lines(root, "diff", "--name-only", f"{upstream}..HEAD"))
+    return changed
+
+
+def report_markdown(root: Path, lib) -> None:
+    """Print which project documents this session updated and which it did not touch.
+
+    Args:
+        root: Repository root.
+        lib: The `project_config` module (None when missing).
+    """
+    docs = sorted(rel for rel in git_lines(root, "ls-files", "--cached", "--others", "--exclude-standard", "*.md") if is_project_markdown(rel))
+    changed = session_changed_files(root, lib)
+    code = [rel for rel in changed if not rel.endswith(".md") and not rel.startswith(".agents/")]
+    updated = [rel for rel in docs if rel in changed]
+    untouched = [rel for rel in docs if rel not in changed]
+    print(f"   本次修改 {len(code)} 個非文件檔案；已更新 {len(updated)} 份文件：")
+    for rel in updated:
+        print(f"   ✅ {rel}")
+    if untouched:
+        print("   以下文件本次沒有修改，請確認內容仍然正確（不正確就先更新再收尾）：")
+        for rel in untouched:
+            print(f"   📄 {rel}")
+
+
+def push_to_remote(root: Path) -> int:
+    """Push the current branch to its upstream (`ALLOW_PUSH=1` lets the pre-push hook through).
+
+    Args:
+        root: Repository root.
+
+    Returns:
+        0 when pushed or nothing to push, 1 when the push failed or there is no upstream.
+    """
+    upstream = upstream_of(root)
+    if not upstream:
+        print("⚠️ 這個分支沒有遠端分支（upstream），沒有推送。請先請使用者確認要推送到哪個 GitHub repo，"
+              "再執行 `ALLOW_PUSH=1 git push -u origin <分支>`。")
+        return 1
+    pending = git_lines(root, "log", "--oneline", f"{upstream}..HEAD")
+    if not pending:
+        print(f"✅ 沒有未推送的 commit（{upstream} 已是最新）。")
+        return 0
+    res = subprocess.run(["git", "push"], cwd=root, capture_output=True, text=True, check=False, env={**os.environ, "ALLOW_PUSH": "1"})
+    if res.returncode != 0:
+        print(f"❌ 推送到 {upstream} 失敗（commit 已保留在本機）：\n{(res.stderr or res.stdout).strip()[-800:]}", file=sys.stderr)
+        return 1
+    print(f"🚀 已推送 {len(pending)} 個 commit 到 {upstream}：")
+    for line in pending[:10]:
+        print(f"   - {line}")
+    return 0
 
 
 def active_task_of(root: Path, agent: str) -> str:
@@ -244,14 +361,13 @@ def append_handoff(root: Path, agent: str, notes: dict[str, str], record: tuple[
     agent_task.update_handoff_file(event_title="Session Closeout (結束對話收尾)", agent=agent, bullets=bullets, root=root)
 
 
-def commit_and_report(root: Path, agent: str, model: str, push: bool) -> int:
-    """Commit remaining changes.
+def commit_and_report(root: Path, agent: str, model: str) -> int:
+    """Commit remaining changes (pushing is done afterwards by `push_to_remote()`).
 
     Args:
         root: Project root directory.
         agent: Agent closing the session.
         model: Model name for the commit trailer (may be empty).
-        push: Push to the remote after committing.
 
     Returns:
         Exit code of `auto_commit.py` (0 when it is not installed).
@@ -263,7 +379,6 @@ def commit_and_report(root: Path, agent: str, model: str, push: bool) -> int:
     cmd += ["--model", model] if model else []
     task = active_task_of(root, agent)
     cmd += ["--task", task] if task else []
-    cmd += ["--push"] if push else []
     return subprocess.run(cmd, cwd=root, check=False).returncode
 
 
@@ -282,7 +397,7 @@ def run_closeout(root: Path, args: argparse.Namespace) -> int:
     agent, model = lib.resolve_agent_identity(args.agent, args.model, root=root) if lib else (args.agent or "unattributed-agent", args.model)
     print("=" * 68 + f"\n🏁 Session Closeout — Agent: {agent}\n" + "=" * 68)
 
-    print("\n[1/5] 🧪 執行測試與 Code Review Guard...")
+    print("\n[1/7] 🧪 執行測試與 Code Review Guard...")
     if run_tests(root, cfg) != 0:
         print("❌ 測試未通過，已中止收尾。請先修復失敗的測試。", file=sys.stderr)
         return 1
@@ -290,10 +405,13 @@ def run_closeout(root: Path, args: argparse.Namespace) -> int:
         print("❌ Code Review Guard 偵測到 CRITICAL 違規，已中止收尾。", file=sys.stderr)
         return 1
 
-    print("\n[2/5] 🌳 更新入口檔與目錄樹...")
+    print("\n[2/7] 🌳 更新入口檔與目錄樹...")
     refresh_generated_docs(root)
 
-    print("\n[3/5] 📝 寫入本機對話紀錄（逐字稿 + 摘要，不進 git）...")
+    print("\n[3/7] 📚 檢查 Markdown 文件...")
+    report_markdown(root, lib)
+
+    print("\n[4/7] 📝 寫入本機對話紀錄（逐字稿 + 摘要，不進 git）...")
     changed = [p for _, p in lib.git_changed_files(root)] if lib else []
     notes = {"goal": args.goal, "decisions": args.decisions, "issues": args.issues, "next": args.next, "note": args.note, "model": model}
     record = write_conversation_record(root, agent, build_summary(agent, notes, changed), args.transcript)
@@ -302,11 +420,18 @@ def run_closeout(root: Path, args: argparse.Namespace) -> int:
     if record:
         print("   （摘要中的 TODO 請補完）")
 
-    print("\n[4/5] 🤝 更新交接看板 .agents/handoff/LATEST.md...")
+    print("\n[5/7] 🤝 更新交接看板 .agents/handoff/LATEST.md...")
     append_handoff(root, agent, notes, record)
 
-    print("\n[5/5] 🔒 本機 Commit 與未推送統計...")
-    return commit_and_report(root, agent, model, args.push)
+    print("\n[6/7] 🔒 本機 Commit...")
+    if commit_and_report(root, agent, model) != 0:
+        print("❌ Commit 失敗，沒有推送。", file=sys.stderr)
+        return 1
+    if args.no_push:
+        print("\n[7/7] ⏸️ 使用 --no-push：commit 保留在本機，沒有推送。")
+        return 0
+    print("\n[7/7] 🚀 推送到 GitHub...")
+    return push_to_remote(root)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -318,7 +443,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     Returns:
         Parsed arguments.
     """
-    parser = argparse.ArgumentParser(description="Session Closeout — 結束對話收尾 (測試、對話紀錄、交接、Commit)")
+    parser = argparse.ArgumentParser(description="Session Closeout — 結束對話收尾 (測試、文件檢查、對話紀錄、交接、Commit、推送)")
     parser.add_argument("--agent", default="", help="AI Agent 名稱；留空時自動偵測 (AI_AGENT_NAME / CLAUDECODE ...)")
     parser.add_argument("--model", default="", help="AI 模型名稱")
     parser.add_argument("--goal", default="", help="本次對話目標")
@@ -327,7 +452,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--next", default="", help="下一步建議")
     parser.add_argument("--note", default="", help="留給下一個 Agent 的一句話交接")
     parser.add_argument("--transcript", default="", help="對話匯出檔（非 Claude Code 時使用；Claude Code 自動讀取）")
-    parser.add_argument("--push", action="store_true", help="收尾後推送至遠端 (需使用者同意)")
+    parser.add_argument("--no-push", action="store_true", help="只在本機 commit，不推送（預設收尾會推送到 upstream）")
+    parser.add_argument("--push", action="store_true", help=argparse.SUPPRESS)  # v3.3 and before; pushing is now the default
     return parser.parse_args(argv)
 
 

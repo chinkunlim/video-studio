@@ -96,7 +96,17 @@ export function calculateTotal(items, taxRate, coupon) { ... }
 
 程式出問題時，第一個看的是 log。Python 專案的 `config/logging_setup.py` 已經設定好格式與檔案，**寫程式時只要照下面做**：
 
-1. **每個模組一個 logger**：`logger = logging.getLogger(__name__)`。只有 `entrypoints` 可以 `print`（CLI 給使用者看的結果），其他層一律用 logger（`code-review-guard` 會擋 `[Logging]`，可用 `[quality] print_allowed_layers` 調整）。
+1. **每個模組一個 logger**：在 `[architecture] layers` 任一層、有定義函式的程式檔，**開頭一定要建立模組 logger**（新專案預設開啟 `[quality] require_logger = true`，`code-review-guard` 以 CRITICAL `[Logging]` 擋下，pre-commit 不讓 commit；純函式的層可列入 `logger_exempt_layers`）。測試檔與沒有函式的檔案（純資料、型別）不需要。只有 `entrypoints` 可以 `print`（CLI 給使用者看的結果），其他層一律用 logger（可用 `[quality] print_allowed_layers` 調整）。
+
+   | 語言 | 每個檔案開頭 | 中央設定（run id、檔案） |
+   |---|---|---|
+   | Python | `logger = logging.getLogger(__name__)` | `config/logging_setup.py` 的 `setup_logging()`，entrypoint 呼叫 |
+   | Node | `const logger = createLogger("services/x")` | `src/config/logger.js` 的 `setupLogging(config)`，寫 `DATA_DIR/logs` |
+   | 網頁 | `const logger = createLogger("app")` | `web/logger.js`（瀏覽器 console；要留存的錯誤送 API） |
+   | GAS | 函式內 `var log = createLogger("Main")`（所有檔案共用全域） | `src/Log.js`（Apps Script「執行作業」紀錄） |
+   | 手機 (Expo) | `const logger = createLogger("services/x")` | `mobile/src/config/logger.ts`，畫面呼叫 `setLogLevel()`（裝置 log） |
+   | Go | `func logger() *slog.Logger { return slog.Default().With("module", "x") }` | `internal/config/logging.go` 的 `SetupLogging(cfg)`（log/slog） |
+   | Rust | `use log::{info, warn, error};` | `src/logging.rs` 的 `setup_logging(&cfg)`（log crate） |
 2. **要記什麼**：
    | 時機 | 等級 | 例子 |
    |---|---|---|
@@ -112,7 +122,7 @@ export function calculateTotal(items, taxRate, coupon) { ... }
    - `DATA_DIR/logs/app.log`（全部）與 `errors.log`（WARNING 以上），自動輪替；`.env` 的 `LOG_TO_FILE=false` 可關閉。
    - 追蹤某一次執行或某個 API 請求：`grep <run id> app.log`；API 回應的 `X-Request-ID` 就是那個 id。
    - 沒被接住的例外也會連同 traceback 寫進 log。
-6. **JS / GAS**：用 `console.info / warn / error`，訊息格式同上（事件 + 關鍵 id + 結果）；GAS 的紀錄在 Apps Script「執行作業」頁查看，不要用 `Logger.log` 混用。
+6. **JS / GAS / Go / Rust**：一律透過上表的模組 logger（不要直接 `console.log`），訊息格式同上（事件 + 關鍵 id + 結果）；GAS 的紀錄在 Apps Script「執行作業」頁查看，不要用 `Logger.log` 混用。
 
 ---
 

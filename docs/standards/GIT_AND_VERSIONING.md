@@ -17,6 +17,7 @@
    - 只暫存它列出的檔案，掃描**已暫存內容**中的秘密（含新檔案），失敗時還原它改過的檔案。
 2. **commit 訊息一律英文**（Conventional Commits，例如 `feat(services): add pricing module`），不要在標題加日期（git 本身有日期）。文件內容可以用中文。
 3. **未經使用者明確同意，不得 `git push`。** `.agents/hooks/pre-push` 會擋下一般的 push；使用者同意後，`agentctl commit --push` 會自動帶 `ALLOW_PUSH=1`，手動推送則用 `ALLOW_PUSH=1 git push`。
+   **例外：收尾**。使用者說「收工 / 結束對話」就代表同意推送，`agentctl closeout` 會在 commit 後推送到目前分支的 upstream（使用者說先不要推送時加 `--no-push`）。永遠不要 force push。
 4. **中途離開**（去上課、開會）：`python3 scripts/agentctl.py pause "<English reason>"`，在交接看板留紀錄並做一次 `wip(handoff)` commit（不寫 CHANGELOG）。程式還沒寫完、過不了檢查時不會 commit，改動和紀錄都留在工作區，回來補齊再 commit。
 5. **不要繞過 pre-commit hook**（`--no-verify`）。Hook 由 `git config core.hooksPath .agents/hooks` 啟用，會檢查秘密、憑證檔與 `code-review-guard`；新電腦請先執行 `python3 scripts/agentctl.py doctor --fix`。
 
@@ -34,7 +35,8 @@
 符合任一條件時，Agent 必須**詢問**使用者是否 `git push`：
 - 未推送 commit 數 ≥ `push_reminder_threshold`（預設 5）。
 - 剛發布新版本（`finish --tag`）。
-- 完成里程碑、或使用者要結束對話。
+- 完成里程碑。
+（使用者要結束對話時不必問：收尾本身就會推送，見 §4。）
 
 ## 4. 結束對話收尾 (Session Closeout)
 
@@ -45,11 +47,12 @@ python3 scripts/agentctl.py closeout --agent <name> --model <model> \
   --goal "本次目標" --decisions "做了什麼、為什麼" --issues "錯誤與根因" --next "下一步" --note "一句話交接"
 ```
 
+0. **執行前先全面更新所有 Markdown 文件**：README、CHANGELOG 的 Unreleased、ARCHITECTURE、specs、ADR / known-issues、PROJECT_RULES、TEMPLATE_FEEDBACK 與各說明檔，依這次實際的修改更新（清單見 `.agents/skills/session-closeout/SKILL.md` §1）。
 1. 跑測試與 `code-review-guard`，失敗就停止並修復。
-2. 更新入口檔與目錄樹。
+2. 更新入口檔與目錄樹，並列出這次沒有修改的文件供複查。
 3. 在 `.agents/conversations/` 寫入這次對話的**逐字稿＋摘要**兩個檔案（去除個資、只存本機、不進 git）；摘要沒提供的欄位會留 TODO，**Agent 必須補完**。
 4. 更新 `.agents/handoff/LATEST.md`。
-5. 本機 commit，列出未推送的 commit 並詢問是否推送。
+5. 本機 commit，**推送到 GitHub**（目前分支的 upstream）。沒有 upstream 或推送失敗時，commit 留在本機並告訴使用者原因。
 
 任務沒做完就要結束時，先執行 `agentctl task handoff TASK-NNN --done-items ... --todo-items ... --blockers ...`。
 
