@@ -50,7 +50,7 @@ import sys
 FALLBACK_SECRET_PATTERNS = [
     (r"AIza[0-9A-Za-z_-]{20,}", "Google / Gemini API Key"),
     (r"gh[opsu]_[0-9A-Za-z]{20,}", "GitHub Token"),
-    (r"sk-[0-9A-Za-z_-]{20,}", "Secret Key"),
+    (r"(?<![A-Za-z0-9])sk-[0-9A-Za-z_-]{20,}", "Secret Key"),
     (r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY", "Private Key"),
 ]
 JS_FUNC = r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z0-9_$]+)\s*(?:<[^>]*>)?\s*\(([^)]*)\)"

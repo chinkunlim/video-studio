@@ -18,7 +18,7 @@
 # =============================================================================
 set -u
 
-SECRET_PATTERN='AIza[0-9A-Za-z_-]{20,}|[0-9]{8,10}:AA[0-9A-Za-z_-]{30,}|gh[opsu]_[0-9A-Za-z]{20,}|github_pat_[0-9A-Za-z_]{20,}|sk-ant-[0-9A-Za-z_-]{20,}|sk-(proj-)?[0-9A-Za-z_-]{20,}|(AKIA|ASIA)[0-9A-Z]{16}|xox[abposr]-[0-9A-Za-z-]{10,}|-----BEGIN ([A-Z]+ )?PRIVATE KEY'
+SECRET_PATTERN='AIza[0-9A-Za-z_-]{20,}|[0-9]{8,10}:AA[0-9A-Za-z_-]{30,}|gh[opsu]_[0-9A-Za-z]{20,}|github_pat_[0-9A-Za-z_]{20,}|(^|[^A-Za-z0-9])sk-ant-[0-9A-Za-z_-]{20,}|(^|[^A-Za-z0-9])sk-(proj-)?[0-9A-Za-z_-]{20,}|(AKIA|ASIA)[0-9A-Z]{16}|xox[abposr]-[0-9A-Za-z-]{10,}|-----BEGIN ([A-Z]+ )?PRIVATE KEY'
 
 # 1. Secrets on added lines (works before the first commit too)
 if git diff --cached -U0 --no-color --diff-filter=ACMR \
