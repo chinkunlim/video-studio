@@ -176,6 +176,9 @@ def local_module_names(source_roots: list[Path]) -> set[str]:
     return names
 
 
+PYTHON_STDLIB_EXTRAS = {"tomllib", "__future__"}
+
+
 def is_stdlib(name: str) -> bool:
     """Tell whether a top-level module belongs to the Python standard library.
 
@@ -188,7 +191,7 @@ def is_stdlib(name: str) -> bool:
     Returns:
         True for standard-library (or built-in) modules.
     """
-    if name in getattr(sys, "stdlib_module_names", ()) or name in sys.builtin_module_names or name == "__future__":
+    if name in getattr(sys, "stdlib_module_names", ()) or name in sys.builtin_module_names or name in PYTHON_STDLIB_EXTRAS:
         return True
     try:
         spec = importlib.util.find_spec(name)

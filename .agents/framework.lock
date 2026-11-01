@@ -1,7 +1,7 @@
 {
   "framework_version": "3.4.0",
-  "template_commit": "7808413",
-  "installed_at": "2026-11-01T15:30:53Z",
+  "template_commit": "d4e2bb7",
+  "installed_at": "2026-11-01T15:33:08Z",
   "skills": [
     "adr-issue-tracker",
     "api-adapter-scaffold",
@@ -15,11 +15,13 @@
     ".agents/bin/agent_task.py": "26d00ca52b971d96cd1157069c2588c4a604e3647f13e0df48fff4488235f5fe",
     ".agents/bin/agentctl.py": "5062073a7ed78b2fdb8cf9f73bc92f34052e7c3fddf66854a41c107c3e22f057",
     ".agents/bin/audit_trail.py": "38a6d7655f88acd5998eebb42aadfb931d93572bbfa0a5a24c5e497d467c767c",
+    ".agents/bin/auto_commit.py": "53f23892749fbdda9d395244a32e7dfd31be334de48ef470ef01587727d78144",
     ".agents/bin/build_graph.py": "73a306b78557c17ddd4cb38369db541f739a59f3b156c55caa7b0790e0ae85dd",
     ".agents/bin/check_staged.py": "b18274192a450f23a233ec2377dc7349d104612c213107745da927aac1f5cfef",
     ".agents/bin/conversations.py": "8bd7c4c696b0c8bcaacd17accec67813db0b46e9bb700aee1ef056a2b2d49aa5",
     ".agents/bin/doctor.py": "559b2797d95b2f0f90298fa94e8ce83cc11a475183b782f05d7f3c9a36cfcd9b",
     ".agents/bin/finish.py": "76fc7e9d61ee7b7b1ad8e38e7a3d26652369f88a4217460b1ebd57db597c8303",
+    ".agents/bin/setup_env.py": "cd78f3576c8f39898d6f2ab6967e2bef591691479736060395a12fbf9282374e",
     ".agents/bin/sync_agent_adapters.py": "69cc544e6f588502833477489ea926ea19f61a3169ebf53c247c8eca4089ecca",
     ".agents/bin/update_framework.py": "25120b333ae984cf19f3111a46e0e712689b095ecb242a41cc277c8704cf4473",
     ".agents/bin/update_tree.py": "9a2cdf3c785bdc968eda298cae973282bc3a08af242eb24a6687ff9d63c0ae87",
@@ -48,11 +50,9 @@
     "docs/standards/CODING_PRINCIPLES.md": "e7b804ba7b4c0fdf76e35100fc3622cb043691771d8c70027f357a2dbb575b8f",
     "docs/standards/ENVIRONMENT_AND_DEPENDENCIES.md": "b90473d0d16474359eff78e626da5897397a445ae096f5029c93805b885a2d85",
     "docs/standards/GIT_AND_VERSIONING.md": "18e5d0486e8ca0f3a64207a23ecbc16f4cb7f2cd6998ebc5853b05d68c414216",
-    "docs/standards/LOCAL_AI_ENVIRONMENT.md": "6a0d5119dfb283fd5ba017b3b6cd4edb28ddb1a71327ea9006aaf2c463163a8a",
+    "docs/standards/LOCAL_AI_ENVIRONMENT.md": "eed3d8a9ae7595fb426401e814df1b07c357c283ea544a8c236f42a46556f3bc",
     "docs/standards/MULTI_AGENT_COLLABORATION.md": "c302f791ffc8861981468799afaeb4aceee6035b67dd56726e773a07c9be0258",
     "docs/standards/TESTING_AND_QUALITY.md": "e8bc516dc6c8c68233f67e526a8051f810c90f6968df6a6ac1473a73358588c7",
-    "scripts/agentctl.py": "4fa8acea992e928ea976282ec12efc4c6ed77be7995d3d30b8f77c593ce8736c",
-    ".agents/bin/auto_commit.py": "100ab7be7b21f123a74a179bcd3384deba0122f5778f6e3434e5efe200fcf9c8",
-    ".agents/bin/setup_env.py": "22889d5b5c444643291dea5347abe48cec3b5494fd1d392e0247ee7bc8075e7b"
+    "scripts/agentctl.py": "4fa8acea992e928ea976282ec12efc4c6ed77be7995d3d30b8f77c593ce8736c"
   }
 }

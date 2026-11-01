@@ -22,6 +22,7 @@ All notable changes to **video-studio** are documented here
 - chore(migration): finalize migration and complete verification (by `@antigravity`)
 - chore: update framework to v3.4.0 (by `@antigravity`)
 - chore(framework): sync framework updates and add project-auditor skill (by `@antigravity`)
+- chore(framework): sync framework updates and pass agentctl check (by `@antigravity`)
 
 ## [0.1.0] - 2026-10-22
 ### Added
