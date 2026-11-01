@@ -46,6 +46,10 @@ video-studio/
 │   │   │   │   └── migration_status.py
 │   │   │   ├── FLASK_TO_FASTAPI.md
 │   │   │   └── SKILL.md
+│   │   ├── project-auditor/
+│   │   │   ├── scripts/
+│   │   │   │   └── audit_project_integrity.py
+│   │   │   └── SKILL.md
 │   │   ├── session-closeout/               # [Skill] 收尾：測試、對話紀錄（逐字稿＋摘要）、交接、Commit
 │   │   │   ├── scripts/
 │   │   │   │   └── closeout_runner.py

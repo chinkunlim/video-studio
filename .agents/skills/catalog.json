@@ -43,6 +43,11 @@
       "tier": "optional",
       "trigger": "專案有 docs/migration/MIGRATION.md，要繼續或完成舊專案遷移時",
       "command": "python3 scripts/agentctl.py migration [--verify]"
+    },
+    "project-auditor": {
+      "tier": "core",
+      "trigger": "專案結案、交付或發布版本前，審查所有對話紀錄與架構/問題檔案是否完整無遺漏",
+      "command": "python3 .agents/skills/project-auditor/scripts/audit_project_integrity.py"
     }
   }
 }

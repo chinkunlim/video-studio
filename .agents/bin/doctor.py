@@ -104,9 +104,20 @@ def check_skill_links(fix: bool) -> list[tuple[str, str]]:
     if missing and fix:
         subprocess.run([sys.executable, str(ROOT / ".agents" / "bin" / "sync_agent_adapters.py")], cwd=ROOT, check=False, capture_output=True)
         missing = [d for d in missing if not any((ROOT / d).glob("*/SKILL.md"))]
+    results: list[tuple[str, str]] = []
     if missing:
-        return [("FAIL", f"skills 連結不存在：{', '.join(missing)}（執行 doctor --fix）")]
-    return [("OK", f"skills 連結：{', '.join(link_dirs) or '(未設定)'}")]
+        results.append(("FAIL", f"skills 連結不存在：{', '.join(missing)}（執行 doctor --fix）"))
+    else:
+        results.append(("OK", f"skills 連結：{', '.join(link_dirs) or '(未設定)'}"))
+
+    # Global symlink integrity check
+    home = Path.home()
+    for g_dir in (home / ".gemini" / "config" / "skills", home / ".claude" / "skills"):
+        if g_dir.exists() and g_dir.is_dir():
+            broken = [p.name for p in g_dir.iterdir() if p.is_symlink() and not p.exists()]
+            if broken:
+                results.append(("WARN", f"全域 skills 包含失效軟連結 ({g_dir.name})：{', '.join(broken)}"))
+    return results
 
 
 DATA_SUBDIRS = ("input", "output", "needs_review", "state", "db", "logs")

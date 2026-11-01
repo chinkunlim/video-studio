@@ -109,12 +109,22 @@ def run_checks(config: dict) -> list[tuple[bool, str]]:
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8") if (ROOT / "CHANGELOG.md").exists() else ""
     tasks = open_tasks()
     dirty = git("status", "--porcelain")
+    auditor_script = ROOT / ".agents" / "skills" / "project-auditor" / "scripts" / "audit_project_integrity.py"
+    audit_passed = True
+    audit_msg = "對話紀錄與架構/已知問題檔案審計通過"
+    if auditor_script.exists():
+        audit_res = sh([sys.executable, str(auditor_script), "--strict"])
+        audit_passed = (audit_res.returncode == 0)
+        if not audit_passed:
+            audit_msg = "對話紀錄中有遺漏未建的 ADR 或 Known Issue（執行 python3 .agents/skills/project-auditor/scripts/audit_project_integrity.py 查看）"
+
     return [
         (sh([sys.executable, "scripts/agentctl.py", "check", *check_args]).returncode == 0, "agentctl check 通過" + ("（含 evals）" if check_args else "")),
         (not test or sh(test).returncode == 0, f"測試通過（{test or '未設定'}）"),
         (not tasks, "任務卡都已完成" + (f"：未完成 {', '.join(tasks)}" if tasks else "")),
         (not untouched, "README / ARCHITECTURE 已改寫" + (f"：尚未改寫 {', '.join(untouched)}" if untouched else "")),
         (bool(unreleased_entries(changelog)) or changelog.count("## [") > 2, "CHANGELOG.md 有實際的變更紀錄"),
+        (audit_passed, audit_msg),
         (not dirty, "所有變更都已 commit"),
     ]
 
