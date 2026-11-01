@@ -11,6 +11,9 @@ All notable changes to **video-studio** are documented here
 - refactor(templates): move templates and configs, remove legacy directory and starter greeting (TASK-004) (`TASK-004`, by `@antigravity`)
 - ci: install ffmpeg in GitHub Actions runner for video workflows (by `@antigravity`)
 
+### Fixed
+- fix(overlay): fallback to load_default font and install fonts-noto-cjk in CI (by `@antigravity`)
+
 ### Documentation
 - docs: migrate design specs and update project architecture documentation (TASK-003) (`TASK-003`, by `@antigravity`)
 - docs: update and synchronize all project markdown documentation, adrs, and known issues (TASK-006) (`TASK-006`, by `@antigravity`)

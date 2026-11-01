@@ -31,7 +31,7 @@ def hex_rgb(h: str) -> tuple[int, int, int]:
 
 
 @lru_cache(maxsize=16)
-def font(path: str, index: int, size: int) -> ImageFont.FreeTypeFont:
+def font(path: str, index: int, size: int) -> Any:
     """快取载入字型物件。
 
     Args:
@@ -40,9 +40,12 @@ def font(path: str, index: int, size: int) -> ImageFont.FreeTypeFont:
         size: 字级像素。
 
     Returns:
-        Pillow FreeTypeFont 物件。
+        Pillow FreeTypeFont 或預設字型物件。
     """
-    return ImageFont.truetype(path, size, index=index)
+    try:
+        return ImageFont.truetype(path, size, index=index)
+    except OSError:
+        return ImageFont.load_default()
 
 
 def _fit_lines(draw: ImageDraw.ImageDraw, text: str, fnt: ImageFont.FreeTypeFont, max_w: float) -> list[str]:
