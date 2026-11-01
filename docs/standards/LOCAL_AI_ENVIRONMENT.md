@@ -82,6 +82,8 @@ graphify --version
 ## 3. 實作規則（摘要；完整規則見 ARCHITECTURE_RULES §3）
 
 - **一組 services、三個入口**：HTTP 路由（OpenAPI）、MCP 工具（`entrypoints/mcp_server.py`）、網頁。功能只寫一次在 `services`。
+- **OpenAPI / Swagger 三重記錄**：代碼端宣告 `response_model` 與 `Field` 說明、前端 Web UI 導覽列保留 `📖 OpenAPI 文件` 外部連結（指向 `/docs`）、專案 `README.md` 標註 `/docs` 規格網址，確保 Open WebUI 與操作者皆能清楚理解合約。
+- **架構與防快取**：一律使用 `create_app()` 工廠模式與 `entrypoints/schemas.py`；管理介面靜態檔案置於 `entrypoints/static/` 並以 `NoCacheStaticFiles` 停用 304 快取；啟動前以 `port_is_free` 檢查埠號防衝突。
 - **讓工具找得到**：專案根目錄的 `.mcp.json`（Claude Code）、`opencode.json`（OpenCode v2）、`.agents/mcp_config.json`（Antigravity）、`.cursor/mcp.json`、`.vscode/mcp.json` 由框架產生；其他工具的步驟在 `docs/INTEGRATIONS.md`。
 - **Open WebUI 原生安裝**（這台電腦）：
   - MCP（管理員）：⚙ 設定 → 管理員 → Integrations → External Tool Servers → MCP (Streamable HTTP)，URL `http://127.0.0.1:<HTTP_PORT>/mcp`，Auth 選 None。

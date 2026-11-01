@@ -21,8 +21,11 @@ from __future__ import annotations
 
 import argparse
 from datetime import date
+import logging
 from pathlib import Path
 import re
+
+logger = logging.getLogger(__name__)
 
 STATUS_MAP = {
     "open": "🔴 未解決 (Open)",
@@ -132,7 +135,7 @@ def create_record(root: Path, kind: str, args: argparse.Namespace) -> Path:
     Args:
         root: Project root.
         kind: `adr` or `issue`.
-        args: Parsed arguments (`add_adr` / `add_issue`, `title`, `summary`, `status`, `agent`, `task`).
+        args: Parsed arguments (`add_adr` / `add_issue`, `title`, `summary`, `status`, `agent`, `task`, etc.).
 
     Returns:
         Path of the new record.
@@ -148,13 +151,30 @@ def create_record(root: Path, kind: str, args: argparse.Namespace) -> Path:
         "NUM": num, "TITLE": args.title, "DATE": today, "AGENT": args.agent or "-", "TASK": args.task or "-",
         "SUMMARY": args.summary or "TODO", "STATUS": status,
     }
-    target.write_text(render_record(folder, spec["fallback"], values), encoding="utf-8")
+    content = render_record(folder, spec["fallback"], values)
+    if kind == "issue":
+        if getattr(args, "cause", None):
+            content = re.sub(r"## 2\. 根本原因\n\n[^\n#]+", f"## 2. 根本原因\n\n{args.cause}", content)
+        if getattr(args, "fix", None):
+            fix_text = f"{args.fix}（相關程式碼註解加 `Refs: ISSUE-{num}`）"
+            content = re.sub(r"## 3\. 修正或規避方式\n\n[^\n#]+", f"## 3. 修正或規避方式\n\n{fix_text}", content)
+        if getattr(args, "prevention", None):
+            content = re.sub(r"## 4\. 防回歸\n\n[^\n#]+", f"## 4. 防回歸\n\n{args.prevention}", content)
+    elif kind == "adr":
+        if getattr(args, "decision", None):
+            content = re.sub(r"## 3\. 決策與理由\n\n[^\n#]+", f"## 3. 決策與理由\n\n{args.decision}", content)
+        if getattr(args, "consequences", None):
+            content = re.sub(r"## 4\. 影響與代價\n\n[^\n#]+", f"## 4. 影響與代價\n\n{args.consequences}", content)
+
+    target.write_text(content, encoding="utf-8")
     link = f"[{spec['prefix']}-{num}]({target.name})"
+    code_refs = getattr(args, "code_refs", "") or "TODO"
     row = (
-        f"| {link} | {cell(args.title)} | {status} | {today} | TODO |" if kind == "adr"
-        else f"| {link} | {status} | {cell(args.title)} | {cell(args.summary or '-')} | TODO |"
+        f"| {link} | {cell(args.title)} | {status} | {today} | {cell(code_refs)} |" if kind == "adr"
+        else f"| {link} | {status} | {cell(args.title)} | {cell(args.summary or '-')} | {cell(code_refs)} |"
     )
     append_index_row(folder / spec["index"], spec["header"], row)
+    logger.info("Created %s record: %s", kind.upper(), target)
     return target
 
 
@@ -184,6 +204,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--add-issue", metavar="SLUG", help="新增 ISSUE（英文短代稱，例如 api-timeout）")
     parser.add_argument("--title", default="未命名紀錄", help="標題")
     parser.add_argument("--summary", default="", help="背景（ADR）或現象（ISSUE）")
+    parser.add_argument("--cause", default="", help="ISSUE 根本原因")
+    parser.add_argument("--fix", default="", help="ISSUE 修正方式")
+    parser.add_argument("--prevention", default="", help="ISSUE 防回歸測試/說明")
+    parser.add_argument("--decision", default="", help="ADR 決策與理由")
+    parser.add_argument("--consequences", default="", help="ADR 影響與代價")
+    parser.add_argument("--code-refs", default="", help="相關程式碼或測試路徑（寫入總表）")
     parser.add_argument("--status", choices=list(STATUS_MAP), default="open", help="ISSUE 狀態")
     parser.add_argument("--agent", default="", help="記錄者 Agent 名稱")
     parser.add_argument("--task", default="", help="相關任務編號")

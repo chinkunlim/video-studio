@@ -45,13 +45,11 @@ GENERATED_MD_PREFIXES = (".agents/", ".cursor/", ".windsurf/", "legacy/", "node_
 
 
 def find_root() -> Path:
-    """Locate the project root (script location first, then the working directory).
+    """Locate the project root (working directory first, then script location).
 
     Returns:
-        The directory containing `.agents/project.toml`.
+        The directory containing `.agents/project.toml`, or the working directory.
     """
-    if (SCRIPT_ROOT / ".agents" / "project.toml").exists():
-        return SCRIPT_ROOT
     current = Path.cwd().resolve()
     for candidate in (current, *current.parents):
         if (candidate / ".agents" / "project.toml").exists():

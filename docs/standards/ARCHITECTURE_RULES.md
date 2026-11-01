@@ -58,16 +58,24 @@ flowchart TD
 
 > 新專案的 HTTP 伺服器**一律使用 FastAPI**（母版的 `scripts/init_project.py --with api`）。`[project_rules] forbidden_imports` 預設禁止 `flask`；只有以維護模式遷移、已完工的舊專案可以保留 Flask。
 
-1. **結構**：路由在 `src/<pkg>/entrypoints/http/`，由 `create_app(config)` 組合 `APIRouter`；輸入輸出格式（pydantic）放 `schemas.py`。
+1. **結構**：路由在 `src/<pkg>/entrypoints/http/`，由 `create_app(config, ...)` 工廠模式組合 `APIRouter`；禁止模組層直接全域實例化 `app = FastAPI()`；輸入輸出格式（pydantic）放 `src/<pkg>/entrypoints/schemas.py`。
 2. **只在邊界驗證**：請求進來先由 pydantic 模型驗證（錯誤自動 422），轉成 domain 物件後才交給 services；services 不碰 request / response。
-3. **路由要薄**：驗證輸入 → 呼叫 service → 轉成輸出格式；業務邏輯不寫在路由裡。
+3. **路由要薄**：驗證輸入 → 呼叫 service → 轉成輸出格式；業務邏輯不寫在路由裡。超過 5 條路由時必須依領域職責拆分子路由（`entrypoints/http/<domain>.py`）。
 4. **依賴當參數傳入**：設定、資料庫 session factory 透過 `create_app(...)` 參數或 `Depends` 注入，測試用 `TestClient(create_app(test_config, ...))`，不需要真的啟動伺服器。
-5. **錯誤**：預期的錯誤用 `HTTPException(status_code=..., detail=...)`；不要把例外訊息或堆疊直接回給使用者。
-6. **只綁 `127.0.0.1`**：`HTTP_HOST` 預設 `127.0.0.1`，不改成 `0.0.0.0`；API 文件在 `http://127.0.0.1:<port>/docs`。
-7. **給 AI 工具用（使用者要網頁時一律做到；動手前先依 [`LOCAL_AI_ENVIRONMENT.md`](LOCAL_AI_ENVIRONMENT.md) §2 確認需求）**：
+5. **錯誤**：預期的錯誤用 `HTTPException(status_code=..., detail=...)`；捕捉領域例外轉換為 HTTP 狀態碼，不要把例外訊息或堆疊直接回給使用者或 AI 模型。
+6. **只綁 `127.0.0.1` 與防護**：
+   - `HTTP_HOST` 預設 `127.0.0.1`，不改成 `0.0.0.0`。
+   - 伺服器啟動前必須檢查埠號（`port_is_free`），若遭佔用應提示佔用程式與 `PORTS.md` 總表。
+   - 必須掛載 `HostValidationMiddleware`（防止 DNS Rebinding）與依設定檔動態載入的 `CORSMiddleware`。
+7. **靜態資源與防快取**：管理介面靜態檔案統一收納於 `src/<pkg>/entrypoints/static/`；為防本機開發時瀏覽器快取過期 JS/CSS，改寫 `StaticFiles` 為 `NoCacheStaticFiles` 停用 304 快取。
+8. **資料庫連線生命週期**：具備關聯式資料庫之 Web App，必須實作 Request-Scoped Session（如 `DbSessionScopeMiddleware` 搭配 `ContextVar` 或 FastAPI `Depends`），請求結束即釋放連線，避免連線洩漏（`QueuePool limit reached`）。
+9. **給 AI 工具用（使用者要網頁時一律做到；動手前先依 [`LOCAL_AI_ENVIRONMENT.md`](LOCAL_AI_ENVIRONMENT.md) §2 確認需求）**：
    - **一組 services、三個入口**：HTTP 路由、MCP 工具（`entrypoints/mcp_server.py`）、網頁。功能只寫在 `services`，入口只做轉換，三邊結果才會一致。
-   - **OpenAPI**：每個路由的函式名稱就是 operationId（`generate_unique_id_function`），docstring 寫清楚用途與參數；Open WebUI 可以直接把 `http://127.0.0.1:<port>` 加成 OpenAPI 工具伺服器。
-   - **MCP**：同一個伺服器在 `/mcp` 提供 Streamable HTTP；`uv run <name>-mcp` 提供 stdio。專案根目錄的 `.mcp.json`（Claude Code）、`opencode.json`（OpenCode）、`.agents/mcp_config.json`（Antigravity）、`.cursor/mcp.json`、`.vscode/mcp.json` 讓各工具打開專案就找得到；其他工具見 `docs/INTEGRATIONS.md`。
+   - **OpenAPI 三重記錄**：
+     - 代碼：每個路由函式名稱就是 operationId，docstring 寫清楚用途與參數；每個路由**必須宣告 `response_model`** 與 `tags`，Pydantic 欄位包含 `Field(description=...)`。
+     - 介面：前端網頁導覽列必須放置 `📖 OpenAPI 文件` 外部連結（指向 `/docs`）。
+     - 文檔：`README.md` 與 `ARCHITECTURE.md` 明確登記 `/docs` 規格網址。
+   - **MCP**：同一個伺服器在 `/mcp` 提供 Streamable HTTP（`app.mount("/mcp", mcp_server.streamable_http_app())`）；`uv run <name>-mcp` 提供 stdio。專案根目錄的 `.mcp.json`（Claude Code）、`opencode.json`（OpenCode）、`.agents/mcp_config.json`（Antigravity）、`.cursor/mcp.json`、`.vscode/mcp.json` 讓各工具打開專案就找得到；其他工具見 `docs/INTEGRATIONS.md`。
    - **最低權限**：讀取的工具可直接呼叫；寫入、刪除、提交、部署的工具要有 `confirm: bool`，沒有使用者同意就拒絕並說明會做什麼。
    - **只接受本機**：Host 只能是 127.0.0.1 / localhost（加上 `HTTP_ALLOWED_HOSTS`）；網頁送出的修改請求只接受本專案與 `HTTP_ALLOWED_ORIGINS`（預設 Open WebUI `http://127.0.0.1:8080`，並開放它的 CORS）。
    - **stdio 的 MCP 不可 print 到 stdout**（stdout 是 MCP 的通道）；log 一律走 logger（stderr 與 `DATA_DIR/logs/`）。
