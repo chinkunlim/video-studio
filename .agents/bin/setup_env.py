@@ -188,12 +188,7 @@ def is_stdlib(name: str) -> bool:
     Returns:
         True for standard-library (or built-in) modules.
     """
-    if (
-        name in getattr(sys, "stdlib_module_names", ())
-        or name in sys.builtin_module_names
-        or name == "__future__"
-        or name in {"tomllib"}
-    ):
+    if name in getattr(sys, "stdlib_module_names", ()) or name in sys.builtin_module_names or name == "__future__":
         return True
     try:
         spec = importlib.util.find_spec(name)
@@ -221,7 +216,7 @@ def check_dependencies() -> int:
         if not is_stdlib(mod)
         and mod not in local
         and mod.lower().replace("_", "-") not in declared
-        and IMPORT_HINTS.get(mod, mod).lower().replace("_", "-") not in declared
+        and IMPORT_HINTS.get(mod, "").lower().replace("_", "-") not in declared
     }
     if not missing:
         print("✅ 所有第三方 import 都已宣告在 pyproject.toml / requirements.txt。")
