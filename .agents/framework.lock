@@ -1,7 +1,7 @@
 {
   "framework_version": "3.4.0",
-  "template_commit": "c1749c1",
-  "installed_at": "2026-11-01T15:23:55Z",
+  "template_commit": "55a8d2c",
+  "installed_at": "2026-11-01T15:25:22Z",
   "skills": [
     "adr-issue-tracker",
     "api-adapter-scaffold",
@@ -37,8 +37,8 @@
     ".agents/skills/legacy-migration/FLASK_TO_FASTAPI.md": "2210dbff9160033407d526ee2f79fce416a5185921ecda2d950911cb3f40c0e7",
     ".agents/skills/legacy-migration/SKILL.md": "e79cde6acfaee379e06685a6c012a61239e0a7cc034a63b22f9d9dd45d6483b1",
     ".agents/skills/legacy-migration/scripts/migration_status.py": "ea68cf042c5e9be39a2526c99ba4bff16d8d04abccf67eb90a559235f32ad5d1",
-    ".agents/skills/session-closeout/SKILL.md": "71308a72af063fbc94796df35b0ba8d1847e3b1e984f0457b3bf6fe283bf76fb",
-    ".agents/skills/session-closeout/scripts/closeout_runner.py": "b0f4d40ac1b6ca76c5f35c84d3a55cf7a03d64118e1825fd4594d16184f34e3a",
+    ".agents/skills/session-closeout/SKILL.md": "d10b3816f13ded83f386d2371146a930390915e5de64271f14db756f0d6cce6e",
+    ".agents/skills/session-closeout/scripts/closeout_runner.py": "d05f4f062de0e3ed5f7904a55a5f3fe9cfd0826477978f117e5ba821ef740692",
     ".agents/skills/tdd-bugfix/SKILL.md": "3039a064a614a5452d79f321469e98f356e362fee3c5e89a6f114da553a9c4f3",
     ".agents/skills/tdd-bugfix/scripts/tdd_runner.py": "fddd86c7ded6a8b1451b6870f3613eadea0b81b295304e5fac0076db851c49d5",
     "docs/standards/ARCHITECTURE_RULES.md": "7d036adbd90ef86eb7e9769d4d80ef3c0da2fdb65edcb0919e763e1e0fd77e1f",

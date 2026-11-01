@@ -48,7 +48,11 @@ python3 scripts/agentctl.py closeout --agent <你的名字> --model <模型> \
 步驟：
 1. 執行 `[commands] test` 與 `code-review-guard`，失敗就停止（先修好再收尾）。
 2. 更新入口檔與目錄樹。
-3. **文件檢查**：列出這次（未 commit 的修改＋還沒推送的 commit）已更新的文件，以及**沒有修改**的文件。這是對第 1 節的複查：若發現漏改的文件，收尾完成後立刻補上，再 `agentctl commit --push`。
+3. **文件檢查**：列出這次（未 commit 的修改＋還沒推送的 commit）已更新的文件，以及**沒有修改**的文件。同時自動檢驗：
+   - 若填寫了 `--issues`，檢查 `docs/known-issues/` 是否有新增/更新記錄；
+   - 若填寫了架構決策 `--decisions` 或異動架構檔，檢查 `docs/adr/` 是否有新增/更新 ADR；
+   - 若修改了程式碼，檢查 `CHANGELOG.md` 是否有記錄於 `## [Unreleased]`。
+   - 使用 `--strict-docs` 可強制阻斷缺漏。若發現漏改的文件，收尾完成後立刻補上，再 `agentctl commit --push`。
 4. 在 `.agents/conversations/` 寫入兩個檔案（去除個資、只存本機、不進 git，專案結束可刪）：
    - `YYYY-MM-DD-HHMM-<agent>-transcript.md`：完整逐字稿（Claude Code 自動讀取；其他工具用 `--transcript <匯出檔>`）。
    - `YYYY-MM-DD-HHMM-<agent>-summary.md`：摘要。

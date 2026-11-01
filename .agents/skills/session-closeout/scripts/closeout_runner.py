@@ -186,12 +186,16 @@ def session_changed_files(root: Path, lib) -> set[str]:
     return changed
 
 
-def report_markdown(root: Path, lib) -> None:
-    """Print which project documents this session updated and which it did not touch.
+def report_markdown(root: Path, lib, notes: dict[str, str] | None = None) -> list[str]:
+    """Print which project documents this session updated and check for missing docs.
 
     Args:
         root: Repository root.
         lib: The `project_config` module (None when missing).
+        notes: Optional closeout notes dictionary (goal, decisions, issues).
+
+    Returns:
+        List of warning messages for missing required documents.
     """
     docs = sorted(rel for rel in git_lines(root, "ls-files", "--cached", "--others", "--exclude-standard", "*.md") if is_project_markdown(rel))
     changed = session_changed_files(root, lib)
@@ -205,6 +209,31 @@ def report_markdown(root: Path, lib) -> None:
         print("   以下文件本次沒有修改，請確認內容仍然正確（不正確就先更新再收尾）：")
         for rel in untouched:
             print(f"   📄 {rel}")
+
+    warnings = []
+    if notes:
+        issues_text = (notes.get("issues") or "").strip()
+        if issues_text and issues_text.lower() not in ("none", "-", "n/a", "無", "無。"):
+            has_issue_doc = any(p.startswith("docs/known-issues/") and p != "docs/known-issues/_TEMPLATE.md" for p in changed)
+            if not has_issue_doc:
+                warnings.append("⚠️ [文件防呆] 本次收尾填寫了錯誤根因 (--issues)，但 docs/known-issues/ 本次未新增/更新紀錄！")
+                print("   ⚠️ [文件防呆] 本次收尾填寫了錯誤根因 (--issues)，但 docs/known-issues/ 本次未新增/更新紀錄！")
+                print("      可執行：python3 .agents/skills/adr-issue-tracker/scripts/tracker_cli.py --add-issue <slug> --title \"...\"")
+
+        decisions_text = (notes.get("decisions") or "").strip()
+        arch_triggers = any(p in changed for p in (".agents/project.toml", "pyproject.toml")) or any(k in decisions_text for k in ("架構", "ADR", "重構", "選用", "分層", "決定"))
+        if arch_triggers:
+            has_adr_doc = any(p.startswith("docs/adr/") and p != "docs/adr/_TEMPLATE.md" for p in changed)
+            if not has_adr_doc:
+                warnings.append("⚠️ [文件防呆] 本次涉及架構變更或重要決策，但 docs/adr/ 本次未新增/更新 ADR 紀錄！")
+                print("   ⚠️ [文件防呆] 本次涉及架構變更或重要決策，但 docs/adr/ 本次未新增/更新 ADR 紀錄！")
+                print("      可執行：python3 .agents/skills/adr-issue-tracker/scripts/tracker_cli.py --add-adr <slug> --title \"...\"")
+
+        if code and "CHANGELOG.md" not in updated:
+            warnings.append("⚠️ [文件防呆] 本次修改了程式碼，但 CHANGELOG.md 未在本次更新！")
+            print("   ⚠️ [文件防呆] 本次修改了程式碼，但 CHANGELOG.md 本次未更新（請確認是否需在 [Unreleased] 記錄）。")
+
+    return warnings
 
 
 def push_to_remote(root: Path) -> int:
@@ -407,7 +436,11 @@ def run_closeout(root: Path, args: argparse.Namespace) -> int:
     refresh_generated_docs(root)
 
     print("\n[3/7] 📚 檢查 Markdown 文件...")
-    report_markdown(root, lib)
+    doc_notes = {"goal": args.goal, "decisions": args.decisions, "issues": args.issues}
+    doc_warnings = report_markdown(root, lib, doc_notes)
+    if getattr(args, "strict_docs", False) and doc_warnings:
+        print("❌ --strict-docs 已啟用，文件檢查未通過，中止收尾。", file=sys.stderr)
+        return 1
 
     print("\n[4/7] 📝 寫入本機對話紀錄（逐字稿 + 摘要，不進 git）...")
     changed = [p for _, p in lib.git_changed_files(root)] if lib else []
@@ -450,6 +483,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--next", default="", help="下一步建議")
     parser.add_argument("--note", default="", help="留給下一個 Agent 的一句話交接")
     parser.add_argument("--transcript", default="", help="對話匯出檔（非 Claude Code 時使用；Claude Code 自動讀取）")
+    parser.add_argument("--strict-docs", action="store_true", help="強制文件檢查：若缺少 ADR、Known Issues 或 CHANGELOG 更新則中止收尾")
     parser.add_argument("--no-push", action="store_true", help="只在本機 commit，不推送（預設收尾會推送到 upstream）")
     parser.add_argument("--push", action="store_true", help=argparse.SUPPRESS)  # v3.3 and before; pushing is now the default
     return parser.parse_args(argv)
