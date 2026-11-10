@@ -19,8 +19,9 @@
 | **前端品味與原型審批** | [`web/taste_design.md`](web/taste_design.md) | Step 0 前置審批關卡、受眾心理學分析、Design Dials | - |
 | **虛擬測試體系** | [`testing/virtual_testing.md`](testing/virtual_testing.md) | 4 層虛擬測試（單元、Dummy 樣本、虛擬使用者、Web 走測） | [`TESTING_AND_QUALITY.md`](TESTING_AND_QUALITY.md) §1-§2 |
 | **實證檢驗與完成定義** | [`testing/empirical_evidence.md`](testing/empirical_evidence.md) | 實證檢驗鐵律（Snapshot/Log/Pilot）、DoD 清單 | [`TESTING_AND_QUALITY.md`](TESTING_AND_QUALITY.md) §1.1, §3 |
-| **資料目錄規劃** | [`env/data_dir_layout.md`](env/data_dir_layout.md) | DATA_DIR 資料程式分離、releases/章節/archive 隔離劃分 | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) §7 |
+| **資料目錄規劃** | [`env/data_dir_layout.md`](env/data_dir_layout.md) | DATA_DIR 資料程式分離、releases/模組/archive 隔離劃分 | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) §7 |
 | **iCloud 同步規範** | [`env/icloud_rules.md`](env/icloud_rules.md) | 當次明確授權、Output-only、集中存放 project-data/ | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) §7 |
+| **一鍵安裝與平滑更新** | [`env/install_and_update.md`](env/install_and_update.md) | 一鍵安裝自動化、環境自檢、資料庫向下相容遷移、更新資料防覆蓋 | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) §10 |
 | **多 Agent 協作與收尾** | [`MULTI_AGENT_COLLABORATION.md`](MULTI_AGENT_COLLABORATION.md) | 冷啟動引導、交接看板、對話逐字稿與個人習慣沉澱 | - |
 | **環境隔離與套件相依** | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) | uv / pnpm 零主機污染、127.0.0.1 本機綁定、Brewfile | - |
 | **Git 規範與版本控制** | [`GIT_AND_VERSIONING.md`](GIT_AND_VERSIONING.md) | 英文 Commit 訊息、未經同意不 push、語意化版本 | - |

@@ -146,13 +146,12 @@ brew bundle --file Brewfile
 - 每個專案在 `.env` 設定 `DATA_DIR`。預設是**相對路徑** `../../projects-data/<專案>`（從專案資料夾算起：`projects/<專案>` 旁邊的 `projects-data/<專案>`），整個資料夾一起搬移時不用改設定。大型資料可以放外接硬碟，這時寫絕對路徑，例如 `/Volumes/<硬碟>/projects-data/<專案>`。
 - **不要把路徑寫死在程式裡**：程式只透過 config 拿 `DATA_DIR`；相對路徑一律從專案資料夾解析，不受執行指令時所在的資料夾影響。
 - **使用者導向目錄劃分與多版本隔離**：
-  - `output/` 應劃分為終端交付物（如 `releases/`）與章節/模組產物，避免章節暫存與全書總檔混雜。
+  - `output/` 應劃分為終端交付物（如 `releases/`）與子模組/階段產物，避免中間暫存與最終發布總檔混雜。
   - 多輪測試或重複執行產出時，需有清晰版本命名（如 `_v01` 或 `run-YYYYMMDD-HHMM`），歷史版本放入 `archive/`，確保最新正式版清晰可辨。
 - **iCloud 同步嚴格規範**：
   - 只有在使用者**當次**要求（或告知「不在電腦旁」）時才可使用 iCloud。
   - 僅同步核心交付 output（如最終 PDF/報告），原稿、對話紀錄、中繼 log 嚴禁上傳。
   - 存放路徑強制集中於 `project-data/<專案名稱>/`，嚴禁在 iCloud 根目錄自建獨立資料夾。
-- **專案 `.env` 的 `DATA_DIR` 優先於終端機的環境變數**：Open WebUI 的安裝步驟會在 `~/.zshrc` 加 `export DATA_DIR="$HOME/open-webui-data"`，這個通用名稱不能把專案的資料導到別處。啟動 log 與 `agentctl doctor` 都會顯示實際使用的資料夾（doctor 也會提示忽略了哪個終端機設定）。其他設定（例如 `LOG_LEVEL`）仍是暫時設定的環境變數優先。
 - **專案 `.env` 的 `DATA_DIR` 優先於終端機的環境變數**：Open WebUI 的安裝步驟會在 `~/.zshrc` 加 `export DATA_DIR="$HOME/open-webui-data"`，這個通用名稱不能把專案的資料導到別處。啟動 log 與 `agentctl doctor` 都會顯示實際使用的資料夾（doctor 也會提示忽略了哪個終端機設定）。其他設定（例如 `LOG_LEVEL`）仍是暫時設定的環境變數優先。
 - 建立標準子資料夾並檢查設定（`DATA_DIR` 在專案資料夾內時會警告）：
 
@@ -185,3 +184,12 @@ chmod 600 ~/.config/<專案>/credentials.json
 | PDF 解析 / 渲染 | PDFKit / Quartz | 依需求選 PyMuPDF 等 |
 | 模型推理加速 | Metal / MPS、Core ML | 純 CPU 推理 |
 | 本機大型模型 | Ollama（`http://127.0.0.1:11434`），呼叫前先過硬體檢查（`--with ollama`） | 雲端 API |
+
+---
+
+## 10. 一鍵安裝與後期平滑更新機制 (One-Click Installation & Lifecycle Updates)
+
+- **一鍵安裝**：專案交付時必須提供一鍵啟動/安裝腳本（例如 `./install.sh` 或 `python3 scripts/agentctl.py setup`），自動完成環境自檢、鎖定相依套件安裝（`uv sync` / `pnpm install`）、`.env` 建立、`DATA_DIR` 子目錄初始化與資料庫遷移。
+- **後期平滑更新**：必須規劃並於 `README.md` 記錄更新程序；更新時嚴禁覆蓋或清空使用者的 `.env` 與 `DATA_DIR` 歷史資料；資料庫結構調整必須相容升級。
+- 詳細規範見 [`docs/standards/env/install_and_update.md`](env/install_and_update.md)。
+

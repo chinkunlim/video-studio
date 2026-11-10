@@ -197,6 +197,6 @@ export function calculateTotal(items, taxRate, coupon) { ... }
 - 只想提交部分檔案時，使用 `--task TASK-NNN`（任務卡的 paths）或 `--paths <dir>`。
 
 ### 5.4 Data Mutation Guard (資料寫入與修改鐵律)
-- 修改或寫入任何資料（包含資料庫、Markdown 筆記正文、結構化 JSON/YAML、設定檔）時，同樣適用 TDD、SOLID、Atomic 鐵律。
+- 修改或寫入任何資料（包含資料庫、Markdown 文件正文、結構化 JSON/YAML、設定檔）時，同樣適用 TDD、SOLID、Atomic 鐵律。
 - **格式與內容嚴格隔離**：調整排版或欄位結構時，嚴禁篡改、刪減非目標之實質內容；改格式不改文字，改內容不動格式。
 - **防呆與指紋校驗**：寫入前對比文字雜湊（Hash）或字元指紋，確保精確覆寫，嚴禁誤改周邊無關內容。
