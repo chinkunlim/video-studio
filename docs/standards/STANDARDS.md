@@ -13,6 +13,7 @@
 | **程式碼註解與可觀測性** | [`coding/comments.md`](coding/comments.md) | 函式開頭用途、參數說明、Logger 規範、Karpathy 4 原則 | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §0 |
 | **軟體設計與原子化** | [`coding/principles.md`](coding/principles.md) | SOLID、DRY、FP/OOP 混合、Atomic 門檻 | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §1-§5.3 |
 | **資料寫入防護** | [`coding/data_guard.md`](coding/data_guard.md) | 格式與內容嚴格隔離、字元級零刪字稽核、指紋校驗 | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §5.4 |
+| **Code Review 即時修復** | [`coding/code_review_zero_tolerance.md`](coding/code_review_zero_tolerance.md) | 零忽視原則、五大代碼異味重構手法（Early Return、DTO） | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §5.5 |
 | **系統架構分層** | [`architecture/layers.md`](architecture/layers.md) | 單向分層依賴（entrypoints ➔ adapters ➔ services ➔ domain ➔ config）、10 大工程守則 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) §1-§2 |
 | **流程對齊與圖譜純淨** | [`architecture/workflow_parity.md`](architecture/workflow_parity.md) | 使用者視角端到端流程一致性、.graphifyignore 純淨圖譜 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) 守則 11-12 |
 | **Web API 與 MCP 整合** | [`web/fastapi_mcp.md`](web/fastapi_mcp.md) | FastAPI 結構、OpenAPI 三重記錄、MCP confirm 機制 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) §3-§4 |

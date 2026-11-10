@@ -200,3 +200,8 @@ export function calculateTotal(items, taxRate, coupon) { ... }
 - 修改或寫入任何資料（包含資料庫、Markdown 文件正文、結構化 JSON/YAML、設定檔）時，同樣適用 TDD、SOLID、Atomic 鐵律。
 - **格式與內容嚴格隔離**：調整排版或欄位結構時，嚴禁篡改、刪減非目標之實質內容；改格式不改文字，改內容不動格式。
 - **防呆與指紋校驗**：寫入前對比文字雜湊（Hash）或字元指紋，確保精確覆寫，嚴禁誤改周邊無關內容。
+
+### 5.5 Code Review Zero Tolerance (Code Review 即時修復鐵律)
+- 執行 `code-review-guard` 或 `agentctl check` 時，任何警告與錯誤視為阻斷性問題，必須在當次對話中立刻解決，嚴禁假裝沒看見或推延至「未來再優化」。
+- 詳細重構手法（Early Return、Extract Function、DTO 封裝）見 [`docs/standards/coding/code_review_zero_tolerance.md`](coding/code_review_zero_tolerance.md)。
+
