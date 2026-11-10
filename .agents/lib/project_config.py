@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 CONFIG_RELATIVE_PATH = Path(".agents") / "project.toml"
-FRAMEWORK_VERSION = "3.4.0"
+FRAMEWORK_VERSION = "3.5.0"
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "framework": {"version": FRAMEWORK_VERSION},

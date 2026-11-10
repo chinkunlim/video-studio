@@ -29,7 +29,7 @@ SKIP_PARTS = {"upstream", "__pycache__", ".DS_Store", "node_modules"}
 # The template is laid out like the projects it creates, so a framework file has the same
 # relative path in both. These folders are copied as a whole (`.agents/skills/` per skill).
 FRAMEWORK_FOLDERS = (".agents/lib", ".agents/bin", ".agents/hooks", "docs/standards")
-FRAMEWORK_FILES = ("scripts/agentctl.py", ".agents/skills/catalog.json")
+FRAMEWORK_FILES = ("scripts/agentctl.py", ".agents/skills/catalog.json", ".graphifyignore")
 # Files in those folders that belong to the template as a project, not to the framework.
 PROJECT_OWNED = {"docs/standards/PROJECT_RULES.md"}
 

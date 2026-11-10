@@ -1,0 +1,40 @@
+# .graphifyignore — Graphify 知識圖譜排除名單
+# 目的：嚴格排除第三方套件、產物與編譯輸出，保持專案核心架構圖譜純淨、降噪。
+
+# 1. 外部第三方函式庫與模組 (3rd Party)
+assets/vendor/
+node_modules/
+.venv/
+venv/
+site-packages/
+
+# 2. 產出物與大型二進位檔 (Build / Data)
+dist/
+build/
+*.min.js
+*.min.css
+*.map
+*.pdf
+*.zip
+*.tar.gz
+*.png
+*.jpg
+*.jpeg
+*.svg
+
+# 3. 快取與臨時目錄 (Caches)
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.skills-cache/
+.DS_Store
+
+# 4. 外部資料夾 (Data Dir)
+../../projects-data/
+projects-data/
+output/
+input/
+state/
+logs/
+needs_review/
