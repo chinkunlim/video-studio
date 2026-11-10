@@ -23,6 +23,7 @@ Sub-commands:
     doctor    Verify / repair this computer's setup                 (doctor.py)
     update    Update framework files from the template              (update_framework.py)
     migration Legacy migration progress / acceptance (--verify)     (legacy-migration skill)
+    scan      Comprehensive architecture & template compliance scan (scan_compliance.py)
 
 Framework scripts live in `.agents/bin/`; the project's `scripts/` folder only holds this
 command's thin launcher (`scripts/agentctl.py`) plus the project's own scripts.
@@ -58,6 +59,7 @@ FORWARDED = {
     "tree": (SCRIPTS / "update_tree.py", "更新目錄樹（--check：CI 檢查是否同步）"),
     "graph": (SCRIPTS / "build_graph.py", "依賴圖與分層違規（寫 GRAPH_REPORT.md）"),
     "migration": (SKILLS / "legacy-migration" / "scripts" / "migration_status.py", "舊專案遷移進度與驗收 (--verify)"),
+    "scan": (SKILLS / "compliance-scanner" / "scripts" / "scan_compliance.py", "全面掃描專案架構與母版合規性 (--fix / --json)"),
 }
 
 

@@ -48,6 +48,11 @@
       "tier": "core",
       "trigger": "專案結案、交付或發布版本前，審查所有對話紀錄與架構/問題檔案是否完整無遺漏",
       "command": "python3 .agents/skills/project-auditor/scripts/audit_project_integrity.py"
+    },
+    "compliance-scanner": {
+      "tier": "core",
+      "trigger": "使用者詢問「專案架構是否符合規範」「有沒有跟上母版更新」「專案健檢」「架構掃描」時",
+      "command": "python3 scripts/agentctl.py scan"
     }
   }
 }

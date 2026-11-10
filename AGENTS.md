@@ -86,6 +86,7 @@
 | `adr-issue-tracker` | 做出架構取捨、或發現需記錄的 bug/坑時 | `python3 .agents/skills/adr-issue-tracker/scripts/tracker_cli.py --add-adr <slug> --title <標題>` |
 | `api-adapter-scaffold` | 串接新的外部 API / 服務時 | `python3 .agents/skills/api-adapter-scaffold/scripts/scaffold_adapter.py` |
 | `code-review-guard` | 寫完或重構程式碼後、commit 前 | `python3 .agents/skills/code-review-guard/scripts/review_guard.py` |
+| `compliance-scanner` | 使用者詢問「專案架構是否符合規範」「有沒有跟上母版更新」「專案健檢」「架構掃描」時 | `python3 scripts/agentctl.py scan` |
 | `legacy-migration` | 專案有 docs/migration/MIGRATION.md，要繼續或完成舊專案遷移時 | `python3 scripts/agentctl.py migration [--verify]` |
 | `project-auditor` | 專案結案、交付或發布版本前，審查所有對話紀錄與架構/問題檔案是否完整無遺漏 | `python3 .agents/skills/project-auditor/scripts/audit_project_integrity.py` |
 | `session-closeout` | 使用者說「結束對話 / 收工 / wrap up」時（先更新所有 md，收尾會 commit 並推送到 GitHub） | `python3 scripts/agentctl.py closeout --agent <name> --goal ... --issues ... --next ...` |
