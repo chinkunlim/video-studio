@@ -15,6 +15,7 @@
 | **Claude Code**（本 App 的 Code 分頁）、**Claude Desktop** | — | App | MCP：專案根目錄 `.mcp.json`；Desktop 用自己的設定檔 |
 | **Antigravity**（App + `agy` CLI） | — | App、官方腳本 | MCP：專案 `.agents/mcp_config.json`（CLI / IDE）；App 在 Settings → Customizations |
 | **graphify** | CLI / Agent Skill | `uv tool install graphifyy` | 在專案內執行 `graphify .` 產生架構圖譜；Agent 對話直接輸入 `/graphify` |
+| **Superpowers** | 全域 Agent 方法論外掛 (15 Skills) | `agy plugin install https://github.com/obra/superpowers` | 代理人自動載入工程流程（TDD、Brainstorming、系統化除錯、Subagent 開發） |
 | **OpenCode v2**（CLI + 桌面版） | 背景服務 | `brew install anomalyco/tap/opencode-v2` | MCP：專案 `opencode.json`（`mcp → servers → 名稱`） |
 | **Open Design** | `127.0.0.1:7456` | App | 透過 `agy` 呼叫工具 |
 | （日後）Hermes Agent、OpenClaw | — | — | MCP，最低權限 |
@@ -39,6 +40,10 @@ opencode --version
 
 ```bash
 agy --version
+```
+
+```bash
+agy plugin list
 ```
 
 ```bash

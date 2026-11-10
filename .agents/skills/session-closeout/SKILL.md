@@ -28,7 +28,7 @@ description: >-
 | `docs/specs/` | 需求或 API 規格有沒有改；新功能要有規格 |
 | `docs/adr/`、`docs/known-issues/` | 這次的架構取捨、錯誤根因是否都已記錄（用 `adr-issue-tracker`），總表是否更新 |
 | `docs/standards/PROJECT_RULES.md` | 使用者這次說的「本專案以後都要這樣」的規則 |
-| `docs/TEMPLATE_FEEDBACK.md` | 使用者這次說的「每個專案都要這樣」的規則 |
+| `docs/TEMPLATE_FEEDBACK.md` | 使用者這次說的「每個專案都要這樣」的規則與個人操作習慣沉澱 |
 | `AGENTS.md` 中由專案維護的段落（Agent 分工等） | 是否仍然正確（規則段落、SKILLS、目錄樹由工具產生） |
 | 其他 `docs/**/*.md`（`INTEGRATIONS.md`、`migration/MIGRATION.md` …） | 是否仍然正確 |
 
@@ -55,7 +55,7 @@ python3 scripts/agentctl.py closeout --agent <你的名字> --model <模型> \
    - 使用 `--strict-docs` 可強制阻斷缺漏。若發現漏改的文件，收尾完成後立刻補上，再 `agentctl commit --push`。
 4. 在 `.agents/conversations/` 寫入兩個檔案（去除個資、只存本機、不進 git，專案結束可刪）：
    - `YYYY-MM-DD-HHMM-<agent>-transcript.md`：完整逐字稿（Claude Code 自動讀取；其他工具用 `--transcript <匯出檔>`）。
-   - `YYYY-MM-DD-HHMM-<agent>-summary.md`：摘要。
+   - `YYYY-MM-DD-HHMM-<agent>-summary.md`：摘要（含目標、決策、錯誤根因、**使用者習慣與指示偏好沉澱**、下一步、變更檔案）。
    交接看板 `LATEST.md`（在 git）會記下目標、錯誤根因、下一步各一行，換電腦也看得到。
 5. 更新 `.agents/handoff/LATEST.md`。
 6. 本機 commit（若你只有一個進行中任務，只提交該任務範圍）。

@@ -334,6 +334,7 @@ def build_summary(agent: str, notes: dict[str, str], changed: list[str]) -> str:
         section("目標 (Goal)", notes.get("goal", ""), "本次對話要完成什麼？"),
         section("做了什麼與決策 (Work & Decisions)", notes.get("decisions", ""), "做了哪些修改？為什麼這樣選？相關 ADR？"),
         section("錯誤與根因 (Errors & Root Causes)", notes.get("issues", ""), "遇到什麼錯誤？根本原因？如何修正？(重要者另記 docs/known-issues/)"),
+        section("使用者習慣與指示偏好沉澱 (Habits & Directives)", notes.get("habits", ""), "本次對話提取了哪些使用者個人操作習慣、指示偏好或自動化約定？(同步更新至 docs/TEMPLATE_FEEDBACK.md)"),
         section("下一步 (Next Steps)", notes.get("next", ""), "下一位 Agent 應該從哪裡開始？"),
         "## 本次變更檔案 (Changed Files)\n",
         files,
@@ -444,7 +445,15 @@ def run_closeout(root: Path, args: argparse.Namespace) -> int:
 
     print("\n[4/7] 📝 寫入本機對話紀錄（逐字稿 + 摘要，不進 git）...")
     changed = [p for _, p in lib.git_changed_files(root)] if lib else []
-    notes = {"goal": args.goal, "decisions": args.decisions, "issues": args.issues, "next": args.next, "note": args.note, "model": model}
+    notes = {
+        "goal": args.goal,
+        "decisions": args.decisions,
+        "issues": args.issues,
+        "habits": getattr(args, "habits", ""),
+        "next": args.next,
+        "note": args.note,
+        "model": model,
+    }
     record = write_conversation_record(root, agent, build_summary(agent, notes, changed), args.transcript)
     for path in record or ():
         print(f"   → {path.relative_to(root)}")
@@ -480,6 +489,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--goal", default="", help="本次對話目標")
     parser.add_argument("--decisions", default="", help="做了什麼、關鍵決策與理由")
     parser.add_argument("--issues", default="", help="遇到的錯誤、根因與修正方式")
+    parser.add_argument("--habits", default="", help="本次對話沉澱的使用者操作習慣與指示偏好")
     parser.add_argument("--next", default="", help="下一步建議")
     parser.add_argument("--note", default="", help="留給下一個 Agent 的一句話交接")
     parser.add_argument("--transcript", default="", help="對話匯出檔（非 Claude Code 時使用；Claude Code 自動讀取）")

@@ -4,17 +4,23 @@
 
 ---
 
-## 1. 三層測試
+## 1. 測試金字塔與虛擬測試體系
 
 測試資料夾：Python `tests/`、Node / GAS `test/`、手機 App `mobile/test/`（檔名 `test_*.py`、`*.test.js`、`*.test.ts`）。
 
 | 層級 | 放哪裡 | 網路 | 何時跑 | 測什麼 |
 |---|---|---|---|---|
-| **單元** | `tests/test_<模組>.py` | **不連網**（純記憶體） | 每次修改 | `services`、`domain` 的純邏輯；`config` 驗證；`adapters` 用靜態樣本解析 |
-| **整合** | `tests/integration/` | **不連網**（假的 HTTP client、記憶體資料庫 `sqlite://`、FastAPI `TestClient`） | 每次 commit 前 | `entrypoints ➔ services ➔ adapters` 完整流程、錯誤處理、`[project_rules]` |
+| **1. 軟體單元** | `tests/test_<模組>.py` | **不連網**（純記憶體） | 每次修改 | `services`、`domain` 的純邏輯；`config` 驗證；`adapters` 用靜態樣本解析 |
+| **2. Dummy 樣本** | `tests/fixtures/` | **不連網**（假檔案/邊界樣本） | 每次修改 | 極端字元、畸形輸入、壓力與容錯邊界測試 |
+| **3. 虛擬使用者** | `tests/integration/` | **不連網**（假客戶端/記憶體 DB） | 每次 commit 前 | 模擬 Dummy 使用者完整 User Journey（起點到終點）、跨模組狀態切換 |
+| **4. Web 元件走測**| `tests/web/` 或 E2E | **本機 127.0.0.1**（Playwright/模擬驅動）| 介面變更時 | 遍歷 Web App 每一個按鈕、表單與功能元件，杜絕死按鈕與佈局破版 |
 | **端對端** | `tests/e2e/`（預設不跑） | **真實網路與 API**（需要 `.env` 金鑰） | 手動或發布前 | 真實外部服務、備援切換 |
 
-`[commands] test` 只跑前兩層；端對端測試要明確執行，並且不可成為 `agentctl check` 的一部分。
+`[commands] test` 跑前四層中不需外部網路的測試；端對端測試要明確執行，並且不可成為 `agentctl check` 的一部分。
+
+### 1.1 實證檢驗鐵律 (Empirical Verification)
+- **嚴禁口頭斷言**：Agent 嚴禁在未出示執行證據前宣稱「已修復」或「已完成」。
+- **三種實證之一**：所有交付物必須附帶**客觀比對快照（Snapshot Diff）**、**真實運行日誌片斷（Execution Log）**或**端到端走測/截圖（Pilot Result）**。
 
 ---
 

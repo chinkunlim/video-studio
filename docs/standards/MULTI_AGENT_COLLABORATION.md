@@ -18,7 +18,7 @@
 
 `CLAUDE.md` 直接匯入 `AGENTS.md`；其他入口檔**複製** `AGENTS.md` 裡 `<!-- RULES_START -->` 到 `<!-- RULES_END -->` 的規則段落，再附上 Skills 索引。所以規則只改 `AGENTS.md`，再執行 `agentctl sync`，所有工具就會一致。
 
-## 2. 開工（每次對話開始）
+## 2. 開工（每次對話開始與冷啟動協議 Bootstrapping Protocol）
 
 ```bash
 python3 scripts/agentctl.py status
@@ -26,6 +26,7 @@ python3 scripts/agentctl.py status
 
 會顯示：交接看板 (`.agents/handoff/LATEST.md`) 的即時狀態、所有進行中/待接手任務、**上一次的交接紀錄**（目標、下一步，在 git 裡）、這台電腦最新對話摘要的「下一步」、未提交的檔案數。接著：
 
+- **新 Session 冷啟動約束**：Agent 進入新對話時，必須先閱讀 `LATEST.md` 與使用者個人操作習慣（`PROJECT_RULES.md`、`docs/TEMPLATE_FEEDBACK.md`），消弭跨對話默契斷層，嚴禁未看規則即盲目動工。
 - 有 `handed_off` 任務 → 讀它的 TODO 與 blockers，再 `agentctl task claim TASK-NNN --agent <你>`。
 - 開始新工作 → `agentctl task create "標題" --paths src/... --agent <你>`（`paths` 是給下一位 Agent 的提示，不是鎖）。
 - 除錯前先查歷史：`grep -rn "<關鍵字>" docs/known-issues .agents/conversations`（後者只在本機）。
@@ -70,6 +71,7 @@ python3 scripts/agentctl.py closeout --agent <你> --model <模型> \
 - **目標**：這次要完成什麼。
 - **做了什麼與決策**：改了哪些地方、為什麼這樣選（重大決策另寫 ADR）。
 - **錯誤與根因**：遇到的錯誤訊息、根本原因、如何修正（會重複發生的另寫 known-issue）。
+- **使用者習慣與回饋沉澱 (Habits & Directives)**：本次對話中提取的使用者操作偏好、高效率指示或工作流約定（寫入個人習慣庫與 `docs/TEMPLATE_FEEDBACK.md`）。
 - **下一步**：下一位 Agent 從哪裡開始。
 
 換電腦接手時看不到這些本機檔案，所以 `closeout` 會把目標、錯誤根因、下一步各一行寫進 `LATEST.md`（在 git）；值得長期保存的內容一律寫 ADR 或 known-issue。

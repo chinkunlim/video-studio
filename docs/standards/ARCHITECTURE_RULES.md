@@ -51,6 +51,11 @@ flowchart TD
    - 檔案增刪或規則調整後，由 `python3 scripts/agentctl.py tree` 與 `python3 scripts/agentctl.py sync` 自動同步目錄樹與各 AI Agent 入口檔。
 10. **四向溯源體系 (Four-Way Traceability)**：
     - 重要設計取捨必留 `ADR-NNN`（`docs/adr/`），踩坑與規避必留 `ISSUE-NNN`（`docs/known-issues/`），並在程式碼註解、測試案例與 Commit 訊息中雙向互連。
+11. **端到端使用者視角流程與程式一致性 (User-Centric End-to-End Workflow & Code Parity)**：
+    - 在討論架構功能、變更管線或重構流程時，必須繪製從使用者起點（輸入/操作）到終點（交付產出）的端到端 Mermaid 流程圖，不可精簡任何中間步驟。
+    - Workflow 圖必須與實體程式碼進行雙向一致性核對；若有不一致處，必須明確列出差異，並分析應以 Workflow 為準重構程式，抑或以程式限制為準調整 Workflow，並清楚告知技術原因。
+12. **Graphify 本體依賴純淨化 (Clean Knowledge Graph without 3rd-Party Noise)**：
+    - 整合 Graphify 進行架構分析時，必須嚴格排除 `vendor/`、`node_modules/`、`site-packages/`、`.venv/` 及第三方 mini JS/CSS，確保知識圖譜僅反映專案本體之架構與依賴關係，消除外部依賴雜訊。
 
 ---
 
