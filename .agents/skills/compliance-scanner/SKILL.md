@@ -24,7 +24,9 @@ description: >-
 ### 1.1 標準全面掃描（終端可讀報告）
 ```bash
 python3 scripts/agentctl.py scan
-# 或
+```
+或直接調用腳本：
+```bash
 python3 .agents/skills/compliance-scanner/scripts/scan_compliance.py
 ```
 
