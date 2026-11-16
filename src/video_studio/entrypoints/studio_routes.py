@@ -502,6 +502,29 @@ def generate_bilingual_route(job_name: str, req: BilingualRequest) -> dict[str, 
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.get("/api/jobs/{job_name}/subtitles/bilingual")
+def get_bilingual_route(job_name: str) -> dict[str, Any]:
+    """Return translated bilingual subtitle pairs from work/script_bilingual.tsv.
+
+    Args:
+        job_name: Target job name.
+
+    Returns:
+        Dictionary with exists flag and list of {index, primary, secondary} rows.
+    """
+    import csv
+
+    try:
+        tsv_path = J.find(job_name).work / "script_bilingual.tsv"
+    except J.JobError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not tsv_path.is_file():
+        return {"exists": False, "rows": []}
+    with open(tsv_path, encoding="utf-8") as f:
+        rows = list(csv.DictReader(f, delimiter="\t"))
+    return {"exists": True, "rows": rows}
+
+
 @router.get("/api/avatar/status")
 def get_avatar_status_route() -> dict[str, Any]:
     """Return availability status of Route B (lightweight) and Route A (SadTalker).

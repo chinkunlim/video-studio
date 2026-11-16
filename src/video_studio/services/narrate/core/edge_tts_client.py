@@ -19,6 +19,8 @@ DEFAULT_EDGE_VOICE = "zh-TW-HsiaoChenNeural"
 class EdgeTTSClient:
     """實作與 Voicebox 相同的 check_ready/generate 介面之 edge-tts 包裝類別。"""
 
+    no_wrap: bool = True
+
     def __init__(self, cfg: dict[str, Any]) -> None:
         """初始化 edge-tts 客戶端。
 

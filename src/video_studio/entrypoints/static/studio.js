@@ -196,6 +196,7 @@ async function loadJobDetail(name) {
   if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
   document.getElementById('briefEditor').value = d.brief || '';
   syncConfigVisibility();
+  loadBilingualPreview(name);
   updateMediaPreview(name, d.latest_version, d.latest_files);
 }
 
@@ -566,12 +567,24 @@ async function handleSaveEnv() {
 function bindWorkflowEvents() {
   document.getElementById('prosodyPreviewBtn')?.addEventListener('click', handleProsodyPreview);
   document.getElementById('buildNarrationBtn').addEventListener('click', async () => {
-    const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/narrate/build`, { method: 'POST' });
-    document.getElementById('narrateLog').textContent = res.output;
+    if (!state.currentJob) return;
+    document.getElementById('narrateLog').textContent = '⏳ 正在生成配音與雙語字幕（需依序合成每句並跑 Whisper 對齊），請稍候…';
+    showToast('已開始生成配音與字幕，請稍候', 'info', 3500);
+    try {
+      const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/narrate/build`, { method: 'POST' });
+      document.getElementById('narrateLog').textContent = res.output;
+      showToast('配音與字幕生成完成！', 'success');
+    } catch (err) {
+      document.getElementById('narrateLog').textContent = `錯誤：${err.message}`;
+      showToast(`配音失敗：${err.message}`, 'error', 4000);
+    }
   });
   document.getElementById('calcTimingBtn').addEventListener('click', async () => {
+    if (!state.currentJob) return;
+    document.getElementById('narrateLog').textContent = '⏳ 正在計算每段秒數…';
     const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/timing`);
     document.getElementById('narrateLog').textContent = res.output;
+    showToast('已計算投影片秒數', 'success');
   });
   document.getElementById('runAgyPlanBtn').addEventListener('click', () => runAntigravityPlan(document.getElementById('planInstruction').value));
   document.getElementById('qaSendBtn').addEventListener('click', () => {
@@ -674,6 +687,21 @@ async function handleTranslateBilingual() {
     }),
   });
   showToast(res.output || '已完成雙語翻譯', 'success');
+  await loadBilingualPreview(state.currentJob);
+}
+
+/**
+ * 載入並顯示 work/script_bilingual.tsv 的雙語字幕對照內容。
+ * @param {string} jobName 工作名稱。
+ * @returns {Promise<void>}
+ */
+async function loadBilingualPreview(jobName) {
+  const box = document.getElementById('bilingualPreviewBox');
+  if (!box || !jobName) return;
+  const res = await api(`/api/jobs/${encodeURIComponent(jobName)}/subtitles/bilingual`).catch(() => ({ exists: false }));
+  if (!res.exists || !(res.rows || []).length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.textContent = res.rows.map(r => `[${r.index}] ${r.primary}\n    ${r.secondary}`).join('\n');
 }
 
 /**

@@ -35,6 +35,7 @@ All notable changes to **video-studio** are documented here
 - fix(studio): ignore empty-workspace hint in job dropdown and return 404 on missing job (by `@Antigravity`)
 - fix(ai): grant agy -p --add-dir/--dangerously-skip-permissions and extract PDF/PPTX text into draft prompt (by `@Antigravity`)
 - fix(script): split English and Chinese sentences cleanly and preserve 5-8 poster cue sections (by `@Antigravity`)
+- fix(narrate): bypass Chinese start/end wraps for edge-tts and add bilingual preview UI (by `@Antigravity`)
 
 ### Documentation
 - docs: migrate design specs and update project architecture documentation (TASK-003) (`TASK-003`, by `@antigravity`)

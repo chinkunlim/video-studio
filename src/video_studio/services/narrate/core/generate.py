@@ -196,6 +196,11 @@ def take(
     work, cfg = work_and_cfg
     opts = options or TakeOptions()
     work.mkdir(parents=True, exist_ok=True)
+    if getattr(vb, "no_wrap", False):
+        clip = work / "take1.wav"
+        clip.write_bytes(vb.generate(text))
+        ws = whisper.words(clip, str(cfg.get("whisper", {}).get("model", "small")))
+        return [{"clip": clip, "words": ws, "hyp": text, "sim": 1.0, "wrap": 1}]
     max_tries = opts.tries or int(cfg.get("generate", {}).get("tries", 8))
     ctx = _AttemptCtx(
         vb=vb,
