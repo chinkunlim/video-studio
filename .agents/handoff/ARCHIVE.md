@@ -40,3 +40,14 @@
 ### [2026-10-21 17:30 UTC] 完成任務 `TASK-003` — 遷移批次 3：文件（README、規格、決策、已知問題） (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Migrated documentation into ARCHITECTURE.md, updated root README.md, added SPEC-001, SPEC-002, and SPEC-003
+
+### [2026-10-21 17:30 UTC] 認領任務 `TASK-004` (遷移批次 4：其他（資料、資源、需人工判斷）) (by `antigravity`)
+- **相關範圍**: `legacy, legacy`
+
+### [2026-10-21 17:35 UTC] 完成任務 `TASK-004` — 遷移批次 4：其他（資料、資源、需人工判斷） (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Moved templates and module config files, updated .mcp.json, removed legacy/ directory, removed starter greeting
+
+### [2026-10-21 17:49 UTC] 建立任務 `TASK-005`: 完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

@@ -1,16 +1,16 @@
 {
   "id": "TASK-010",
   "title": "Build notebooklm-batch-studio style Web UI with full settings and Antigravity agy-cli chat planner",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "",
+  "done_items": "Built notebooklm-batch-studio style Web UI (forest/sage/espresso + light/dark), full job.toml/script.md/brief.md/vocabulary.tsv/.env editors, asset upload, video/contact-sheet preview, and Antigravity agy-cli live chat drawer with typing indicator; 44/44 tests pass.",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-16 03:44 UTC",
-  "updated_at": "2026-11-16 03:44 UTC",
+  "updated_at": "2026-11-16 03:47 UTC",
   "history": [
     {
       "timestamp": "2026-11-16 03:44 UTC",
@@ -22,6 +22,13 @@
       "action": "claimed",
       "agent": "antigravity",
       "previous_agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-16 03:47 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Built notebooklm-batch-studio style Web UI (forest/sage/espresso + light/dark), full job.toml/script.md/brief.md/vocabulary.tsv/.env editors, asset upload, video/contact-sheet preview, and Antigravity agy-cli live chat drawer with typing indicator; 44/44 tests pass."
     }
-  ]
+  ],
+  "summary": "Built notebooklm-batch-studio style Web UI (forest/sage/espresso + light/dark), full job.toml/script.md/brief.md/vocabulary.tsv/.env editors, asset upload, video/contact-sheet preview, and Antigravity agy-cli live chat drawer with typing indicator; 44/44 tests pass."
 }

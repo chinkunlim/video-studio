@@ -1,0 +1,27 @@
+{
+  "id": "TASK-011",
+  "title": "Upgrade Web UI with full voice/language settings, notebooklm-batch-studio layout polish, toast notifications, and WYSIWYG layout tune guides",
+  "status": "in_progress",
+  "agent": "Antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-16 03:48 UTC",
+  "updated_at": "2026-11-16 03:48 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-16 03:48 UTC",
+      "action": "created_and_claimed",
+      "agent": "Antigravity"
+    },
+    {
+      "timestamp": "2026-11-16 03:48 UTC",
+      "action": "claimed",
+      "agent": "Antigravity",
+      "previous_agent": "Antigravity"
+    }
+  ]
+}

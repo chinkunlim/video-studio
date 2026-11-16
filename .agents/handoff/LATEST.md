@@ -5,20 +5,32 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 03:44 UTC`
-- **最近操作 Agent**: `antigravity`
+- **最後更新時間**: `2026-11-16 03:48 UTC`
+- **最近操作 Agent**: `Antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `9d4eeba chore(task): close TASK-009 handoff records [agent:antigravity]`
+- **最新 Git Commit**: `3df33dc feat(web): add notebooklm-batch-studio style Web UI, full settings, and agy chat planner (TASK-010) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-010**<br/>Build notebooklm-batch-studio style Web UI with full settings and Antigravity agy-cli chat planner | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
+| **TASK-011**<br/>Upgrade Web UI with full voice/language settings, notebooklm-batch-studio layout polish, toast notifications, and WYSIWYG layout tune guides | 🟢 `in_progress` | `Antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-16 03:48 UTC] 認領任務 `TASK-011` (Upgrade Web UI with full voice/language settings, notebooklm-batch-studio layout polish, toast notifications, and WYSIWYG layout tune guides) (by `Antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `Antigravity`
+
+### [2026-11-16 03:48 UTC] 建立任務 `TASK-011`: Upgrade Web UI with full voice/language settings, notebooklm-batch-studio layout polish, toast notifications, and WYSIWYG layout tune guides (by `Antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-16 03:47 UTC] 完成任務 `TASK-010` — Build notebooklm-batch-studio style Web UI with full settings and Antigravity agy-cli chat planner (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Built notebooklm-batch-studio style Web UI (forest/sage/espresso + light/dark), full job.toml/script.md/brief.md/vocabulary.tsv/.env editors, asset upload, video/contact-sheet preview, and Antigravity agy-cli live chat drawer with typing indicator; 44/44 tests pass.
 
 ### [2026-11-16 03:44 UTC] 認領任務 `TASK-010` (Build notebooklm-batch-studio style Web UI with full settings and Antigravity agy-cli chat planner) (by `antigravity`)
 - **相關範圍**: `-`
@@ -95,14 +107,3 @@
 ### [2026-10-21 17:58 UTC] 完成任務 `TASK-005` — 完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Completed comprehensive workflow tests for extract_audio, narrate, video, job/sv and openwebui adapter with full passing test suite.
-
-### [2026-10-21 17:49 UTC] 建立任務 `TASK-005`: 完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-10-21 17:35 UTC] 完成任務 `TASK-004` — 遷移批次 4：其他（資料、資源、需人工判斷） (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Moved templates and module config files, updated .mcp.json, removed legacy/ directory, removed starter greeting
-
-### [2026-10-21 17:30 UTC] 認領任務 `TASK-004` (遷移批次 4：其他（資料、資源、需人工判斷）) (by `antigravity`)
-- **相關範圍**: `legacy, legacy`

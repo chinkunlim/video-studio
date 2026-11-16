@@ -84,12 +84,19 @@ def load_narrate_config(job: J.Job | None = None) -> dict[str, Any]:
     voice_cfg = job.cfg.get("voice", {})
     if voice_cfg.get("profile"):
         cfg["voicebox"]["profile"] = voice_cfg["profile"]
+    if voice_cfg.get("language"):
+        cfg["voicebox"]["language"] = str(voice_cfg["language"]).strip()
     if voice_cfg.get("engine"):
         cfg["tts"]["engine"] = str(voice_cfg["engine"]).strip().lower()
     if voice_cfg.get("edge_voice"):
         cfg["tts"]["edge_voice"] = str(voice_cfg["edge_voice"]).strip()
     if voice_cfg.get("edge_rate"):
         cfg["tts"]["edge_rate"] = str(voice_cfg["edge_rate"]).strip()
+    whisper_cfg = job.cfg.get("whisper", {})
+    if whisper_cfg.get("model"):
+        cfg["whisper"]["model"] = str(whisper_cfg["model"]).strip()
+    if whisper_cfg.get("opencc_mode"):
+        cfg["whisper"]["opencc_mode"] = str(whisper_cfg["opencc_mode"]).strip()
     if "loudness" in job.cfg.get("output", {}):
         cfg["audio"]["loudness"] = job.cfg["output"]["loudness"]
     return cfg

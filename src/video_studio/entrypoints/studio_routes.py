@@ -29,11 +29,16 @@ class JobConfigUpdate(BaseModel):
     title: str = Field(default="", description="Display title")
     visual_mode: str = Field(default="auto", description="auto | poster | pptx-export | html | none")
     voice_engine: str = Field(default="voicebox", description="voicebox | edge-tts")
+    voice_language: str = Field(default="zh", description="Voice/TTS language code (zh, en, ja, etc.)")
     voice_profile: str = Field(default="My Voice", description="Voicebox profile name")
     edge_voice: str = Field(default="zh-TW-HsiaoChenNeural", description="edge-tts voice name")
     edge_rate: str = Field(default="+0%", description="edge-tts speaking rate")
+    whisper_model: str = Field(default="small", description="Whisper model (tiny, base, small, medium)")
+    opencc_mode: str = Field(default="s2tw", description="OpenCC conversion (s2tw, s2t, none)")
     subtitles_formats: list[str] = Field(default_factory=lambda: ["youtube", "powerpoint", "vlc"])
     burn_in: bool = Field(default=True, description="Burn subtitles into video_subtitled.mp4")
+    subtitle_font_size: int = Field(default=22, description="Burn-in subtitle font size")
+    fps: int = Field(default=30, description="Output video FPS")
     loudness: float = Field(default=-16.0, description="Target LUFS (-30 to -8)")
     backup_dir: str = Field(default="", description="Optional backup output directory")
     inputs: dict[str, str] = Field(default_factory=dict, description="Input filename mappings")
@@ -95,15 +100,22 @@ def _serialize_job_toml(job_type: str, req: JobConfigUpdate) -> str:
         "",
         "[voice]",
         f"engine = {_toml_str(req.voice_engine)}",
+        f"language = {_toml_str(req.voice_language)}",
         f"profile = {_toml_str(req.voice_profile)}",
         f"edge_voice = {_toml_str(req.edge_voice)}",
         f"edge_rate = {_toml_str(req.edge_rate)}",
         "",
+        "[whisper]",
+        f"model = {_toml_str(req.whisper_model)}",
+        f"opencc_mode = {_toml_str(req.opencc_mode)}",
+        "",
         "[subtitles]",
         f"formats = [{fmts}]",
         f"burn_in = {'true' if req.burn_in else 'false'}",
+        f"font_size = {req.subtitle_font_size}",
         "",
         "[output]",
+        f"fps = {req.fps}",
         f"loudness = {req.loudness}",
         f"backup_dir = {_toml_str(req.backup_dir)}",
         "",

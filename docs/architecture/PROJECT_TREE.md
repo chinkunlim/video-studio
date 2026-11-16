@@ -74,7 +74,8 @@ video-studio/
 │   │   ├── TASK-007-refactor-oversized-functions-and.json
 │   │   ├── TASK-008-add-fastapi-http-api-mcp-server-.json
 │   │   ├── TASK-009-add-edge-tts-dual-tts-engine-and.json
-│   │   └── TASK-010-build-notebooklm-batch-studio-st.json
+│   │   ├── TASK-010-build-notebooklm-batch-studio-st.json
+│   │   └── TASK-011-upgrade-web-ui-with-full-voice-l.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -168,6 +169,7 @@ video-studio/
 │       ├── entrypoints/
 │       │   ├── static/
 │       │   │   ├── index.html
+│       │   │   ├── studio-layout-tune.js
 │       │   │   ├── studio-theme.css
 │       │   │   ├── studio.css
 │       │   │   └── studio.js

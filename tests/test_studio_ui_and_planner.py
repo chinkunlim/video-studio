@@ -13,6 +13,8 @@ from fastapi.testclient import TestClient
 
 from video_studio.config.settings import AppConfig
 from video_studio.entrypoints.api import create_app
+from video_studio.services.common import job as J
+from video_studio.services.narrate.narrate import load_narrate_config
 
 
 class TestStudioUIAndPlanner(unittest.TestCase):
@@ -39,12 +41,15 @@ class TestStudioUIAndPlanner(unittest.TestCase):
         html = self.client.get("/")
         self.assertEqual(html.status_code, 200)
         self.assertIn("qa-drawer", html.text)
+        self.assertIn("cfgVoiceLanguage", html.text)
+        self.assertIn("btnLayoutGuides", html.text)
         self.assertIn("📖 OpenAPI 文件", html.text)
 
         css = self.client.get("/studio.css")
         self.assertEqual(css.status_code, 200)
         self.assertIn("qa-typing-dots", css.text)
         self.assertIn("qaBounce", css.text)
+        self.assertIn("layout-guide-hud", css.text)
 
         theme = self.client.get("/studio-theme.css")
         self.assertEqual(theme.status_code, 200)
@@ -53,6 +58,12 @@ class TestStudioUIAndPlanner(unittest.TestCase):
         js = self.client.get("/studio.js")
         self.assertEqual(js.status_code, 200)
         self.assertIn("runAntigravityPlan", js.text)
+        self.assertIn("showToast", js.text)
+
+        tune_js = self.client.get("/studio-layout-tune.js")
+        self.assertEqual(tune_js.status_code, 200)
+        self.assertIn("toggleLayoutGuides", tune_js.text)
+        self.assertIn("toggleLayoutTuneMode", tune_js.text)
 
     def test_job_config_script_brief_and_upload(self) -> None:
         """Verify creating a job, saving brief/script/job.toml, and uploading an asset."""
@@ -79,7 +90,12 @@ class TestStudioUIAndPlanner(unittest.TestCase):
                 "title": "UI 測試",
                 "visual_mode": "html",
                 "voice_engine": "edge-tts",
-                "edge_voice": "zh-TW-YunJheNeural",
+                "voice_language": "en",
+                "edge_voice": "en-US-AriaNeural",
+                "whisper_model": "base",
+                "opencc_mode": "none",
+                "subtitle_font_size": 26,
+                "fps": 24,
                 "loudness": -14.0,
                 "burn_in": True,
                 "inputs": {"script": "script.md"},
@@ -95,9 +111,19 @@ class TestStudioUIAndPlanner(unittest.TestCase):
 
         detail = self.client.get("/api/jobs/ui-job/detail").json()
         self.assertEqual(detail["config"]["voice"]["engine"], "edge-tts")
+        self.assertEqual(detail["config"]["voice"]["language"], "en")
+        self.assertEqual(detail["config"]["whisper"]["model"], "base")
+        self.assertEqual(detail["config"]["whisper"]["opencc_mode"], "none")
+        self.assertEqual(detail["config"]["subtitles"]["font_size"], 26)
+        self.assertEqual(detail["config"]["output"]["fps"], 24)
         self.assertEqual(detail["config"]["visual"]["mode"], "html")
         self.assertIn("slides.pdf", detail["input_files"])
         self.assertIn("測試規劃說明", detail["brief"])
+
+        narrate_cfg = load_narrate_config(J.find("ui-job"))
+        self.assertEqual(narrate_cfg["voicebox"]["language"], "en")
+        self.assertEqual(narrate_cfg["whisper"]["model"], "base")
+        self.assertEqual(narrate_cfg["whisper"]["opencc_mode"], "none")
 
     def test_agy_planner_streams_response(self) -> None:
         """Verify agy -p background planner streams output and finishes cleanly."""

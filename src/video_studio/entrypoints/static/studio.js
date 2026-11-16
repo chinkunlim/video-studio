@@ -40,15 +40,38 @@ function switchView(name) {
 }
 
 /**
- * 初始化並記憶色盤與亮暗主題。
+ * 顯示非阻塞 Toast 通知訊息。
+ * @param {string} msg 通知文字。
+ * @param {'info'|'success'|'warning'|'error'} [type='info'] 樣式類型。
+ * @param {number} [duration=2600] 自動消失毫秒數。
+ * @returns {void}
+ */
+function showToast(msg, type = 'info', duration = 2600) {
+  const stack = document.getElementById('toastStack');
+  if (!stack) return;
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  stack.appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+/**
+ * 初始化並記憶色盤、亮暗主題、毛玻璃、側欄收合與雙欄/上下版面設定。
  * @returns {void}
  */
 function initTheme() {
   const root = document.documentElement;
   const pal = localStorage.getItem('vs.palette') || 'forest';
   const mode = localStorage.getItem('vs.mode') || 'light';
+  const glass = localStorage.getItem('vs.glass') || 'off';
+  const layout = localStorage.getItem('vs.layout') || 'split';
   root.dataset.palette = pal;
   root.dataset.mode = mode;
+  root.dataset.glass = glass;
+  document.body.dataset.layout = layout;
+  if (localStorage.getItem('vs.dockCollapsed') === '1') document.body.classList.add('dock-collapsed');
+
   document.getElementById('paletteSelect').value = pal;
   document.getElementById('paletteSelect').addEventListener('change', e => {
     root.dataset.palette = e.target.value;
@@ -58,6 +81,32 @@ function initTheme() {
     const next = root.dataset.mode === 'dark' ? 'light' : 'dark';
     root.dataset.mode = next;
     localStorage.setItem('vs.mode', next);
+  });
+  document.getElementById('glassToggle')?.addEventListener('click', () => {
+    const next = root.dataset.glass === 'on' ? 'off' : 'on';
+    root.dataset.glass = next;
+    localStorage.setItem('vs.glass', next);
+    showToast(`毛玻璃效果：${next === 'on' ? '開啟' : '關閉'}`, 'info', 1600);
+  });
+  document.getElementById('dockCollapseBtn')?.addEventListener('click', () => {
+    const collapsed = document.body.classList.toggle('dock-collapsed');
+    localStorage.setItem('vs.dockCollapsed', collapsed ? '1' : '0');
+  });
+  document.querySelectorAll('#layoutSeg button').forEach(btn => {
+    btn.classList.toggle('on', btn.dataset.layout === layout);
+    btn.addEventListener('click', () => {
+      document.body.dataset.layout = btn.dataset.layout;
+      localStorage.setItem('vs.layout', btn.dataset.layout);
+      document.querySelectorAll('#layoutSeg button').forEach(b => b.classList.toggle('on', b === btn));
+    });
+  });
+  document.getElementById('btnLayoutGuides')?.addEventListener('click', () => toggleLayoutGuides());
+  document.getElementById('btnLayoutGuidesTop')?.addEventListener('click', () => toggleLayoutGuides());
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      toggleLayoutGuides();
+    }
   });
 }
 
@@ -102,11 +151,16 @@ async function loadJobDetail(name) {
   document.getElementById('cfgTitle').value = c.job?.title || '';
   document.getElementById('cfgVisualMode').value = c.visual?.mode || 'auto';
   document.getElementById('cfgVoiceEngine').value = c.voice?.engine || 'voicebox';
+  document.getElementById('cfgVoiceLanguage').value = c.voice?.language || 'zh';
   document.getElementById('cfgVoiceProfile').value = c.voice?.profile || 'My Voice';
   document.getElementById('cfgEdgeVoice').value = c.voice?.edge_voice || 'zh-TW-HsiaoChenNeural';
   document.getElementById('cfgEdgeRate').value = c.voice?.edge_rate || '+0%';
+  document.getElementById('cfgWhisperModel').value = c.whisper?.model || 'small';
+  document.getElementById('cfgOpenccMode').value = c.whisper?.opencc_mode || 's2tw';
   document.getElementById('cfgLoudness').value = c.output?.loudness ?? -16;
+  document.getElementById('cfgFps').value = c.output?.fps ?? 30;
   document.getElementById('cfgBurnIn').value = String(c.subtitles?.burn_in ?? true);
+  document.getElementById('cfgSubtitleFontSize').value = c.subtitles?.font_size ?? 22;
   document.getElementById('cfgBackupDir').value = c.output?.backup_dir || '';
   document.getElementById('cfgInScript').value = c.inputs?.script || '';
   document.getElementById('cfgInPptx').value = c.inputs?.pptx || '';
@@ -292,7 +346,11 @@ function bindSettingsEvents() {
     const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/brief`, {
       method: 'PUT', body: JSON.stringify({ content: document.getElementById('briefEditor').value }),
     });
-    alert(res.output);
+    showToast(res.output || '已儲存 brief.md', 'success');
+  });
+  document.getElementById('cfgVoiceLanguage')?.addEventListener('change', e => {
+    const defaults = { zh: 'zh-TW-HsiaoChenNeural', en: 'en-US-AriaNeural', ja: 'ja-JP-NanamiNeural', ko: 'ko-KR-SunHiNeural' };
+    if (defaults[e.target.value]) document.getElementById('cfgEdgeVoice').value = defaults[e.target.value];
   });
   document.getElementById('saveVocabBtn').addEventListener('click', handleSaveVocab);
   document.getElementById('saveEnvBtn').addEventListener('click', handleSaveEnv);
@@ -308,11 +366,16 @@ async function handleSaveJobConfig() {
     title: document.getElementById('cfgTitle').value,
     visual_mode: document.getElementById('cfgVisualMode').value,
     voice_engine: document.getElementById('cfgVoiceEngine').value,
+    voice_language: document.getElementById('cfgVoiceLanguage').value,
     voice_profile: document.getElementById('cfgVoiceProfile').value,
     edge_voice: document.getElementById('cfgEdgeVoice').value,
     edge_rate: document.getElementById('cfgEdgeRate').value,
+    whisper_model: document.getElementById('cfgWhisperModel').value,
+    opencc_mode: document.getElementById('cfgOpenccMode').value,
     loudness: Number(document.getElementById('cfgLoudness').value || -16),
+    fps: Number(document.getElementById('cfgFps').value || 30),
     burn_in: document.getElementById('cfgBurnIn').value === 'true',
+    subtitle_font_size: Number(document.getElementById('cfgSubtitleFontSize').value || 22),
     backup_dir: document.getElementById('cfgBackupDir').value,
     inputs: {
       script: document.getElementById('cfgInScript').value,
@@ -322,7 +385,7 @@ async function handleSaveJobConfig() {
     },
   };
   const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/config`, { method: 'PUT', body: JSON.stringify(payload) });
-  alert(res.output);
+  showToast(res.output || '已儲存 job.toml 設定', 'success');
 }
 
 /**
@@ -335,7 +398,7 @@ async function saveScript(autoFormat) {
     method: 'PUT', body: JSON.stringify({ content: document.getElementById('scriptEditor').value, auto_format: autoFormat }),
   });
   if (autoFormat) document.getElementById('scriptEditor').value = res.content;
-  alert(res.output);
+  showToast(res.output || '已儲存講稿', 'success');
 }
 
 /**
@@ -352,7 +415,7 @@ async function handleSaveVocab() {
     }),
   });
   document.getElementById('vocabListLog').textContent = (await api('/api/vocab')).output;
-  alert(res.output);
+  showToast(res.output || '已更新詞彙表', 'success');
 }
 
 /**
@@ -370,7 +433,7 @@ async function handleSaveEnv() {
       },
     }),
   });
-  alert(res.output);
+  showToast(res.output || '已儲存全域設定', 'success');
 }
 
 /**
@@ -419,7 +482,7 @@ async function approveReviewFile(filename) {
   const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/approve`, {
     method: 'POST', body: JSON.stringify({ filename }),
   });
-  alert(res.output);
+  showToast(res.output || `已核可 ${filename}`, 'success');
   await loadJobDetail(state.currentJob);
 }
 
