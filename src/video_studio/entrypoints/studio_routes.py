@@ -47,6 +47,8 @@ class JobConfigUpdate(BaseModel):
     avatar_engine: str = Field(default="none", description="none | lightweight | sadtalker")
     avatar_image: str = Field(default="", description="Portrait image filename inside input/")
     avatar_position: str = Field(default="bottom-right", description="Avatar PiP corner position")
+    width: int = Field(default=1920, ge=320, le=3840, description="Output video width in pixels")
+    height: int = Field(default=1080, ge=320, le=3840, description="Output video height in pixels")
     fps: int = Field(default=30, description="Output video FPS")
     loudness: float = Field(default=-16.0, description="Target LUFS (-30 to -8)")
     backup_dir: str = Field(default="", description="Optional backup output directory")
@@ -164,6 +166,8 @@ def _serialize_job_toml(job_type: str, req: JobConfigUpdate) -> str:
         f"position = {_toml_str(req.avatar_position)}",
         "",
         "[output]",
+        f"width = {req.width}",
+        f"height = {req.height}",
         f"fps = {req.fps}",
         f"loudness = {req.loudness}",
         f"backup_dir = {_toml_str(req.backup_dir)}",

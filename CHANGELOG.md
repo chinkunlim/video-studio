@@ -27,6 +27,7 @@ All notable changes to **video-studio** are documented here
 - feat(ui): add real-time percentage progress bar to live Terminal console (by `@Antigravity`)
 - feat(ai): add stage-ranked 1/2/3 agy model selectors and stream-json live app.log progress (by `@Antigravity`)
 - feat(studio): add active agy plan reconnect endpoint and frontend auto-resume on page reload (by `@antigravity`)
+- feat(studio): fit-to-stage review HTML preview and configurable video aspect ratios (by `@antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

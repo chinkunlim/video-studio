@@ -259,3 +259,20 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         finally:
             with planner._LOCK:
                 planner._RUNS.pop(run.run_id, None)
+
+    def test_video_aspect_resolution_config_and_prompt(self) -> None:
+        """Verify output width/height (e.g. 4:3 1440x1080) persists in job.toml and plan prompt."""
+        from video_studio.services import planner
+
+        res = self.client.put(
+            "/api/jobs/einstein-demo/config",
+            json={"title": "4:3 Demo", "width": 1440, "height": 1080, "fps": 30},
+        )
+        self.assertEqual(res.status_code, 200)
+        detail = self.client.get("/api/jobs/einstein-demo/detail")
+        self.assertEqual(detail.status_code, 200)
+        out_cfg = detail.json()["config"]["output"]
+        self.assertEqual(out_cfg["width"], 1440)
+        self.assertEqual(out_cfg["height"], 1080)
+        prompt = planner.build_plan_prompt("einstein-demo")
+        self.assertIn("1440x1080", prompt)

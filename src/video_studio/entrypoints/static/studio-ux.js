@@ -140,6 +140,7 @@ function initLiveTerminal() {
 document.addEventListener('DOMContentLoaded', () => {
   initDraftAutosave();
   initLiveTerminal();
+  initAspectAndPreviewFit();
 });
 
 let _resumedRunId = null;
@@ -177,4 +178,81 @@ async function resumeActivePlanIfAny(jobName) {
     // ignore transient reconnect errors
   }
 }
+
+/**
+ * 依 HTML data-width/data-height 或設定尺寸等比縮放 reviewPreviewFrame，確保完整畫面不裁切。
+ * @returns {void}
+ */
+function fitReviewPreviewFrame() {
+  const stage = document.getElementById('reviewStage');
+  const frame = document.getElementById('reviewPreviewFrame');
+  if (!stage || !frame) return;
+  let w = Number(document.getElementById('cfgWidth')?.value || 1920) || 1920;
+  let h = Number(document.getElementById('cfgHeight')?.value || 1080) || 1080;
+  try {
+    const docEl = frame.contentDocument?.documentElement;
+    const dw = Number(docEl?.getAttribute('data-width') || 0);
+    const dh = Number(docEl?.getAttribute('data-height') || 0);
+    if (dw >= 320 && dh >= 320) { w = dw; h = dh; }
+  } catch {
+    // cross-origin guard
+  }
+  stage.style.aspectRatio = `${w} / ${h}`;
+  frame.style.width = `${w}px`;
+  frame.style.height = `${h}px`;
+  const scale = stage.clientWidth > 0 ? stage.clientWidth / w : 1;
+  frame.style.transform = `scale(${scale})`;
+  const badge = document.getElementById('reviewDimBadge');
+  if (badge) badge.textContent = `完整畫面等比縮放預覽 · ${w}×${h} (${Math.round(scale * 100)}%)`;
+}
+
+/**
+ * 依寬高輸入框同步影片比例預設下拉選單。
+ * @returns {void}
+ */
+function syncAspectPresetFromInputs() {
+  const sel = document.getElementById('cfgAspectPreset');
+  const w = Number(document.getElementById('cfgWidth')?.value || 1920);
+  const h = Number(document.getElementById('cfgHeight')?.value || 1080);
+  if (sel) {
+    const key = `${w}x${h}`;
+    const hasOpt = Array.from(sel.options).some(o => o.value === key);
+    sel.value = hasOpt ? key : 'custom';
+  }
+  fitReviewPreviewFrame();
+}
+
+/**
+ * 初始化影片比例預設選擇、自訂寬高同步與 review 預覽框自動等比縮放。
+ * @returns {void}
+ */
+function initAspectAndPreviewFit() {
+  const sel = document.getElementById('cfgAspectPreset');
+  const wInput = document.getElementById('cfgWidth');
+  const hInput = document.getElementById('cfgHeight');
+  sel?.addEventListener('change', () => {
+    if (sel.value !== 'custom' && sel.value.includes('x')) {
+      const [w, h] = sel.value.split('x').map(Number);
+      if (wInput) wInput.value = String(w);
+      if (hInput) hInput.value = String(h);
+    }
+    fitReviewPreviewFrame();
+  });
+  wInput?.addEventListener('input', syncAspectPresetFromInputs);
+  hInput?.addEventListener('input', syncAspectPresetFromInputs);
+
+  const stage = document.getElementById('reviewStage');
+  const frame = document.getElementById('reviewPreviewFrame');
+  frame?.addEventListener('load', fitReviewPreviewFrame);
+  if (stage && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(fitReviewPreviewFrame).observe(stage);
+  }
+  document.getElementById('openReviewTabBtn')?.addEventListener('click', () => {
+    if (typeof state !== 'undefined' && state.currentJob) {
+      window.open(`/api/jobs/${encodeURIComponent(state.currentJob)}/review/index.html`, '_blank', 'noopener');
+    }
+  });
+  fitReviewPreviewFrame();
+}
+
 

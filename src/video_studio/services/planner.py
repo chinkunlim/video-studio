@@ -104,11 +104,18 @@ def build_plan_prompt(
     )
     target_file = f"{job.review / 'index.html'}" if mode == "html" else f"{job.review / 'scenes.toml'}"
     poster_rules = _poster_and_lang_rules(job, follow_poster_design)
+    out_cfg = job.cfg.get("output", {})
+    out_w = int(out_cfg.get("width", 1920))
+    out_h = int(out_cfg.get("height", 1080))
     return "\n".join(
         [
             f"請為 video-studio 工作 `{job.type}/{job.name}`（標題：{job.title}）規劃分鏡草稿。",
             f"工作目錄：{job.dir}",
             f"輸出目標檔案（寫入 review/，勿直接改 input/）：{target_file}",
+            (
+                f"目標影片解析度：{out_w}x{out_h}（若輸出 index.html，請於 <html> 設定 "
+                f'data-width="{out_w}" data-height="{out_h}" 且內容完全配合此尺寸不超出、不裁切）'
+            ),
             "",
             "【使用者規劃說明 (brief.md)】",
             brief_text or "（無額外 brief.md）",

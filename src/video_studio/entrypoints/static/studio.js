@@ -179,6 +179,9 @@ async function loadJobDetail(name) {
   document.getElementById('cfgProsodyPreset').value = c.voice?.prosody_preset || 'normal';
   document.getElementById('cfgWhisperModel').value = c.whisper?.model || 'small';
   document.getElementById('cfgOpenccMode').value = c.whisper?.opencc_mode || 's2tw';
+  document.getElementById('cfgWidth').value = c.output?.width ?? 1920;
+  document.getElementById('cfgHeight').value = c.output?.height ?? 1080;
+  if (typeof syncAspectPresetFromInputs === 'function') syncAspectPresetFromInputs();
   document.getElementById('cfgLoudness').value = c.output?.loudness ?? -16;
   document.getElementById('cfgFps').value = c.output?.fps ?? 30;
   document.getElementById('cfgBurnIn').value = String(c.subtitles?.burn_in ?? true);
@@ -528,6 +531,8 @@ async function handleSaveJobConfig() {
     prosody_preset: document.getElementById('cfgProsodyPreset').value,
     whisper_model: document.getElementById('cfgWhisperModel').value,
     opencc_mode: document.getElementById('cfgOpenccMode').value,
+    width: Number(document.getElementById('cfgWidth')?.value || 1920),
+    height: Number(document.getElementById('cfgHeight')?.value || 1080),
     loudness: Number(document.getElementById('cfgLoudness').value || -16),
     fps: Number(document.getElementById('cfgFps').value || 30),
     burn_in: document.getElementById('cfgBurnIn').value === 'true',

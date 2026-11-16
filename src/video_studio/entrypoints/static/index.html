@@ -242,6 +242,19 @@
           <div class="cfg-section">
             <h3 class="cfg-section-title">5. 輸出參數與輸入檔案對應 (inputs.*)</h3>
             <div class="field-grid">
+              <label class="field">影片比例與解析度
+                <select id="cfgAspectPreset">
+                  <option value="1920x1080">16:9 橫式 Full HD (1920×1080) ★預設</option>
+                  <option value="1280x720">16:9 橫式 HD (1280×720)</option>
+                  <option value="1440x1080">4:3 傳統簡報 (1440×1080)</option>
+                  <option value="1024x768">4:3 標準 (1024×768)</option>
+                  <option value="1080x1920">9:16 直式短影音 (1080×1920)</option>
+                  <option value="1080x1080">1:1 方形社群 (1080×1080)</option>
+                  <option value="custom">自訂寬高 (px)</option>
+                </select>
+              </label>
+              <label class="field">影片寬度 (px)<input type="number" id="cfgWidth" value="1920" min="320" max="3840" /></label>
+              <label class="field">影片高度 (px)<input type="number" id="cfgHeight" value="1080" min="320" max="3840" /></label>
               <label class="field">響度 LUFS (-30 ~ -8)<input type="number" id="cfgLoudness" value="-16" /></label>
               <label class="field">輸出 FPS<input type="number" id="cfgFps" value="30" min="15" max="60" /></label>
               <label class="field">備份輸出目錄 (選填)<input type="text" id="cfgBackupDir" placeholder="/Volumes/..." /></label>
@@ -392,10 +405,14 @@
           <h2>review/ 草稿預覽與核可移入 input/</h2>
           <div class="row" id="reviewActionsRow">
             <button class="btn btn-soft" id="previewReviewHtmlBtn" type="button">預覽 review/index.html</button>
+            <button class="btn btn-ghost btn-sm" id="openReviewTabBtn" type="button">↗ 新分頁全螢幕檢視</button>
             <button class="btn" id="approveHtmlBtn" type="button">核可 index.html -> input/</button>
             <button class="btn" id="approveScenesBtn" type="button">核可 scenes.toml -> input/</button>
+            <span class="muted" id="reviewDimBadge">完整畫面等比縮放預覽 · 1920×1080</span>
           </div>
-          <iframe class="preview-frame" id="reviewPreviewFrame" title="review 預覽"></iframe>
+          <div class="review-stage" id="reviewStage">
+            <iframe class="preview-frame-scaled" id="reviewPreviewFrame" title="review 預覽"></iframe>
+          </div>
         </div>
       </section>
 
