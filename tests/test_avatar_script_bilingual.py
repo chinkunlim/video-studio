@@ -320,12 +320,17 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         from PIL import Image, ImageDraw
 
         from video_studio.services.narrate.core import audio, concat
-        from video_studio.services.video.engine import overlay
+        from video_studio.services.video.engine import media, overlay
+
+        srt_path = self.data_dir / "bilingual.srt"
+        srt_path.write_text("1\n00:00:02,000 --> 00:00:04,000\nHello world\n你好世界\n\n", encoding="utf-8")
+        parsed = media.read_srt(srt_path)
+        self.assertEqual(parsed[0][2], "Hello world\n你好世界")
 
         img = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         fnt = overlay.font("/System/Library/Fonts/STHeiti Light.ttc", 1, 28)
-        lines = overlay._fit_lines(draw, "Hello world\n你好世界", fnt, 1720)
+        lines = overlay._fit_lines(draw, parsed[0][2], fnt, 1720)
         self.assertEqual(lines, ["Hello world", "你好世界"])
 
         tone = self.data_dir / "tone.wav"

@@ -103,7 +103,7 @@ def read_srt(path: Path | str) -> list[tuple[float, float, str]]:
         if len(rows) >= 3 and "-->" in rows[1]:
             parts = [x.strip() for x in rows[1].split("-->")]
             a, b = sec(parts[0]), sec(parts[1])
-            cues.append((a, b, " ".join(rows[2:])))
+            cues.append((a, b, "\n".join(rows[2:])))
     return cues
 
 
