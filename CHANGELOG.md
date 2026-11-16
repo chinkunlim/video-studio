@@ -29,6 +29,7 @@ All notable changes to **video-studio** are documented here
 - refactor(templates): move templates and configs, remove legacy directory and starter greeting (TASK-004) (`TASK-004`, by `@antigravity`)
 - ci: install ffmpeg in GitHub Actions runner for video workflows (by `@antigravity`)
 - refactor(quality): resolve Code Review Guard warnings and ignore graphify-out (TASK-007) (`TASK-007`, by `@antigravity`)
+- refactor(ui): consolidate prosody_preset into Step 3A with auto-save (by `@Antigravity`)
 
 ### Fixed
 - fix(overlay): fallback to load_default font and install fonts-noto-cjk in CI (by `@antigravity`)

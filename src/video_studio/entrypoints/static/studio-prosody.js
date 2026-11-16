@@ -157,4 +157,36 @@ function initProsodyAndAgyControls() {
   loadAgyModels();
 }
 
+/**
+ * 將目前講稿翻譯為雙語字幕對照表（work/script_bilingual.tsv）。
+ * @returns {Promise<void>}
+ */
+async function handleTranslateBilingual() {
+  if (!state.currentJob) return;
+  showToast('正在以 agy CLI 翻譯雙語字幕…', 'info', 3500);
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/subtitles/bilingual`, {
+    method: 'POST',
+    body: JSON.stringify({
+      target_lang: document.getElementById('cfgSubtitleSecondaryLang').value,
+      model: document.getElementById('planModelSelect')?.value || '',
+    }),
+  });
+  showToast(res.output || '已完成雙語翻譯', 'success');
+  await loadBilingualPreview(state.currentJob);
+}
+
+/**
+ * 載入並顯示 work/script_bilingual.tsv 的雙語字幕對照內容。
+ * @param {string} jobName 工作名稱。
+ * @returns {Promise<void>}
+ */
+async function loadBilingualPreview(jobName) {
+  const box = document.getElementById('bilingualPreviewBox');
+  if (!box || !jobName) return;
+  const res = await api(`/api/jobs/${encodeURIComponent(jobName)}/subtitles/bilingual`).catch(() => ({ exists: false }));
+  if (!res.exists || !(res.rows || []).length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.textContent = res.rows.map(r => `[${r.index}] ${r.primary}\n    ${r.secondary}`).join('\n');
+}
+
 document.addEventListener('DOMContentLoaded', initProsodyAndAgyControls);

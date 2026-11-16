@@ -160,13 +160,6 @@
                   <option value="ko">ko (한국어)</option>
                 </select>
               </label>
-              <label class="field">預設韻律風格 (prosody_preset)
-                <select id="cfgProsodyPreset">
-                  <option value="normal">標準自然 (normal)</option>
-                  <option value="energetic">活力強音加速 (energetic)</option>
-                  <option value="calm">沉穩放慢輕柔 (calm)</option>
-                </select>
-              </label>
               <label class="field cfg-voicebox-only">Voicebox 聲紋名稱<input type="text" id="cfgVoiceProfile" /></label>
               <label class="field cfg-edgetts-only">edge-tts 聲線 (依語音語言選擇)
                 <select id="cfgEdgeVoice">
@@ -339,7 +332,16 @@
         <div class="grid-2">
           <div class="card" id="cardNarrate">
             <h2>Step 3A：先聲後影（生成配音與量測秒數）</h2>
-            <p class="muted">先依設定（Voicebox 或 edge-tts）產生配音與字幕，再用 ffprobe 算出每頁秒數。</p>
+            <p class="muted">選好語氣風格（可直接選或先試聽 10 秒）後，產生配音與字幕並算出每段秒數。</p>
+            <div class="field-grid">
+              <label class="field">目前語氣韻律風格 (自動儲存至 job.toml)
+                <select id="cfgProsodyPreset">
+                  <option value="normal">標準自然 (normal)</option>
+                  <option value="energetic">活力強音加速 (energetic)</option>
+                  <option value="calm">沉穩放慢輕柔 (calm)</option>
+                </select>
+              </label>
+            </div>
             <div class="row">
               <button class="btn btn-soft" id="prosodyPreviewBtn" type="button">🎧 生成 10 秒韻律試聽（標準 / 活力 / 沉穩）</button>
               <button class="btn" id="buildNarrationBtn" type="button">1. 生成配音與字幕 (narrate build)</button>
