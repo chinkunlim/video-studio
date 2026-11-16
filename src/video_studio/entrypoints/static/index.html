@@ -430,10 +430,12 @@
         <div class="terminal-head">
           <strong>🖥️ 即時執行 Terminal 日誌 (DATA_DIR/logs/app.log)</strong>
           <div class="row">
+            <span class="pill" id="termProgressLabel">待命中 · 0%</span>
             <button type="button" class="btn btn-ghost btn-sm on" id="termAutoBtn">🟢 即時追蹤中 (1.5s)</button>
             <button type="button" class="btn btn-ghost btn-sm" id="termRefreshBtn">立即刷新</button>
           </div>
         </div>
+        <div class="term-progress-bar" aria-label="執行進度"><div class="term-progress-fill" id="termProgressFill" style="width:0%"></div></div>
         <pre class="terminal-box" id="terminalLogOutput">載入日誌中…</pre>
       </div>
     </section>

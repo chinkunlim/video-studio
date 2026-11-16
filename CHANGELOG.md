@@ -24,6 +24,7 @@ All notable changes to **video-studio** are documented here
 - feat(script): instruct agy-cli to auto-annotate inline prosody tags in drafted scripts (by `@Antigravity`)
 - feat(ui): add input draft autosave, Step 1 job hydration, and live Terminal log tail (by `@Antigravity`)
 - feat(ui): add quick return buttons in Step 4 to revise script or animation (by `@Antigravity`)
+- feat(ui): add real-time percentage progress bar to live Terminal console (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

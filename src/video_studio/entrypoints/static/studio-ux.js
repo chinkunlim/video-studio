@@ -54,6 +54,37 @@ function initDraftAutosave() {
 }
 
 /**
+ * 依據日誌內容與目前執行狀態估算 0-100% 進度並更新進度條。
+ * @param {string[]} lines 最新日誌行陣列。
+ * @returns {void}
+ */
+function updateTerminalProgress(lines) {
+  const fill = document.getElementById('termProgressFill');
+  const label = document.getElementById('termProgressLabel');
+  if (!fill || !label) return;
+  const tailText = lines.slice(-25).join('\n');
+  let pct = 0;
+  let status = '待命中';
+  const totalLines = (document.getElementById('scriptEditor')?.value || '')
+    .split('\n').filter(l => l.trim() && !l.trim().startsWith('#')).length || 30;
+  const matches = [...tailText.matchAll(/_generate_missing_takes:\d+\s*-\s*\[(\d+)\]/g)];
+  if (matches.length) {
+    const cur = Number(matches[matches.length - 1][1]);
+    pct = Math.min(98, Math.round((cur / totalLines) * 100));
+    status = `配音/對齊第 ${cur}/${totalLines} 句`;
+  } else if (typeof state !== 'undefined' && state.busyPlan) {
+    pct = 55;
+    status = 'agy-cli 規劃分鏡中';
+  }
+  if (/完成：|Drafted review script|Applied .* avatar overlay|已儲存/.test(lines.slice(-4).join('\n'))) {
+    pct = 100;
+    status = '已完成';
+  }
+  fill.style.width = `${pct}%`;
+  label.textContent = `${status} · ${pct}%`;
+}
+
+/**
  * 向後端 /api/logs/tail 取得最新日誌並更新 Terminal 視窗。
  * @returns {Promise<void>}
  */
@@ -65,6 +96,7 @@ async function refreshLiveTerminal() {
     const lines = res.lines || [];
     box.textContent = lines.length ? lines.join('\n') : '（尚無執行日誌）';
     box.scrollTop = box.scrollHeight;
+    updateTerminalProgress(lines);
   } catch {
     // ignore transient poll errors
   }
