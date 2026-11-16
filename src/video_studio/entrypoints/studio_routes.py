@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from video_studio.config.settings import PROJECT_ROOT, load_config
-from video_studio.services import planner, script_drafter
+from video_studio.services import planner, review_history, script_drafter
 from video_studio.services.common import job as J
 from video_studio.services.narrate import narrate as narrate_svc
 from video_studio.services.narrate.core import bilingual
@@ -99,6 +99,12 @@ class AvatarApplyRequest(BaseModel):
     engine: str = Field(default="lightweight", description="lightweight | sadtalker")
     position: str = Field(default="bottom-right", description="Corner placement")
     image_name: str = Field(default="", description="Optional portrait image filename inside input/")
+
+
+class SnapshotCreateRequest(BaseModel):
+    """Request payload for saving a manual review/ draft snapshot."""
+
+    note: str = Field(default="手動備份", description="Snapshot description")
 
 
 class ProsodyPreviewRequest(BaseModel):
@@ -373,6 +379,61 @@ def poll_plan(run_id: str) -> dict[str, Any]:
     try:
         return planner.get_plan_status(run_id)
     except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/api/jobs/{job_name}/review/snapshots")
+def list_review_snapshots(job_name: str) -> dict[str, Any]:
+    """List saved review/ draft snapshots for rollback.
+
+    Args:
+        job_name: Target job name.
+
+    Returns:
+        Dictionary with snapshots list ordered newest first.
+    """
+    try:
+        return {"snapshots": review_history.list_snapshots(job_name)}
+    except J.JobError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/api/jobs/{job_name}/review/snapshots")
+def create_review_snapshot(job_name: str, req: SnapshotCreateRequest) -> dict[str, Any]:
+    """Manually save a snapshot of current review/ drafts before editing.
+
+    Args:
+        job_name: Target job name.
+        req: Snapshot note payload.
+
+    Returns:
+        Created snapshot metadata or status message.
+    """
+    try:
+        entry = review_history.create_snapshot(job_name, note=req.note)
+    except J.JobError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not entry:
+        raise HTTPException(status_code=400, detail="review/ 目前沒有可備份的草稿檔案")
+    return {"ok": True, "snapshot": entry, "output": f"已儲存草稿快照 {entry['id']}"}
+
+
+@router.post("/api/jobs/{job_name}/review/snapshots/{snap_id}/restore")
+def restore_review_snapshot(job_name: str, snap_id: str) -> dict[str, Any]:
+    """Restore a saved snapshot back into review/ (auto-backing up current state first).
+
+    Args:
+        job_name: Target job name.
+        snap_id: Snapshot identifier to restore.
+
+    Returns:
+        Restore confirmation dictionary.
+    """
+    try:
+        return review_history.restore_snapshot(job_name, snap_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except J.JobError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 

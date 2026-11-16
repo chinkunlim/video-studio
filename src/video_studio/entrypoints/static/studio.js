@@ -225,6 +225,9 @@ async function loadJobDetail(name) {
   if (typeof resumeActivePlanIfAny === 'function') {
     resumeActivePlanIfAny(name);
   }
+  if (typeof refreshReviewSnapshots === 'function') {
+    refreshReviewSnapshots(name);
+  }
 }
 
 /**

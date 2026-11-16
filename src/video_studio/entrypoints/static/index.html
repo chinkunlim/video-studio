@@ -393,10 +393,11 @@
               </label>
             </div>
             <label class="field">補充給 Antigravity 的指示
-              <textarea id="planInstruction" placeholder="例如：第 1 幕用大標題淡入，第 2 幕強調數據對比…"></textarea>
+              <textarea id="planInstruction" placeholder="例如：第 1 幕用大標題淡入，第 2 幕強調數據對比…（系統已自動內建：section 寬度約 3/4、超長下滑捲動、手寫/手繪動畫、無 emoji、置中對齊）"></textarea>
             </label>
             <div class="row">
               <button class="btn" id="runAgyPlanBtn" type="button">✨ 啟動 Antigravity (agy CLI) 規劃</button>
+              <button class="btn btn-ghost btn-sm" id="insertPlanPresetBtn" type="button">➕ 插入預設排版／捲動／手繪規則</button>
             </div>
           </div>
         </div>
@@ -409,6 +410,11 @@
             <button class="btn" id="approveHtmlBtn" type="button">核可 index.html -> input/</button>
             <button class="btn" id="approveScenesBtn" type="button">核可 scenes.toml -> input/</button>
             <span class="muted" id="reviewDimBadge">完整畫面等比縮放預覽 · 1920×1080</span>
+          </div>
+          <div class="row" id="reviewHistoryRow" style="margin-top:8px;">
+            <button class="btn btn-soft btn-sm" id="saveSnapshotBtn" type="button">📸 儲存目前草稿版本</button>
+            <select id="reviewSnapshotSelect" style="flex:1; min-width:220px;"><option value="">（尚無草稿快照，執行 agy 規劃前會自動備份）</option></select>
+            <button class="btn btn-ghost btn-sm" id="restoreSnapshotBtn" type="button">⏪ 退回此版本</button>
           </div>
           <div class="review-stage" id="reviewStage">
             <iframe class="preview-frame-scaled" id="reviewPreviewFrame" title="review 預覽"></iframe>

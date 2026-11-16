@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from video_studio.config.settings import PROJECT_ROOT
+from video_studio.services import review_history
 from video_studio.services.common import job as J
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,17 @@ def _poster_and_lang_rules(job: J.Job, follow_poster_design: bool) -> list[str]:
             "講解海報不同段落時，當前講到的區塊必須有明顯的高亮聚焦效果（發光外框／微幅放大／重點標記動畫），"
             "非當前區塊適度降暗（opacity 降至 ~0.45）；搭配 GSAP 平滑推拉運鏡（pan/zoom）、"
             "圖表或關鍵詞依講稿節奏逐一進場，並於畫面加入章節進度條，讓觀眾清楚跟上目前進度且畫面生動不單調。"
+        )
+        rules.append(
+            "4. 聚焦區塊尺寸、置中與超長捲動（必做）："
+            "講解中的 section 寬度應約為總螢幕寬度的 3/4（~75%），置中呈現且完整不裁切；"
+            "一般高度的 section 須垂直居中；若該 section 高度大於螢幕畫面，"
+            "講解到該部分時須使用平滑垂直捲動（scrolling）往下滑動呈現。"
+        )
+        rules.append(
+            "5. 視覺細節與手繪動畫："
+            "禁止在畫面與卡片中使用 emoji；背景海報輪廓須水平與垂直置中；"
+            "必要時可適當使用手寫（SVG stroke-dashoffset）與手繪標記（圓圈／底線／箭頭）增加視覺動畫。"
         )
     return rules
 
@@ -371,6 +383,7 @@ def start_agy_plan(
         Dictionary containing run_id, status, available flag, and prompt.
     """
     prompt = build_plan_prompt(job_name, user_instruction, mode, follow_poster_design)
+    review_history.create_snapshot(job_name, note=f"agy {mode} 規劃前自動備份")
     agy_bin = _resolve_agy_bin()
     run_id = uuid.uuid4().hex[:12]
     if not agy_bin:

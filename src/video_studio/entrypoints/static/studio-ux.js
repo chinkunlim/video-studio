@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initDraftAutosave();
   initLiveTerminal();
   initAspectAndPreviewFit();
+  initReviewHistoryAndPlanPreset();
 });
 
 let _resumedRunId = null;
@@ -254,5 +255,81 @@ function initAspectAndPreviewFit() {
   });
   fitReviewPreviewFrame();
 }
+
+const DEFAULT_PLAN_RULES = [
+  '- 講解中的 section，寬度約為總螢幕的 3/4（~75%），置中呈現；若該 section 高度大於螢幕畫面，講解到該部分時使用平滑 scrolling 下滑呈現。',
+  '- 必要時適當使用手寫（SVG 筆畫）、手繪標記（圓圈／底線／箭頭）增加動畫。',
+  '- 移除所有 emoji，背景海報輪廓水平與垂直置中。',
+].join('\n');
+
+/**
+ * 重新載入目前工作的 review/ 草稿版本快照清單。
+ * @param {string} jobName 工作名稱。
+ * @returns {Promise<void>}
+ */
+async function refreshReviewSnapshots(jobName) {
+  const sel = document.getElementById('reviewSnapshotSelect');
+  if (!sel || !jobName) return;
+  try {
+    const res = await api(`/api/jobs/${encodeURIComponent(jobName)}/review/snapshots`);
+    const items = res.snapshots || [];
+    if (!items.length) {
+      sel.innerHTML = '<option value="">（尚無草稿快照，執行 agy 規劃前會自動備份）</option>';
+      return;
+    }
+    sel.innerHTML = items.map(s =>
+      `<option value="${esc(s.id)}">${esc(s.id)} · ${esc(s.created_at)} · ${esc(s.note)} (${esc((s.files || []).join(', '))})</option>`
+    ).join('');
+  } catch {
+    // ignore transient load errors
+  }
+}
+
+/**
+ * 初始化草稿快照儲存／退回按鈕與預設規則插入按鈕。
+ * @returns {void}
+ */
+function initReviewHistoryAndPlanPreset() {
+  document.getElementById('insertPlanPresetBtn')?.addEventListener('click', () => {
+    const box = document.getElementById('planInstruction');
+    if (!box) return;
+    box.value = box.value.trim() ? `${box.value.trim()}\n${DEFAULT_PLAN_RULES}` : DEFAULT_PLAN_RULES;
+    box.dispatchEvent(new Event('input'));
+  });
+  document.getElementById('saveSnapshotBtn')?.addEventListener('click', async () => {
+    if (!state?.currentJob) return;
+    const note = window.prompt('輸入此草稿快照備註（方便日後識別）：', '手動備份') ?? '';
+    if (!note.trim()) return;
+    try {
+      const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/review/snapshots`, {
+        method: 'POST',
+        body: JSON.stringify({ note: note.trim() }),
+      });
+      await refreshReviewSnapshots(state.currentJob);
+      alert(res.output || '已儲存草稿快照');
+    } catch (err) {
+      alert(`儲存快照失敗：${err.message}`);
+    }
+  });
+  document.getElementById('restoreSnapshotBtn')?.addEventListener('click', async () => {
+    const sel = document.getElementById('reviewSnapshotSelect');
+    const snapId = sel?.value;
+    if (!state?.currentJob || !snapId) return;
+    if (!window.confirm(`確定要將 review/ 退回至快照 ${snapId}？（退回前會自動備份目前版本）`)) return;
+    try {
+      const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/review/snapshots/${encodeURIComponent(snapId)}/restore`, {
+        method: 'POST',
+      });
+      await refreshReviewSnapshots(state.currentJob);
+      const frame = document.getElementById('reviewPreviewFrame');
+      if (frame) frame.src = `/api/jobs/${encodeURIComponent(state.currentJob)}/review/index.html?t=${Date.now()}`;
+      await loadJobDetail(state.currentJob);
+      alert(res.output || '已退回至指定草稿版本');
+    } catch (err) {
+      alert(`退回失敗：${err.message}`);
+    }
+  });
+}
+
 
 

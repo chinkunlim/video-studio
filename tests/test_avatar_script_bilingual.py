@@ -276,3 +276,34 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         self.assertEqual(out_cfg["height"], 1080)
         prompt = planner.build_plan_prompt("einstein-demo")
         self.assertIn("1440x1080", prompt)
+
+    def test_review_snapshot_and_rollback(self) -> None:
+        """Verify review/ snapshot creation, listing, and rollback restore."""
+        from video_studio.services import planner
+        from video_studio.services.common import job as J
+
+        job = J.find("einstein-demo")
+        job.review.mkdir(parents=True, exist_ok=True)
+        html_path = job.review / "index.html"
+        html_path.write_text("<html><body>v1</body></html>", encoding="utf-8")
+
+        snap_res = self.client.post("/api/jobs/einstein-demo/review/snapshots", json={"note": "v1 initial"})
+        self.assertEqual(snap_res.status_code, 200)
+        snap_id = snap_res.json()["snapshot"]["id"]
+
+        # Overwrite review/index.html with v2 (simulating a bad agy edit)
+        html_path.write_text("<html><body>v2 broken</body></html>", encoding="utf-8")
+        restore_res = self.client.post(f"/api/jobs/einstein-demo/review/snapshots/{snap_id}/restore")
+        self.assertEqual(restore_res.status_code, 200)
+        self.assertEqual(html_path.read_text(encoding="utf-8"), "<html><body>v1</body></html>")
+
+        # Pre-restore backup should also exist in list
+        list_res = self.client.get("/api/jobs/einstein-demo/review/snapshots")
+        self.assertEqual(list_res.status_code, 200)
+        self.assertGreaterEqual(len(list_res.json()["snapshots"]), 2)
+
+        # Poster rules include 3/4 width, scrolling, and hand-drawn animation
+        (job.input / "poster.png").write_bytes(b"fake")
+        prompt = planner.build_plan_prompt("einstein-demo")
+        self.assertIn("3/4", prompt)
+        self.assertIn("scrolling", prompt)
