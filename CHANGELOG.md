@@ -29,6 +29,7 @@ All notable changes to **video-studio** are documented here
 - feat(studio): add active agy plan reconnect endpoint and frontend auto-resume on page reload (by `@antigravity`)
 - feat(studio): fit-to-stage review HTML preview and configurable video aspect ratios (by `@antigravity`)
 - feat(studio): add review/ version snapshots & rollback plus 3/4-width scroll & hand-drawn agy rules (by `@antigravity`)
+- feat(planner): enforce mirrored left/right poster framing and side-margin hand-drawn callouts (by `@antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)
