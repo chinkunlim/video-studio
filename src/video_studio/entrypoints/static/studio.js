@@ -198,6 +198,19 @@ async function loadJobDetail(name) {
   syncConfigVisibility();
   loadBilingualPreview(name);
   updateMediaPreview(name, d.latest_version, d.latest_files);
+  const narrEl = document.getElementById('narrateLog');
+  if (narrEl) {
+    narrEl.textContent = d.latest_version && d.latest_files.includes('narration.wav')
+      ? `✅ 已產出最新配音與字幕 (${d.latest_version})：\n${d.latest_files.join(', ')}`
+      : '尚未執行';
+  }
+  const rendEl = document.getElementById('renderLog');
+  if (rendEl) {
+    const hasVid = d.latest_files.includes('video_subtitled.mp4') || d.latest_files.includes('video.mp4');
+    rendEl.textContent = d.latest_version && hasVid
+      ? `✅ 已產出最新影片 (${d.latest_version})：\n${d.latest_files.join(', ')}`
+      : '尚未渲染';
+  }
 }
 
 /**

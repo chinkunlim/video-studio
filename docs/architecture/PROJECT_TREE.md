@@ -115,6 +115,7 @@ video-studio/
 │   │   ├── 002-host-python-tomllib-detection.md
 │   │   ├── 003-empty-workspace-job-parse.md
 │   │   ├── 004-agy-cli-denied-data-dir-read.md
+│   │   ├── 005-narrate-log-resets-on-refresh.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── migration/                          # [遷移紀錄] 舊專案搬移清單、批次與完成標準
