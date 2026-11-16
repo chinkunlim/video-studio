@@ -35,13 +35,50 @@ _RUNS: dict[str, PlanRun] = {}
 _LOCK = threading.Lock()
 
 
-def build_plan_prompt(job_name: str, user_instruction: str = "", mode: str = "html") -> str:
+def _poster_and_lang_rules(job: J.Job, follow_poster_design: bool) -> list[str]:
+    """Build prompt instructions for poster design reuse and cross-language translation.
+
+    Args:
+        job: Loaded Job instance.
+        follow_poster_design: Whether to preserve uploaded poster/PPTX layout and colors.
+
+    Returns:
+        List of instruction lines for the planning prompt.
+    """
+    in_files = sorted(p.name for p in job.input.iterdir() if p.is_file()) if job.input.is_dir() else []
+    posters = [
+        f for f in in_files if f.lower().endswith((".pptx", ".pdf", ".png", ".jpg")) and "script" not in f
+    ]
+    voice_lang = str(job.cfg.get("voice", {}).get("language", "zh")).strip().lower()
+    rules = [f"已上傳素材目錄（{job.input}）：{', '.join(in_files) if in_files else '無'}"]
+    if posters and follow_poster_design:
+        rules.append(
+            f"1. 沿用海報設計：請先檢視 {', '.join(posters)} 的版面結構、配色與視覺層級，"
+            "在 HTML/GSAP 中保留並重構使用者的原海報設計風格。"
+        )
+    elif posters:
+        rules.append(f"1. 參考 {', '.join(posters)} 的核心資訊，但可重新設計更適合影片動態節奏的版面。")
+    if posters and voice_lang != "zh":
+        rules.append(
+            f"2. 跨語系海報翻譯：目前語音語言為 `{voice_lang}`，請自動將海報上所有中文標題、"
+            f"內文、圖表標籤翻譯為自然流暢的 `{voice_lang}` 呈現於畫面中。"
+        )
+    return rules
+
+
+def build_plan_prompt(
+    job_name: str,
+    user_instruction: str = "",
+    mode: str = "html",
+    follow_poster_design: bool = True,
+) -> str:
     """Assemble a complete planning prompt from the job's brief, script, and timing.
 
     Args:
         job_name: Target job name.
         user_instruction: Additional instruction from the web UI chat box.
         mode: Target planning mode ('html' or 'poster').
+        follow_poster_design: Whether to preserve uploaded poster/PPTX design.
 
     Returns:
         Self-contained prompt string for Antigravity / agy CLI.
@@ -57,6 +94,7 @@ def build_plan_prompt(job_name: str, user_instruction: str = "", mode: str = "ht
         else "（尚未產出時間軸，請先執行 narrate build）"
     )
     target_file = f"{job.review / 'index.html'}" if mode == "html" else f"{job.review / 'scenes.toml'}"
+    poster_rules = _poster_and_lang_rules(job, follow_poster_design)
     return "\n".join(
         [
             f"請為 video-studio 工作 `{job.type}/{job.name}`（標題：{job.title}）規劃分鏡草稿。",
@@ -65,6 +103,9 @@ def build_plan_prompt(job_name: str, user_instruction: str = "", mode: str = "ht
             "",
             "【使用者規劃說明 (brief.md)】",
             brief_text or "（無額外 brief.md）",
+            "",
+            "【海報設計與語言對齊規則】",
+            *poster_rules,
             "",
             "【本次補充要求】",
             user_instruction.strip() or "請依講稿與先聲後影時間軸規劃清晰、可重現的分鏡與動畫。",
@@ -188,6 +229,7 @@ def start_agy_plan(
     user_instruction: str = "",
     mode: str = "html",
     model: str = "",
+    follow_poster_design: bool = True,
 ) -> dict[str, Any]:
     """Start a background agy CLI planning run for a job.
 
@@ -196,11 +238,12 @@ def start_agy_plan(
         user_instruction: Optional user instruction or follow-up message.
         mode: Target output mode ('html' or 'poster').
         model: Optional agy model ID.
+        follow_poster_design: Whether to preserve uploaded poster/PPTX design.
 
     Returns:
         Dictionary containing run_id, status, available flag, and prompt.
     """
-    prompt = build_plan_prompt(job_name, user_instruction, mode)
+    prompt = build_plan_prompt(job_name, user_instruction, mode, follow_poster_design)
     agy_bin = _resolve_agy_bin()
     run_id = uuid.uuid4().hex[:12]
     if not agy_bin:

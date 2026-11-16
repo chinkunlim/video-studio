@@ -87,7 +87,20 @@ class TestAvatarScriptBilingual(unittest.TestCase):
                 "/api/jobs/einstein-demo/plan",
                 json={"instruction": "test", "mode": "html", "model": "gemini-4-argon-high"},
             )
-            mock_plan.assert_called_once_with("einstein-demo", "test", "html", "gemini-4-argon-high")
+            mock_plan.assert_called_once_with("einstein-demo", "test", "html", "gemini-4-argon-high", True)
+
+        # Verify build_plan_prompt preserves poster design and adds English translation rule when voice=en
+        from video_studio.services.planner import build_plan_prompt
+
+        job = J.find("einstein-demo")
+        (job.input / "poster.pptx").write_bytes(b"PK")
+        self.client.put(
+            "/api/jobs/einstein-demo/config",
+            json={"title": "愛因斯坦相對論", "voice_language": "en", "visual_mode": "html"},
+        )
+        prompt = build_plan_prompt("einstein-demo", "", "html", follow_poster_design=True)
+        self.assertIn("沿用海報設計", prompt)
+        self.assertIn("跨語系海報翻譯", prompt)
 
         js = self.client.get("/studio-prosody.js")
         self.assertEqual(js.status_code, 200)

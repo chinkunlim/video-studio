@@ -270,9 +270,10 @@ async function runAntigravityPlan(instruction) {
   try {
     const mode = document.getElementById('planModeSelect').value;
     const model = document.getElementById('planModelSelect')?.value || '';
+    const follow_poster_design = document.getElementById('planFollowPoster')?.value !== 'false';
     const startRes = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/plan`, {
       method: 'POST',
-      body: JSON.stringify({ instruction, mode, model }),
+      body: JSON.stringify({ instruction, mode, model, follow_poster_design }),
     });
     state.lastPrompt = startRes.prompt || '';
     if (!startRes.available) {

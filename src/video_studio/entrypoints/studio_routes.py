@@ -66,6 +66,7 @@ class PlanRequest(BaseModel):
     instruction: str = Field(default="", description="User planning instruction or follow-up")
     mode: str = Field(default="html", description="html | poster")
     model: str = Field(default="", description="Optional agy CLI model ID")
+    follow_poster_design: bool = Field(default=True, description="Preserve uploaded poster design")
 
 
 class EnvUpdateRequest(BaseModel):
@@ -313,7 +314,7 @@ def start_plan(job_name: str, req: PlanRequest) -> dict[str, Any]:
     Returns:
         Run handle with run_id and initial status.
     """
-    return planner.start_agy_plan(job_name, req.instruction, req.mode, req.model)
+    return planner.start_agy_plan(job_name, req.instruction, req.mode, req.model, req.follow_poster_design)
 
 
 @router.get("/api/agy/models")
