@@ -42,6 +42,7 @@ class TestStudioUIAndPlanner(unittest.TestCase):
         self.assertEqual(html.status_code, 200)
         self.assertIn("qa-drawer", html.text)
         self.assertIn("cfgVoiceLanguage", html.text)
+        self.assertIn('id="assetFileInput" multiple', html.text)
         self.assertIn("btnLayoutGuides", html.text)
         self.assertIn("📖 OpenAPI 文件", html.text)
 

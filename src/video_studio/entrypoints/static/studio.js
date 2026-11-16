@@ -341,17 +341,25 @@ async function handleCreateJob() {
 }
 
 /**
- * 上傳素材檔案至目前工作的 input/ 目錄。
+ * 批次上傳一或多個素材檔案至目前工作的 input/ 目錄。
  * @returns {Promise<void>}
  */
 async function handleUploadAsset() {
-  const f = document.getElementById('assetFileInput').files[0];
-  if (!f || !state.currentJob) return;
-  const fd = new FormData();
-  fd.append('file', f);
-  const res = await fetch(`/api/jobs/${encodeURIComponent(state.currentJob)}/upload`, { method: 'POST', body: fd });
-  const data = await res.json();
-  document.getElementById('jobCheckLog').textContent = data.output || data.detail;
+  const input = document.getElementById('assetFileInput');
+  const files = [...(input?.files || [])];
+  if (!state.currentJob) { showToast('請先建立或選擇一個工作', 'warning'); return; }
+  if (!files.length) { showToast('請先選擇要上傳的檔案（可多選）', 'warning'); return; }
+  const logs = [];
+  for (const f of files) {
+    const fd = new FormData();
+    fd.append('file', f);
+    const res = await fetch(`/api/jobs/${encodeURIComponent(state.currentJob)}/upload`, { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    logs.push(data.output || data.detail || `${f.name}: HTTP ${res.status}`);
+  }
+  document.getElementById('jobCheckLog').textContent = logs.join('\n');
+  input.value = '';
+  showToast(`已上傳 ${files.length} 個檔案至 input/`, 'success');
   await loadJobDetail(state.currentJob);
 }
 
