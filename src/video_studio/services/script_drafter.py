@@ -13,7 +13,6 @@ from pypdf import PdfReader
 from video_studio.config.settings import load_config as load_app_config
 from video_studio.services.common import job as J
 from video_studio.services.common.ollama_client import generate_text, is_ollama_reachable
-from video_studio.services.narrate.core.script import split_sentences
 from video_studio.services.planner import run_agy_prompt
 
 logger = logging.getLogger(__name__)
@@ -64,8 +63,11 @@ def build_script_draft_prompt(
             "",
             "【嚴格輸出格式】",
             "1. 第一行寫 `# 講稿：{標題}`。",
-            "2. 用 `## 投影片 1`、`## 投影片 2` ... 分段。",
-            "3. 每段底下只放口播句子，**一句一行**，不要加項目符號、不要加括號舞台指示、不要多餘前言或解釋。",
+            "2. 用 `## 投影片 1`、`## 投影片 2` ... 分段（**必須依海報區塊切分 5～8 個段落**，"
+            "每個段落對應一個鏡頭 Zoom-In 聚焦區塊，例如動機、假設、Figure 1、Figure 2、結果、總結，"
+            "切勿全部寫在 `## 投影片 1`）。",
+            "3. 每段底下只放口播句子，**一句獨立一行**（英文每句結尾換行），"
+            "不要加項目符號、不要加括號舞台指示、不要多餘前言或解釋。",
             "4. 請適當加入語氣韻律標記讓語音更擬真：關鍵名詞或核心數據用 `[loud]詞彙[/loud]`、"
             "輕聲補充或轉折詞用 `[soft]詞彙[/soft]`、較快過渡句在句首加 `[fast] `、"
             "需要放慢強調的重點句在句首加 `[slow] `（每段適度標記 1–3 處即可）。",
@@ -115,6 +117,36 @@ def _extract_pptx_text(pptx_path: Path, max_chars: int = 6000) -> str:
     except Exception as exc:
         logger.warning("Failed reading PPTX %s: %s", pptx_path, exc)
         return ""
+
+
+def _format_drafted_script(raw: str) -> str:
+    """Format LLM script output into clean headings and one sentence per line (ZH & EN).
+
+    Args:
+        raw: Raw Markdown script returned by agy-cli or Ollama.
+
+    Returns:
+        Formatted Markdown script preserving headings and sentence-per-line layout.
+    """
+    out: list[str] = []
+    for raw_line in raw.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            if out and out[-1] != "":
+                out.append("")
+            out.append(line)
+            out.append("")
+            continue
+        # Split English sentence boundaries first, then Chinese sentence endings
+        en_sents = re.split(r'(?<=[.!?])\s+(?=[A-Z"\[\*])', line)
+        for en_s in en_sents:
+            for zh_s in re.findall(r"[^。！？；]+[。！？；]?", en_s):
+                s = zh_s.strip()
+                if s:
+                    out.append(s)
+    return "\n".join(out).strip() + "\n"
 
 
 def _collect_input_context(job: J.Job) -> str:
@@ -181,8 +213,7 @@ def draft_script_to_review(
             base_url=app_cfg.ollama_base_url,
             model=app_cfg.ollama_model,
         )
-    raw = re.sub(r"^(#+ .+)$", r"\1\n", raw, flags=re.MULTILINE)
-    formatted = split_sentences(raw)
+    formatted = _format_drafted_script(raw)
     job.review.mkdir(parents=True, exist_ok=True)
     out_path = job.review / "script.md"
     out_path.write_text(formatted.rstrip() + "\n", encoding="utf-8")
