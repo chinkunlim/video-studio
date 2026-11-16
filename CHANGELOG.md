@@ -21,6 +21,7 @@ All notable changes to **video-studio** are documented here
 - feat(ui): group job.toml settings into sections with conditional field visibility (by `@Antigravity`)
 - feat(planner): preserve poster design option and auto-translate Chinese poster for non-zh voice (by `@Antigravity`)
 - feat(planner): enforce poster spotlight highlight, GSAP motion, and progress bar in plan prompt (by `@Antigravity`)
+- feat(script): instruct agy-cli to auto-annotate inline prosody tags in drafted scripts (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)
