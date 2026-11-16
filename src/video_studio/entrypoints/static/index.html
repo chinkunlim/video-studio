@@ -126,111 +126,140 @@
       <section class="view" id="view-settings">
         <div class="card" id="cardJobConfig">
           <h2>工作完整設定 (job.toml)</h2>
-          <div class="field-grid">
-            <label class="field">中文標題<input type="text" id="cfgTitle" /></label>
-            <label class="field">畫面模式 (visual.mode)
-              <select id="cfgVisualMode">
-                <option value="auto">auto</option>
-                <option value="html">html (HyperFrames + GSAP)</option>
-                <option value="poster">poster (海報鏡頭)</option>
-                <option value="pptx-export">pptx-export</option>
-                <option value="none">none (僅配音字幕)</option>
-              </select>
-            </label>
-            <label class="field">配音引擎 (voice.engine)
-              <select id="cfgVoiceEngine">
-                <option value="voicebox">voicebox (本機聲音克隆)</option>
-                <option value="edge-tts">edge-tts (免啟動免費雲端配音)</option>
-              </select>
-            </label>
-            <label class="field">語音語言 (voice.language)
-              <select id="cfgVoiceLanguage">
-                <option value="zh">zh (繁體中文 / 國語)</option>
-                <option value="en">en (English)</option>
-                <option value="ja">ja (日本語)</option>
-                <option value="ko">ko (한국어)</option>
-              </select>
-            </label>
-            <label class="field">Voicebox 聲紋名稱<input type="text" id="cfgVoiceProfile" /></label>
-            <label class="field">edge-tts 聲線 (依語音語言選擇)
-              <select id="cfgEdgeVoice">
-                <optgroup label="繁體中文（台灣）">
-                  <option value="zh-TW-HsiaoChenNeural">zh-TW-HsiaoChenNeural (曉臻 · 女聲)</option>
-                  <option value="zh-TW-YunJheNeural">zh-TW-YunJheNeural (雲哲 · 男聲)</option>
-                  <option value="zh-TW-HsiaoYuNeural">zh-TW-HsiaoYuNeural (曉雨 · 女聲)</option>
-                </optgroup>
-                <optgroup label="English (US)">
-                  <option value="en-US-AriaNeural">en-US-AriaNeural (Aria · 女聲)</option>
-                  <option value="en-US-GuyNeural">en-US-GuyNeural (Guy · 男聲)</option>
-                </optgroup>
-                <optgroup label="日本語">
-                  <option value="ja-JP-NanamiNeural">ja-JP-NanamiNeural (Nanami · 女聲)</option>
-                  <option value="ja-JP-KeitaNeural">ja-JP-KeitaNeural (Keita · 男聲)</option>
-                </optgroup>
-                <optgroup label="한국어">
-                  <option value="ko-KR-SunHiNeural">ko-KR-SunHiNeural (SunHi · 女聲)</option>
-                </optgroup>
-              </select>
-            </label>
-            <label class="field">edge-tts 語速<input type="text" id="cfgEdgeRate" value="+0%" /></label>
-            <label class="field">預設韻律風格 (prosody_preset)
-              <select id="cfgProsodyPreset">
-                <option value="normal">標準自然 (normal)</option>
-                <option value="energetic">活力強音加速 (energetic)</option>
-                <option value="calm">沉穩放慢輕柔 (calm)</option>
-              </select>
-            </label>
-            <label class="field">Whisper 字幕辨識模型
-              <select id="cfgWhisperModel">
-                <option value="tiny">tiny (最快)</option>
-                <option value="base">base</option>
-                <option value="small">small (預設推薦)</option>
-                <option value="medium">medium (較精準)</option>
-              </select>
-            </label>
-            <label class="field">繁簡轉換 (OpenCC)
-              <select id="cfgOpenccMode">
-                <option value="s2tw">s2tw (簡轉台灣正體)</option>
-                <option value="s2t">s2t (簡轉繁體)</option>
-                <option value="none">none (不轉換)</option>
-              </select>
-            </label>
-            <label class="field">響度 LUFS (-30 ~ -8)<input type="number" id="cfgLoudness" value="-16" /></label>
-            <label class="field">輸出 FPS<input type="number" id="cfgFps" value="30" min="15" max="60" /></label>
-            <label class="field">燒錄字幕 (burn_in)
-              <select id="cfgBurnIn"><option value="true">是 (輸出 video_subtitled.mp4)</option><option value="false">否</option></select>
-            </label>
-            <label class="field">雙語字幕 (英文配音建議開啟)
-              <select id="cfgBilingualSubtitles"><option value="false">否 (單語字幕)</option><option value="true">是 (主語言 + 副語言雙行)</option></select>
-            </label>
-            <label class="field">雙語副字幕語言
-              <select id="cfgSubtitleSecondaryLang"><option value="zh-TW">繁體中文 (zh-TW)</option><option value="en">English</option><option value="ja">日本語</option></select>
-            </label>
-            <label class="field">字幕字級 (px)<input type="number" id="cfgSubtitleFontSize" value="22" min="12" max="64" /></label>
-            <label class="field">Avatar 講者模式
-              <select id="cfgAvatarEngine">
-                <option value="none">不疊加 Avatar</option>
-                <option value="lightweight">路線 B：輕量動態頭像框 (FFmpeg)</option>
-                <option value="sadtalker">路線 A：SadTalker AI 對嘴模型</option>
-              </select>
-            </label>
-            <label class="field">Avatar 頭像檔名 (input/)<input type="text" id="cfgAvatarImage" placeholder="例如 einstein.png" /></label>
-            <label class="field">Avatar 視窗位置
-              <select id="cfgAvatarPosition">
-                <option value="bottom-right">右下角</option>
-                <option value="bottom-left">左下角</option>
-                <option value="top-right">右上角</option>
-                <option value="top-left">左上角</option>
-              </select>
-            </label>
-            <label class="field">備份輸出目錄 (選填)<input type="text" id="cfgBackupDir" placeholder="/Volumes/..." /></label>
+
+          <div class="cfg-section">
+            <h3 class="cfg-section-title">1. 基本與畫面引擎</h3>
+            <div class="field-grid">
+              <label class="field">中文標題<input type="text" id="cfgTitle" /></label>
+              <label class="field">畫面模式 (visual.mode)
+                <select id="cfgVisualMode">
+                  <option value="auto">auto (自動判斷)</option>
+                  <option value="html">html (HyperFrames + GSAP 動畫)</option>
+                  <option value="poster">poster (海報鏡頭)</option>
+                  <option value="pptx-export">pptx-export (PowerPoint 匯出)</option>
+                  <option value="none">none (僅配音字幕)</option>
+                </select>
+              </label>
+            </div>
           </div>
-          <div class="field-grid">
-            <label class="field">講稿檔名 (inputs.script)<input type="text" id="cfgInScript" /></label>
-            <label class="field">PPTX 檔名 (inputs.pptx)<input type="text" id="cfgInPptx" /></label>
-            <label class="field">海報檔名 (inputs.poster)<input type="text" id="cfgInPoster" /></label>
-            <label class="field">分鏡檔名 (inputs.scenes)<input type="text" id="cfgInScenes" /></label>
+
+          <div class="cfg-section">
+            <h3 class="cfg-section-title">2. 聲音與 TTS 引擎設定</h3>
+            <div class="field-grid">
+              <label class="field">配音引擎 (voice.engine)
+                <select id="cfgVoiceEngine">
+                  <option value="voicebox">voicebox (本機聲音克隆)</option>
+                  <option value="edge-tts">edge-tts (免啟動免費雲端配音)</option>
+                </select>
+              </label>
+              <label class="field">語音語言 (voice.language)
+                <select id="cfgVoiceLanguage">
+                  <option value="zh">zh (繁體中文 / 國語)</option>
+                  <option value="en">en (English)</option>
+                  <option value="ja">ja (日本語)</option>
+                  <option value="ko">ko (한국어)</option>
+                </select>
+              </label>
+              <label class="field">預設韻律風格 (prosody_preset)
+                <select id="cfgProsodyPreset">
+                  <option value="normal">標準自然 (normal)</option>
+                  <option value="energetic">活力強音加速 (energetic)</option>
+                  <option value="calm">沉穩放慢輕柔 (calm)</option>
+                </select>
+              </label>
+              <label class="field cfg-voicebox-only">Voicebox 聲紋名稱<input type="text" id="cfgVoiceProfile" /></label>
+              <label class="field cfg-edgetts-only">edge-tts 聲線 (依語音語言選擇)
+                <select id="cfgEdgeVoice">
+                  <optgroup label="繁體中文（台灣）">
+                    <option value="zh-TW-HsiaoChenNeural">zh-TW-HsiaoChenNeural (曉臻 · 女聲)</option>
+                    <option value="zh-TW-YunJheNeural">zh-TW-YunJheNeural (雲哲 · 男聲)</option>
+                    <option value="zh-TW-HsiaoYuNeural">zh-TW-HsiaoYuNeural (曉雨 · 女聲)</option>
+                  </optgroup>
+                  <optgroup label="English (US)">
+                    <option value="en-US-AriaNeural">en-US-AriaNeural (Aria · 女聲)</option>
+                    <option value="en-US-GuyNeural">en-US-GuyNeural (Guy · 男聲)</option>
+                  </optgroup>
+                  <optgroup label="日本語">
+                    <option value="ja-JP-NanamiNeural">ja-JP-NanamiNeural (Nanami · 女聲)</option>
+                    <option value="ja-JP-KeitaNeural">ja-JP-KeitaNeural (Keita · 男聲)</option>
+                  </optgroup>
+                  <optgroup label="한국어">
+                    <option value="ko-KR-SunHiNeural">ko-KR-SunHiNeural (SunHi · 女聲)</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label class="field cfg-edgetts-only">edge-tts 語速<input type="text" id="cfgEdgeRate" value="+0%" /></label>
+            </div>
           </div>
+
+          <div class="cfg-section">
+            <h3 class="cfg-section-title">3. 字幕與 Whisper 辨識設定</h3>
+            <div class="field-grid">
+              <label class="field">Whisper 字幕辨識模型
+                <select id="cfgWhisperModel">
+                  <option value="tiny">tiny (最快)</option>
+                  <option value="base">base</option>
+                  <option value="small">small (預設推薦)</option>
+                  <option value="medium">medium (較精準)</option>
+                </select>
+              </label>
+              <label class="field">繁簡轉換 (OpenCC)
+                <select id="cfgOpenccMode">
+                  <option value="s2tw">s2tw (簡轉台灣正體)</option>
+                  <option value="s2t">s2t (簡轉繁體)</option>
+                  <option value="none">none (不轉換)</option>
+                </select>
+              </label>
+              <label class="field">燒錄字幕 (burn_in)
+                <select id="cfgBurnIn"><option value="true">是 (輸出 video_subtitled.mp4)</option><option value="false">否</option></select>
+              </label>
+              <label class="field">字幕字級 (px)<input type="number" id="cfgSubtitleFontSize" value="22" min="12" max="64" /></label>
+              <label class="field">雙語字幕 (英文配音建議開啟)
+                <select id="cfgBilingualSubtitles"><option value="false">否 (單語字幕)</option><option value="true">是 (主語言 + 副語言雙行)</option></select>
+              </label>
+              <label class="field cfg-bilingual-only">雙語副字幕語言
+                <select id="cfgSubtitleSecondaryLang"><option value="zh-TW">繁體中文 (zh-TW)</option><option value="en">English</option><option value="ja">日本語</option></select>
+              </label>
+            </div>
+          </div>
+
+          <div class="cfg-section">
+            <h3 class="cfg-section-title">4. Avatar 虛擬講者設定</h3>
+            <div class="field-grid">
+              <label class="field">Avatar 講者模式
+                <select id="cfgAvatarEngine">
+                  <option value="none">不疊加 Avatar</option>
+                  <option value="lightweight">路線 B：輕量動態頭像框 (FFmpeg)</option>
+                  <option value="sadtalker">路線 A：SadTalker AI 對嘴模型</option>
+                </select>
+              </label>
+              <label class="field cfg-avatar-only">Avatar 頭像檔名 (input/)<input type="text" id="cfgAvatarImage" placeholder="例如 einstein.png" /></label>
+              <label class="field cfg-avatar-only">Avatar 視窗位置
+                <select id="cfgAvatarPosition">
+                  <option value="bottom-right">右下角</option>
+                  <option value="bottom-left">左下角</option>
+                  <option value="top-right">右上角</option>
+                  <option value="top-left">左上角</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="cfg-section">
+            <h3 class="cfg-section-title">5. 輸出參數與輸入檔案對應 (inputs.*)</h3>
+            <div class="field-grid">
+              <label class="field">響度 LUFS (-30 ~ -8)<input type="number" id="cfgLoudness" value="-16" /></label>
+              <label class="field">輸出 FPS<input type="number" id="cfgFps" value="30" min="15" max="60" /></label>
+              <label class="field">備份輸出目錄 (選填)<input type="text" id="cfgBackupDir" placeholder="/Volumes/..." /></label>
+            </div>
+            <div class="field-grid" style="margin-top:10px;">
+              <label class="field">講稿檔名 (inputs.script)<input type="text" id="cfgInScript" /></label>
+              <label class="field">簡報檔名 (inputs.pptx · 選填)<input type="text" id="cfgInPptx" placeholder="例如 poster.pptx" /></label>
+              <label class="field">海報圖檔名 (inputs.poster · 僅海報鏡頭用)<input type="text" id="cfgInPoster" placeholder="例如 poster.png / poster.pdf" /></label>
+              <label class="field">分鏡檔名 (inputs.scenes)<input type="text" id="cfgInScenes" /></label>
+            </div>
+          </div>
+
           <div class="row">
             <button class="btn" id="saveJobConfigBtn" type="button">儲存 job.toml 設定</button>
           </div>

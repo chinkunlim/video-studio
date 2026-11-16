@@ -195,6 +195,7 @@ async function loadJobDetail(name) {
   document.getElementById('scriptEditor').value = d.script || '';
   if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
   document.getElementById('briefEditor').value = d.brief || '';
+  syncConfigVisibility();
   updateMediaPreview(name, d.latest_version, d.latest_files);
 }
 
@@ -438,13 +439,32 @@ function bindSettingsEvents() {
     const defaults = { zh: 'zh-TW-HsiaoChenNeural', en: 'en-US-AriaNeural', ja: 'ja-JP-NanamiNeural', ko: 'ko-KR-SunHiNeural' };
     if (defaults[e.target.value]) document.getElementById('cfgEdgeVoice').value = defaults[e.target.value];
     if (e.target.value === 'en') document.getElementById('cfgBilingualSubtitles').value = 'true';
+    syncConfigVisibility();
   });
+  document.getElementById('cfgVoiceEngine')?.addEventListener('change', syncConfigVisibility);
+  document.getElementById('cfgAvatarEngine')?.addEventListener('change', syncConfigVisibility);
+  document.getElementById('cfgBilingualSubtitles')?.addEventListener('change', syncConfigVisibility);
+  syncConfigVisibility();
   document.getElementById('draftScriptBtn')?.addEventListener('click', handleDraftScript);
   document.getElementById('loadReviewScriptBtn')?.addEventListener('click', handleLoadReviewScript);
   document.getElementById('approveScriptBtn')?.addEventListener('click', () => approveReviewFile('script.md'));
   document.getElementById('translateBilingualBtn')?.addEventListener('click', handleTranslateBilingual);
   document.getElementById('saveVocabBtn').addEventListener('click', handleSaveVocab);
   document.getElementById('saveEnvBtn').addEventListener('click', handleSaveEnv);
+}
+
+/**
+ * 依選擇的配音引擎、雙語字幕與 Avatar 開關，動態顯示或隱藏對應欄位。
+ * @returns {void}
+ */
+function syncConfigVisibility() {
+  const voiceEngine = document.getElementById('cfgVoiceEngine')?.value || 'voicebox';
+  const avatarEngine = document.getElementById('cfgAvatarEngine')?.value || 'none';
+  const bilingual = document.getElementById('cfgBilingualSubtitles')?.value === 'true';
+  document.querySelectorAll('.cfg-voicebox-only').forEach(el => el.classList.toggle('is-hidden', voiceEngine !== 'voicebox'));
+  document.querySelectorAll('.cfg-edgetts-only').forEach(el => el.classList.toggle('is-hidden', voiceEngine !== 'edge-tts'));
+  document.querySelectorAll('.cfg-avatar-only').forEach(el => el.classList.toggle('is-hidden', avatarEngine === 'none'));
+  document.querySelectorAll('.cfg-bilingual-only').forEach(el => el.classList.toggle('is-hidden', !bilingual));
 }
 
 /**

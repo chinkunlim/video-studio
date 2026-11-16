@@ -173,6 +173,11 @@ iframe.preview-frame { width: 100%; height: 340px; border: 1px solid var(--line)
   background: var(--surface); border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(0, 0, 0, .2);
 }
 
+/* Settings Sections & Conditional Visibility */
+.cfg-section { padding: 14px; border-radius: var(--radius-m); background: var(--surface-2); border: 1px solid var(--line); }
+.cfg-section-title { font-size: 13.5px; font-weight: 700; color: var(--primary); margin-bottom: 10px; }
+.is-hidden { display: none !important; }
+
 /* Dropzone & File Chips */
 .dropzone {
   border: 1.5px dashed var(--line); border-radius: var(--radius-m); padding: 12px;

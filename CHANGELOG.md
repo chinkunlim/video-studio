@@ -18,6 +18,7 @@ All notable changes to **video-studio** are documented here
 - feat(ui): support batch multi-file upload to job input/ (by `@Antigravity`)
 - feat(ui): add drag-drop multi-file upload queue and prominent input file chips (by `@Antigravity`)
 - feat(script): include input/ directory and uploaded files in agy script draft prompt (by `@Antigravity`)
+- feat(ui): group job.toml settings into sections with conditional field visibility (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)
