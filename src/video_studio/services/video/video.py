@@ -17,6 +17,7 @@ from __future__ import annotations
 import csv
 import logging
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -38,19 +39,8 @@ def load_video_config() -> dict[str, Any]:
     app_cfg = load_app_config()
     fixes_path = Path(__file__).resolve().parents[1] / "narrate" / "traditional_fixes.tsv"
     return {
-        "output": {
-            "width": 1920,
-            "height": 1080,
-            "fps": 30,
-            "crf": 18,
-            "tail": 1.0,
-        },
-        "camera": {
-            "raster_width": 3840,
-            "background": "#F0EFEB",
-            "move": 0.8,
-            "hold_end": 0.5,
-        },
+        "output": {"width": 1920, "height": 1080, "fps": 30, "crf": 18, "tail": 1.0},
+        "camera": {"raster_width": 3840, "background": "#F0EFEB", "move": 0.8, "hold_end": 0.5},
         "callout": {
             "height": 140,
             "color": "#D9692E",
@@ -68,10 +58,7 @@ def load_video_config() -> dict[str, Any]:
             "stroke_width": 3,
             "margin_bottom": 40,
         },
-        "font": {
-            "path": "/System/Library/Fonts/STHeiti Light.ttc",
-            "index": 1,
-        },
+        "font": {"path": "/System/Library/Fonts/STHeiti Light.ttc", "index": 1},
         "fixes_path": str(fixes_path),
         "voicebox_url": app_cfg.voicebox_url,
     }
@@ -137,21 +124,21 @@ def write_timing_tsv(v: Path, slides: list[timing.Slide]) -> None:
         v: 版本目录。
         slides: Slide 列表。
     """
+    rows = [
+        [
+            s.slide,
+            f"{s.start:.2f}",
+            f"{s.end:.2f}",
+            f"{s.duration:.2f}",
+            len(s.lines),
+            " ".join(f"{c:.2f}" for c in s.clicks),
+        ]
+        for s in slides
+    ]
     with open(v / "slide_timing.tsv", "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, delimiter="\t", lineterminator="\n")
         w.writerow(["slide", "start", "end", "duration", "lines", "clicks_from_slide_start"])
-        for s in slides:
-            clicks_str = " ".join(f"{c:.2f}" for c in s.clicks)
-            w.writerow(
-                [
-                    s.slide,
-                    f"{s.start:.2f}",
-                    f"{s.end:.2f}",
-                    f"{s.duration:.2f}",
-                    len(s.lines),
-                    clicks_str,
-                ]
-            )
+        w.writerows(rows)
 
 
 def calc_timing(job_name: str, version: str | None = None) -> str:
@@ -197,6 +184,37 @@ def script_slides_text(job: J.Job) -> dict[int, list[str]]:
     return texts
 
 
+def _write_draft_scenes_file(
+    job: J.Job,
+    dst: Path,
+    slides: list[SimpleNamespace],
+    mode_and_cfg: tuple[str, dict[str, Any]],
+) -> str:
+    """依来源模式写入 scenes.toml 草稿并回传讯息。
+
+    Args:
+        job: 工作物件。
+        dst: 目标 scenes.toml 路径。
+        slides: 投影片列表。
+        mode_and_cfg: (来源模式, 设定字典) 元组。
+
+    Returns:
+        起草结果说明文字。
+    """
+    src_mode, cfg = mode_and_cfg
+    if src_mode == "pptx":
+        p_path = need_input(job, "pptx", "pptx")
+        info = storyboard.read(p_path)
+        if len(info.get("pages", [])) != len(slides):
+            raise RuntimeError(f"pptx 有 {len(info.get('pages', []))} 页，讲稿有 {len(slides)} 页，要一样多")
+        storyboard.write_scenes(info, dst, p_path.name)
+        return f"已从 {p_path.name} 读出 {len(info.get('pages', []))} 幕的镜头位置与提示栏 → {dst}"
+    pf_path = need_input(job, "poster", "海报")
+    img = poster.load_poster(pf_path, cfg["camera"]["raster_width"])
+    poster.write_template(dst, slides, img.size)
+    return f"已起草 {dst}（{len(slides)} 幕，先把海报由上到下平均分配）"
+
+
 def draft_scenes(job_name: str, source: str = "auto", force: bool = False) -> str:
     """起草分镜到 review/scenes.toml + review/scenes_preview.jpg。
 
@@ -210,79 +228,77 @@ def draft_scenes(job_name: str, source: str = "auto", force: bool = False) -> st
     """
     cfg = load_video_config()
     job = get_job(job_name)
-    texts = script_slides_text(job)
-    slides = [SimpleNamespace(slide=n) for n in sorted(texts)]
+    slides = [SimpleNamespace(slide=n) for n in sorted(script_slides_text(job))]
     dst = job.review / "scenes.toml"
     job.review.mkdir(exist_ok=True)
     if dst.exists() and not force:
         raise RuntimeError(f"{dst} 已经存在，不会覆盖（要重做请加 force=True）")
     p = job.input_file("pptx")
     job.input_file("poster")
-    src_mode = source
-    if src_mode == "auto":
-        if p and p.exists() and storyboard.read(p).get("storyboard_like"):
-            src_mode = "pptx"
-        else:
-            src_mode = "even"
-    if src_mode == "pptx":
-        p_path = need_input(job, "pptx", "pptx")
-        info = storyboard.read(p_path)
-        if len(info.get("pages", [])) != len(slides):
-            raise RuntimeError(f"pptx 有 {len(info.get('pages', []))} 页，讲稿有 {len(slides)} 页，要一样多")
-        storyboard.write_scenes(info, dst, p_path.name)
-        msg = f"已从 {p_path.name} 读出 {len(info.get('pages', []))} 幕的镜头位置与提示栏 → {dst}"
-    else:
-        pf_path = need_input(job, "poster", "海报")
-        img = poster.load_poster(pf_path, cfg["camera"]["raster_width"])
-        poster.write_template(dst, slides, img.size)
-        msg = f"已起草 {dst}（{len(slides)} 幕，先把海报由上到下平均分配）"
+    src_mode = (
+        "pptx"
+        if (source == "auto" and p and p.exists() and storyboard.read(p).get("storyboard_like"))
+        else ("even" if source == "auto" else source)
+    )
+    msg = _write_draft_scenes_file(job, dst, slides, (src_mode, cfg))
     preview_path = job.review / "scenes_preview.jpg"
-    pf_preview = need_input(job, "poster", "海报")
-    img_preview = poster.load_poster(pf_preview, cfg["camera"]["raster_width"])
+    img_preview = poster.load_poster(need_input(job, "poster", "海报"), cfg["camera"]["raster_width"])
     scenes_map, _ = poster.read_scenes(dst)
-    poster_scenes = {n: s for n, s in scenes_map.items() if s.get("visual") == "poster"}
-    poster.preview(img_preview, poster_scenes, preview_path)
+    poster.preview(
+        img_preview, {n: s for n, s in scenes_map.items() if s.get("visual") == "poster"}, preview_path
+    )
     return f"{msg}\n区域预览已产生：{preview_path}"
 
 
+@dataclass(frozen=True)
+class FinishContext:
+    """完成合成、烧录与验收所需的上下文参数。
+
+    Attributes:
+        cfg: 设定字典。
+        job: 工作物件。
+        v: 版本目录。
+        slides: Slide 列表。
+    """
+
+    cfg: dict[str, Any]
+    job: J.Job
+    v: Path
+    slides: list[timing.Slide]
+
+
 def finish_video(
-    cfg: dict[str, Any],
-    job: J.Job,
-    v: Path,
-    slides: list[timing.Slide],
+    ctx: FinishContext,
     picture: Path,
     reserve_bottom: int = 0,
 ) -> tuple[bool, list[str]]:
     """完成配音合成、燒錄字幕與影片驗收共用流程。
 
     Args:
-        cfg: 設定字典。
-        job: 工作物件。
-        v: 版本目錄。
-        slides: Slide 列表。
+        ctx: 合成上下文。
         picture: 畫面影片路徑。
         reserve_bottom: 底部保留高度（像素）。
 
     Returns:
         (是否全數通過驗收, 驗收報告列表) 元組。
     """
-    work = job.work / "video"
+    work = ctx.job.work / "video"
     work.mkdir(parents=True, exist_ok=True)
-    out = v / "video.mp4"
+    out = ctx.v / "video.mp4"
     logger.info("合成配音至 %s", out)
-    media.mux(picture, v / "narration.wav", out, slides[-1].end, cfg)
-
-    burn = job.cfg.get("subtitles", {}).get("burn_in", True)
-    if burn:
-        sub_srt = v / "subtitles_vlc.srt"
+    media.mux(picture, ctx.v / "narration.wav", out, media.MuxOptions(ctx.slides[-1].end, ctx.cfg))
+    if ctx.job.cfg.get("subtitles", {}).get("burn_in", True):
+        sub_srt = ctx.v / "subtitles_vlc.srt"
         if sub_srt.exists():
-            logger.info("燒錄字幕至 %s", v / "video_subtitled.mp4")
-            media.burn_subtitles(out, sub_srt, v / "video_subtitled.mp4", cfg, work / "subs", reserve_bottom)
-
+            logger.info("燒錄字幕至 %s", ctx.v / "video_subtitled.mp4")
+            burn_opts = media.SubtitleBurnOptions(ctx.cfg, work / "subs", reserve_bottom)
+            media.burn_subtitles(out, sub_srt, ctx.v / "video_subtitled.mp4", burn_opts)
     logger.info("執行影片驗收與縮圖生成")
-    ok, report = media.check(out, v / "narration.wav", slides, v / "video_contact_sheet.jpg", work / "thumbs")
-    write_timing_tsv(v, slides)
-    (v / "video_check.txt").write_text("\n".join(report), encoding="utf-8")
+    ok, report = media.check(
+        out, ctx.v / "narration.wav", ctx.slides, (ctx.v / "video_contact_sheet.jpg", work / "thumbs")
+    )
+    write_timing_tsv(ctx.v, ctx.slides)
+    (ctx.v / "video_check.txt").write_text("\n".join(report), encoding="utf-8")
     shutil.rmtree(work, ignore_errors=True)
     return ok, report
 
@@ -307,10 +323,10 @@ def render_poster_video(job_name: str, version: str | None = None) -> str:
     work = job.work / "video"
     work.mkdir(parents=True, exist_ok=True)
     picture = work / "picture.mp4"
-    poster.render(cfg, img, scenes, slides, picture)
+    poster.render(poster.RenderRequest(cfg, img, scenes, slides), picture)
     has_bar = any(s.get("callout") for s in scenes.values())
     bottom_res = cfg.get("callout", {}).get("height", 0) if has_bar else 0
-    ok, report = finish_video(cfg, job, v, slides, picture, bottom_res)
+    ok, report = finish_video(FinishContext(cfg, job, v, slides), picture, bottom_res)
     report_text = "\n".join(report)
     status_str = "完成" if ok else "完成（但验收有项目未通过）"
     return f"{status_str}：{v}/\n{report_text}"
@@ -342,7 +358,7 @@ def mux_external_video(
 
     pd = media.duration(pic)
     logger.info("畫面影片：%s (%.2f 秒)，配音：%.2f 秒", pic, pd, nd)
-    ok, report = finish_video(cfg, job, v, slides, pic, reserve_bottom)
+    ok, report = finish_video(FinishContext(cfg, job, v, slides), pic, reserve_bottom)
     report_text = "\n".join(report)
     status_str = "已合成" if ok else "已合成（但驗收有項目未通過）"
     return f"{status_str}：{v}/\n{report_text}"
@@ -369,8 +385,7 @@ def check_video(job_name: str, version: str | None = None) -> str:
         video_path,
         v / "narration.wav",
         slides,
-        v / "video_contact_sheet.jpg",
-        work_thumbs,
+        (v / "video_contact_sheet.jpg", work_thumbs),
     )
     shutil.rmtree(job.work / "video", ignore_errors=True)
     report_text = f"驗收影片：{video_path}\n" + "\n".join(report)

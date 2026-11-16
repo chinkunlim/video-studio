@@ -69,6 +69,36 @@ def list_jobs(ws: Path | None = None) -> str:
     return "\n".join(rows)
 
 
+def _scaffold_job_dir(job_type: str, name: str, title: str, d: Path) -> None:
+    """在工作区建立工作目录与范本档案。
+
+    Args:
+        job_type: 类型 ('extract', 'dub', 'generate')。
+        name: 识别英文代称。
+        title: 中文标题。
+        d: 工作根目录。
+    """
+    for sub in ("input", "review", "work", "output"):
+        (d / sub).mkdir(parents=True, exist_ok=True)
+    tpl_file = TEMPLATES / job_type / "job.toml"
+    text = (
+        tpl_file.read_text(encoding="utf-8")
+        if tpl_file.exists()
+        else f'[job]\ntype = "{job_type}"\ntitle = "{title or name}"\n'
+    )
+    if title:
+        text = re.sub(r'^title = ".*?"', f'title = "{title}"', text, count=1, flags=re.M)
+    (d / "job.toml").write_text(text, encoding="utf-8")
+    tdir = TEMPLATES / job_type / "input"
+    if tdir.exists():
+        shutil.copytree(tdir, d / "input" / "templates")
+    readme_content = INPUT_README.get(job_type, "")
+    (d / "input" / "README.md").write_text(
+        f"# input/\n\n{readme_content}\n\ntemplates/ 里是范例；照着写好之后，存在 input/ 这一层。\n",
+        encoding="utf-8",
+    )
+
+
 def init_job(job_type: str, name: str, title: str = "", ws: Path | None = None) -> str:
     """建立一份新制作工作目录与范本档案。
 
@@ -92,25 +122,7 @@ def init_job(job_type: str, name: str, title: str = "", ws: Path | None = None) 
     d = ws_path / job_type / name
     if d.exists():
         raise RuntimeError(f"{d} 已经存在，不会覆盖")
-    for sub in ("input", "review", "work", "output"):
-        (d / sub).mkdir(parents=True, exist_ok=True)
-    tpl_file = TEMPLATES / job_type / "job.toml"
-    text = (
-        tpl_file.read_text(encoding="utf-8")
-        if tpl_file.exists()
-        else f'[job]\ntype = "{job_type}"\ntitle = "{title or name}"\n'
-    )
-    if title:
-        text = re.sub(r'^title = ".*?"', f'title = "{title}"', text, count=1, flags=re.M)
-    (d / "job.toml").write_text(text, encoding="utf-8")
-    tdir = TEMPLATES / job_type / "input"
-    if tdir.exists():
-        shutil.copytree(tdir, d / "input" / "templates")
-    readme_content = INPUT_README.get(job_type, "")
-    (d / "input" / "README.md").write_text(
-        f"# input/\n\n{readme_content}\n\ntemplates/ 里是范例；照着写好之后，存在 input/ 这一层。\n",
-        encoding="utf-8",
-    )
+    _scaffold_job_dir(job_type, name, title, d)
     ensure_shared(ws_path)
     return (
         f"已建立 {job_type}/{name}：{d}\n下一步：\n"

@@ -6,6 +6,7 @@ import csv
 import logging
 import os
 import re
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -83,13 +84,15 @@ def to_traditional(text: str, fixes_path: Path | str | None = None) -> str:
     """
     from opencc import OpenCC
 
-    out = OpenCC("s2tw").convert(text)
-    if fixes_path and Path(fixes_path).exists():
-        with open(fixes_path, encoding="utf-8") as f:
-            for r in csv.DictReader(f, delimiter="\t"):
-                if r.get("wrong"):
-                    out = out.replace(r["wrong"], r.get("right", ""))
-    return str(out)
+    out = str(OpenCC("s2tw").convert(text))
+    if not fixes_path or not Path(fixes_path).exists():
+        return out
+    with open(fixes_path, encoding="utf-8") as f:
+        for r in csv.DictReader(f, delimiter="\t"):
+            wrong = r.get("wrong")
+            if wrong:
+                out = out.replace(wrong, r.get("right", ""))
+    return out
 
 
 FONT_DIRS = [
@@ -98,6 +101,21 @@ FONT_DIRS = [
     str(Path.home() / "Library/Fonts"),
     "/System/Library/AssetsV2",
 ]
+
+
+def _scan_font_dir(d: str, idx: dict[str, str]) -> None:
+    """扫描单一字型资料夹并登记至索引字典。
+
+    Args:
+        d: 资料夹路径。
+        idx: 字型名称与路径对照字典。
+    """
+    for root, _, files in os.walk(d):
+        for f in files:
+            if not f.lower().endswith((".ttf", ".otf", ".ttc")):
+                continue
+            key = re.sub(r"[^a-z0-9]", "", f.rsplit(".", 1)[0].lower())
+            idx.setdefault(key, os.path.join(root, f))
 
 
 @lru_cache(maxsize=1)
@@ -109,13 +127,8 @@ def _font_index() -> dict[str, str]:
     """
     idx: dict[str, str] = {}
     for d in FONT_DIRS:
-        if not os.path.exists(d):
-            continue
-        for root, _, files in os.walk(d):
-            for f in files:
-                if f.lower().endswith((".ttf", ".otf", ".ttc")):
-                    key = re.sub(r"[^a-z0-9]", "", f.rsplit(".", 1)[0].lower())
-                    idx.setdefault(key, os.path.join(root, f))
+        if os.path.exists(d):
+            _scan_font_dir(d, idx)
     return idx
 
 
@@ -142,22 +155,65 @@ def find_font(name: str, cfg: dict[str, Any]) -> tuple[str, int]:
     )
 
 
-def _tick(d: ImageDraw.ImageDraw, x: float, cy: float, fs: int, color: tuple[int, int, int, int]) -> None:
+@dataclass(frozen=True)
+class _TickStyle:
+    """打勾符号几何与色彩参数。"""
+
+    x: float
+    cy: float
+    fs: int
+    color: tuple[int, int, int, int]
+
+
+def _tick(d: ImageDraw.ImageDraw, style: _TickStyle) -> None:
     """绘制提示栏打勾符号。
 
     Args:
         d: 绘图物件。
-        x: X 坐标。
-        cy: Y 中心点。
-        fs: 字级。
-        color: RGBA 颜色。
+        style: 打勾符号位置与尺寸样式。
     """
+    x, cy, fs = style.x, style.cy, style.fs
     d.line(
         [(x, cy), (x + fs * 0.3, cy + fs * 0.3), (x + fs * 0.8, cy - fs * 0.35)],
-        fill=color,
+        fill=style.color,
         width=max(3, fs // 9),
         joint="curve",
     )
+
+
+def _draw_callout_rows(
+    d: ImageDraw.ImageDraw,
+    text: str,
+    cfg_and_font: tuple[dict[str, Any], Any],
+    layout: tuple[int, int, int, int],
+) -> None:
+    """在提示栏区域绘制多行文字与打勾符号。
+
+    Args:
+        d: 绘图物件。
+        text: 提示栏多行文字。
+        cfg_and_font: (callout 设定字典, 字型物件) 元组。
+        layout: (画面宽, 顶部 Y, 提示栏高, 字级) 元组。
+    """
+    c, fnt = cfg_and_font
+    width, top, c_height, fs = layout
+    color = hex_rgb(str(c.get("text_color", "#FFFFFF"))) + (255,)
+    prefix = str(c.get("prefix", ""))
+    tick = prefix.strip() == "✓"
+    bullet_x = float(c.get("bullet_x", 80))
+    text_x = float(c.get("text_x", bullet_x + int(fs * 1.2) if tick else bullet_x))
+    rows: list[tuple[bool, str]] = []
+    for para in [p for p in text.split("\n") if p.strip()]:
+        label = para if tick or not prefix else prefix + para
+        for k, line in enumerate(_fit_lines(d, label, fnt, width - text_x - 60)):
+            rows.append((k == 0, line))
+    lh = fs * 1.3
+    y = top + c_height / 2.0 - lh * len(rows) / 2.0
+    for first, line in rows:
+        if tick and first:
+            _tick(d, _TickStyle(bullet_x, y + lh / 2.0 - fs * 0.05, fs, color))
+        d.text((text_x, y + (lh - fs) / 2.0 - fs * 0.1), line, font=fnt, fill=color)
+        y += lh
 
 
 def callout(cfg: dict[str, Any], text: str, size: tuple[int, int]) -> Image.Image | None:
@@ -183,28 +239,8 @@ def callout(cfg: dict[str, Any], text: str, size: tuple[int, int]) -> Image.Imag
     top = height - c_height
     d.rectangle([0, top, width, height], fill=hex_rgb(str(c.get("color", "#D9692E"))) + (255,))
     fs = int(c.get("font_size", 34))
-    fnt = font(
-        str(f.get("path", "/System/Library/Fonts/STHeiti Light.ttc")),
-        int(f.get("index", 1)),
-        fs,
-    )
-    color = hex_rgb(str(c.get("text_color", "#FFFFFF"))) + (255,)
-    prefix = str(c.get("prefix", ""))
-    tick = prefix.strip() == "✓"
-    bullet_x = float(c.get("bullet_x", 80))
-    text_x = float(c.get("text_x", bullet_x + int(fs * 1.2) if tick else bullet_x))
-    rows: list[tuple[bool, str]] = []
-    for para in [p for p in text.split("\n") if p.strip()]:
-        label = para if tick or not prefix else prefix + para
-        for k, line in enumerate(_fit_lines(d, label, fnt, width - text_x - 60)):
-            rows.append((k == 0, line))
-    lh = fs * 1.3
-    y = top + c_height / 2.0 - lh * len(rows) / 2.0
-    for first, line in rows:
-        if tick and first:
-            _tick(d, bullet_x, y + lh / 2.0 - fs * 0.05, fs, color)
-        d.text((text_x, y + (lh - fs) / 2.0 - fs * 0.1), line, font=fnt, fill=color)
-        y += lh
+    fnt = font(str(f.get("path", "/System/Library/Fonts/STHeiti Light.ttc")), int(f.get("index", 1)), fs)
+    _draw_callout_rows(d, text, (c, fnt), (width, top, c_height, fs))
     return img
 
 
@@ -234,13 +270,27 @@ def frame(size: tuple[int, int], inset: list[float], color: str) -> Image.Image:
     return img
 
 
+@dataclass(frozen=True)
+class OverlayTextStyle:
+    """画面大字样式设定。
+
+    Attributes:
+        box: [x, y, 宽, 高] 占画面比例。
+        font_size: 字级占画面高度比例。
+        font_name: 字体名称。
+        color: 色码。
+    """
+
+    box: list[float]
+    font_size: float
+    font_name: str
+    color: str
+
+
 def overlay_text(
     cfg: dict[str, Any],
     text: str,
-    box: list[float],
-    font_size: float,
-    font_name: str,
-    color: str,
+    style: OverlayTextStyle,
     size: tuple[int, int],
 ) -> Image.Image | None:
     """画面上的大字（例如结尾的「匯報完畢」）。
@@ -248,10 +298,7 @@ def overlay_text(
     Args:
         cfg: 设定字典。
         text: 画面文字。
-        box: [x, y, 宽, 高] 占画面比例。
-        font_size: 字级占画面高度比例。
-        font_name: 字体名称。
-        color: 色码。
+        style: 位置与字体样式设定。
         size: 画面总尺寸。
 
     Returns:
@@ -263,22 +310,20 @@ def overlay_text(
     width, height = size
     img = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    path, index = find_font(font_name, cfg)
-    fnt = font(path, index, max(8, int(font_size * height)))
-    x, y, w, h = box[0] * width, box[1] * height, box[2] * width, box[3] * height
+    path, index = find_font(style.font_name, cfg)
+    fnt = font(path, index, max(8, int(style.font_size * height)))
+    x, y, w, h = style.box[0] * width, style.box[1] * height, style.box[2] * width, style.box[3] * height
     lines = text.split("\n")
-    lh = font_size * height * 1.2
+    lh = style.font_size * height * 1.2
     ty = y + h / 2.0 - lh * len(lines) / 2.0
+    fill = hex_rgb(style.color) + (255,)
     for line in lines:
         bb = d.textbbox((0, 0), line, font=fnt)
         d.text(
-            (
-                x + w / 2.0 - (bb[2] - bb[0]) / 2.0 - bb[0],
-                ty + (lh - (bb[3] - bb[1])) / 2.0 - bb[1],
-            ),
+            (x + w / 2.0 - (bb[2] - bb[0]) / 2.0 - bb[0], ty + (lh - (bb[3] - bb[1])) / 2.0 - bb[1]),
             line,
             font=fnt,
-            fill=hex_rgb(color) + (255,),
+            fill=fill,
         )
         ty += lh
     return img
@@ -301,30 +346,22 @@ def subtitle(
     Returns:
         包含字幕的透明 RGBA 图片。
     """
-    s = cfg.get("subtitle", {})
-    f = cfg.get("font", {})
+    s, f = cfg.get("subtitle", {}), cfg.get("font", {})
     width, height = size
     img = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     fs = int(s.get("font_size", 34))
-    fnt = font(
-        str(f.get("path", "/System/Library/Fonts/STHeiti Light.ttc")),
-        int(f.get("index", 1)),
-        fs,
-    )
+    fnt = font(str(f.get("path", "/System/Library/Fonts/STHeiti Light.ttc")), int(f.get("index", 1)), fs)
     lines = _fit_lines(d, text, fnt, width - 200)
     lh = fs * 1.3
-    margin_bottom = int(s.get("margin_bottom", 40))
-    y = height - bottom_reserved - margin_bottom - lh * len(lines)
+    y = height - bottom_reserved - int(s.get("margin_bottom", 40)) - lh * len(lines)
+    fill = hex_rgb(str(s.get("color", "#FFFFFF"))) + (255,)
+    stroke_fill = hex_rgb(str(s.get("stroke_color", "#000000"))) + (255,)
+    stroke_w = int(s.get("stroke_width", 3))
     for line in lines:
         w = d.textlength(line, font=fnt)
         d.text(
-            ((width - w) / 2.0, y),
-            line,
-            font=fnt,
-            fill=hex_rgb(str(s.get("color", "#FFFFFF"))) + (255,),
-            stroke_width=int(s.get("stroke_width", 3)),
-            stroke_fill=hex_rgb(str(s.get("stroke_color", "#000000"))) + (255,),
+            ((width - w) / 2.0, y), line, font=fnt, fill=fill, stroke_width=stroke_w, stroke_fill=stroke_fill
         )
         y += lh
     return img

@@ -99,6 +99,31 @@ def parse(text: str) -> list[Line]:
     return lines
 
 
+def _split_long_sentence(sent: str, max_len: int) -> list[str]:
+    """将超过长度限制的句子依逗号或顿号切分。
+
+    Args:
+        sent: 单一句子文字。
+        max_len: 单句最大字元数限制。
+
+    Returns:
+        切分后的短句列表。
+    """
+    if len(sent) <= max_len:
+        return [sent]
+    parts: list[str] = []
+    cur = ""
+    for part in re.findall(r"[^，、]+[，、]?", sent):
+        if cur and len(cur + part) > max_len:
+            parts.append(cur)
+            cur = part
+        else:
+            cur += part
+    if cur:
+        parts.append(cur)
+    return parts
+
+
 def split_sentences(text: str, max_len: int = 45) -> str:
     """把一般的讲稿（一段一段）整理成 script.md 的「一句一行」。太长的句子从逗号断开。
 
@@ -113,18 +138,6 @@ def split_sentences(text: str, max_len: int = 45) -> str:
     for para in [p.strip() for p in text.split("\n\n") if p.strip()]:
         clean_para = para.replace("\n", "")
         for sent in re.findall(r"[^。！？；]+[。！？；]?", clean_para):
-            sent = sent.strip()
-            if len(sent) <= max_len:
-                out.append(sent)
-                continue
-            cur = ""
-            for part in re.findall(r"[^，、]+[，、]?", sent):
-                if cur and len(cur + part) > max_len:
-                    out.append(cur)
-                    cur = part
-                else:
-                    cur += part
-            if cur:
-                out.append(cur)
+            out.extend(_split_long_sentence(sent.strip(), max_len))
         out.append("")
     return "\n".join(out)

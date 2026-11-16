@@ -20,6 +20,7 @@ video-studio/
 │   │   ├── update_framework.py
 │   │   └── update_tree.py
 │   ├── handoff/                            # [交接紀錄] 頂部即時狀態看板 + 歷史交接時間軸，開工前必讀
+│   │   ├── ARCHIVE.md                      # [歷史交接歸檔] 超過 20 筆之舊交接紀錄自動歸檔
 │   │   └── LATEST.md                       # [即時交接看板] 目前分支、進行中/待接手任務、已完成與待辦事項
 │   ├── hooks/                              # [版本控管的 git hooks] 由 core.hooksPath 啟用（pre-commit、pre-push）
 │   │   ├── pre-commit
@@ -69,7 +70,8 @@ video-studio/
 │   │   ├── TASK-003-3-readme.json
 │   │   ├── TASK-004-4.json
 │   │   ├── TASK-005-extract-narrate-video-job-sv-ope.json
-│   │   └── TASK-006-markdown.json
+│   │   ├── TASK-006-markdown.json
+│   │   └── TASK-007-refactor-oversized-functions-and.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
@@ -145,7 +147,8 @@ video-studio/
 │       ├── adapters/
 │       │   ├── __init__.py
 │       │   ├── openwebui_runner.py
-│       │   └── openwebui_tool.py
+│       │   ├── openwebui_tool.py
+│       │   └── openwebui_video_mixin.py
 │       ├── config/
 │       │   ├── __init__.py
 │       │   ├── logging_setup.py
@@ -160,6 +163,7 @@ video-studio/
 │       │   ├── common/
 │       │   │   ├── __init__.py
 │       │   │   ├── check.py
+│       │   │   ├── check_media.py
 │       │   │   ├── job.py
 │       │   │   └── material.py
 │       │   ├── extract_audio/

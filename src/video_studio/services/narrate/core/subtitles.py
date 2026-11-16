@@ -83,8 +83,7 @@ def char_times(text: str, words: list[tuple[str, float, float]]) -> tuple[list[f
 def _split_pause(
     piece: str,
     first: int,
-    ts: list[float],
-    te: list[float],
+    timings: tuple[list[float], list[float]],
     max_w: float,
 ) -> list[tuple[str, int]]:
     """根据字元间隔停顿细切长句。
@@ -92,8 +91,7 @@ def _split_pause(
     Args:
         piece: 片段字串。
         first: 起始字元索引。
-        ts: 字元开始时间。
-        te: 字元结束时间。
+        timings: (字元开始时间列表, 字元结束时间列表) 元组。
         max_w: 单行最大排版宽度。
 
     Returns:
@@ -101,6 +99,7 @@ def _split_pause(
     """
     if width(piece) <= max_w + 2:
         return [(piece, first)]
+    ts, te = timings
     pos: list[tuple[int, int]] = []
     idx = first
     for m in re.finditer(r"[A-Za-z0-9]+|.", piece):
@@ -117,8 +116,8 @@ def _split_pause(
     if best is None:
         return [(piece, first)]
     _, end, k = best
-    return _split_pause(piece[:end].strip(), first, ts, te, max_w) + _split_pause(
-        piece[end:].strip(), k + 1, ts, te, max_w
+    return _split_pause(piece[:end].strip(), first, timings, max_w) + _split_pause(
+        piece[end:].strip(), k + 1, timings, max_w
     )
 
 
@@ -149,8 +148,9 @@ def split_line(text: str, ts: list[float], te: list[float], max_w: float) -> lis
         if cur.strip():
             pieces.append((cur.strip(), cur_start))
     out: list[tuple[str, int]] = []
+    timings = (ts, te)
     for piece, start in pieces:
-        out.extend(_split_pause(piece, start, ts, te, max_w))
+        out.extend(_split_pause(piece, start, timings, max_w))
     return out
 
 
@@ -253,6 +253,38 @@ def _ass_t(t: float) -> str:
     return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
 
+def _build_ass(cues: list[tuple[float, float, str]], cfg: dict[str, Any], title: str) -> str:
+    """产生 ASS 格式字幕字串。
+
+    Args:
+        cues: 繁体字幕列表。
+        cfg: 设定字典。
+        title: 简报/影片标题。
+
+    Returns:
+        ASS 字幕全文。
+    """
+    sc = cfg.get("subtitle", {})
+    font = sc.get("font", "PingFang TC")
+    font_size = sc.get("font_size", 28)
+    ass_format_line = (
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "
+        "BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, "
+        "BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
+    )
+    ass_style_line = (
+        f"Style: Default,{font},{font_size},"
+        "&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,3,1,2,60,60,60,1\n"
+    )
+    header = (
+        f"[Script Info]\nTitle: {title}\nScriptType: v4.00+\n"
+        "PlayResX: 1920\nPlayResY: 1080\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n"
+        f"[V4+ Styles]\n{ass_format_line}{ass_style_line}"
+        "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+    )
+    return header + "".join(f"Dialogue: 0,{_ass_t(s)},{_ass_t(e)},Default,,0,0,0,,{t}\n" for s, e, t in cues)
+
+
 def write_all(
     cues: list[tuple[float, float, str]],
     out_dir: Path | str,
@@ -270,38 +302,13 @@ def write_all(
     Returns:
         产出的字幕档案名称列表。
     """
-    sc = cfg.get("subtitle", {})
-    font = sc.get("font", "PingFang TC")
-    font_size = sc.get("font_size", 28)
     srt = "".join(f"{k}\n{_hms(s, ',')} --> {_hms(e, ',')}\n{t}\n\n" for k, (s, e, t) in enumerate(cues, 1))
     vtt = "WEBVTT\n\n" + "".join(f"{_hms(s, '.')} --> {_hms(e, '.')}\n{t}\n\n" for s, e, t in cues)
-    ass_format_line = (
-        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "
-        "BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, "
-        "BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
-    )
-    ass_style_line = (
-        f"Style: Default,{font},{font_size},"
-        "&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0,0,1,3,1,2,60,60,60,1\n"
-    )
-    ass = f"""[Script Info]
-Title: {title}
-ScriptType: v4.00+
-PlayResX: 1920
-PlayResY: 1080
-WrapStyle: 0
-ScaledBorderAndShadow: yes
-
-[V4+ Styles]
-{ass_format_line}{ass_style_line}
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-""" + "".join(f"Dialogue: 0,{_ass_t(s)},{_ass_t(e)},Default,,0,0,0,,{t}\n" for s, e, t in cues)
     files = {
         "subtitles_youtube.srt": srt,
         "subtitles_powerpoint.vtt": vtt,
         "subtitles_vlc.srt": srt,
-        "subtitles_vlc.ass": ass,
+        "subtitles_vlc.ass": _build_ass(cues, cfg, title),
     }
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)

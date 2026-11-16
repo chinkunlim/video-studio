@@ -11,10 +11,11 @@ import csv
 import logging
 import re
 import tomllib
-import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from video_studio.services.common.check_media import check_brief, check_cues, check_pptx
 from video_studio.services.common.job import TYPES, Job, vocabulary_path
 from video_studio.services.narrate.core import script as script_mod
 from video_studio.services.narrate.core import vocab as vocab_mod
@@ -91,6 +92,57 @@ class Report:
 # ---------- job.toml ----------
 
 
+def _check_job_inputs(t: str, c: dict[str, Any], job: Job, r: Report) -> None:
+    """检查 job.toml 的 [inputs] 与类型专属栏位。
+
+    Args:
+        t: 工作类型。
+        c: job.toml 完整设定字典。
+        job: 工作物件。
+        r: 报告收集物件。
+    """
+    f = "job.toml"
+    inputs = c.get("inputs", {})
+    for key, name in inputs.items():
+        if not name or (job.input / name).exists():
+            continue
+        if key == "scenes":
+            r.warn(f, f"input/{name} 还不存：先执行 video.py scenes 起草到 review/，确认后 sv.py approve")
+        else:
+            r.err(f, f'[inputs] {key} = "{name}"，但 input/ 里找不到这个档案（没有就写 ""）')
+    if t == "generate":
+        if not any(inputs.get(k) for k in ("script", "brief", "pptx", "poster")):
+            r.err(f, "[inputs] script、brief、pptx、poster 至少要有一个")
+        mode = c.get("visual", {}).get("mode", "auto")
+        if mode not in VISUAL_MODES:
+            r.err(f, f"[visual] mode 要是 {' / '.join(VISUAL_MODES)} 其中一个，现在是「{mode}」")
+    if t in ("extract", "dub") and not inputs.get("video"):
+        r.err(f, "[inputs] video 必填：input/ 里的影片档名")
+    if t == "dub" and not inputs.get("script") and not inputs.get("cues"):
+        r.note("讲稿没有指定：执行时会先用原片逐字稿起草到 review/script.md，校对后再 approve。")
+
+
+def _check_job_voice_and_output(t: str, c: dict[str, Any], r: Report) -> None:
+    """检查配音与输出设定。
+
+    Args:
+        t: 工作类型。
+        c: job.toml 完整设定字典。
+        r: 报告收集物件。
+    """
+    if t not in ("generate", "dub"):
+        return
+    f = "job.toml"
+    if not c.get("voice", {}).get("profile"):
+        r.err(f, '[voice] profile 要填 Voicebox 里复制声音的名称，例如 "My Voice"')
+    for fmt in c.get("subtitles", {}).get("formats", []):
+        if fmt not in SUB_FORMATS:
+            r.err(f, f"[subtitles] formats 里的「{fmt}」不认识，只能用 {', '.join(SUB_FORMATS)}")
+    loud = c.get("output", {}).get("loudness", -16)
+    if not isinstance(loud, (int, float)) or not -30 <= loud <= -8:
+        r.err(f, f"[output] loudness 要是 -30 到 -8 之间的数字，现在是 {loud!r}")
+
+
 def check_job_toml(job: Job, r: Report) -> None:
     """检查 job.toml 的必要区块与栏位。
 
@@ -112,31 +164,8 @@ def check_job_toml(job: Job, r: Report) -> None:
     if not isinstance(inputs, dict):
         r.err(f, "[inputs] 区段不见了，请对照范本补上")
         return
-    for key, name in inputs.items():
-        if name and not (job.input / name).exists():
-            if key == "scenes":
-                r.warn(f, f"input/{name} 还不存：先执行 video.py scenes 起草到 review/，确认后 sv.py approve")
-            else:
-                r.err(f, f'[inputs] {key} = "{name}"，但 input/ 里找不到这个档案（没有就写 ""）')
-    if t == "generate":
-        if not any(inputs.get(k) for k in ("script", "brief", "pptx", "poster")):
-            r.err(f, "[inputs] script、brief、pptx、poster 至少要有一个")
-        mode = c.get("visual", {}).get("mode", "auto")
-        if mode not in VISUAL_MODES:
-            r.err(f, f"[visual] mode 要是 {' / '.join(VISUAL_MODES)} 其中一个，现在是「{mode}」")
-    if t in ("generate", "dub"):
-        if not c.get("voice", {}).get("profile"):
-            r.err(f, '[voice] profile 要填 Voicebox 里复制声音的名称，例如 "My Voice"')
-        for fmt in c.get("subtitles", {}).get("formats", []):
-            if fmt not in SUB_FORMATS:
-                r.err(f, f"[subtitles] formats 里的「{fmt}」不认识，只能用 {', '.join(SUB_FORMATS)}")
-        loud = c.get("output", {}).get("loudness", -16)
-        if not isinstance(loud, (int, float)) or not -30 <= loud <= -8:
-            r.err(f, f"[output] loudness 要是 -30 到 -8 之间的数字，现在是 {loud!r}")
-    if t in ("extract", "dub") and not inputs.get("video"):
-        r.err(f, "[inputs] video 必填：input/ 里的影片档名")
-    if t == "dub" and not inputs.get("script") and not inputs.get("cues"):
-        r.note("讲稿没有指定：执行时会先用原片逐字稿起草到 review/script.md，校对后再 approve。")
+    _check_job_inputs(t, c, job, r)
+    _check_job_voice_and_output(t, c, r)
 
 
 # ---------- vocabulary.tsv ----------
@@ -179,6 +208,39 @@ def check_vocabulary(path: Path, r: Report) -> dict[str, Any]:
 # ---------- script.md ----------
 
 
+def _validate_slide_headers(where: str, rows: list[str], r: Report) -> bool:
+    """检查讲稿的投影片标题与连续页码。
+
+    Args:
+        where: 错误定位标签。
+        rows: 讲稿各行文字。
+        r: 报告收集物件。
+
+    Returns:
+        是否存在至少一个投影片标题。
+    """
+    first_slide = next((i for i, s in enumerate(rows) if s.strip().startswith("## ")), None)
+    if first_slide is None:
+        r.err(where, "没有任何「## 投影片 N」。每一页前面要有一行「## 投影片 1」…")
+        return False
+    for i, s in enumerate(rows[:first_slide], 1):
+        if s.strip() and s.strip() != "#" and not s.strip().startswith("# "):
+            r.err(where, f"第 {i} 行在第一个「## 投影片」之前，不会被念。请移到投影片底下，或改成注解")
+    nums: list[int] = []
+    for i, s in enumerate(rows, 1):
+        if not s.strip().startswith("## "):
+            continue
+        m = re.search(r"\d+", s)
+        if not m:
+            r.err(where, f"第 {i} 行「{s.strip()}」没有页码，请写成「## 投影片 {len(nums) + 1}」")
+            nums.append(len(nums) + 1)
+        else:
+            nums.append(int(m.group()))
+    if nums != list(range(1, len(nums) + 1)):
+        r.err(where, f"投影片编号要从 1 开始连续编号，现在是 {nums}")
+    return True
+
+
 def check_script(path: Path, voc: dict[str, Any], r: Report) -> list[script_mod.Line]:
     """检查讲稿档案格式、投影片标示与词汇引用。
 
@@ -192,25 +254,8 @@ def check_script(path: Path, voc: dict[str, Any], r: Report) -> list[script_mod.
     """
     where = f"input/{path.name}"
     text = path.read_text(encoding="utf-8")
-    rows = text.splitlines()
-    first_slide = next((i for i, s in enumerate(rows) if s.strip().startswith("## ")), None)
-    if first_slide is None:
-        r.err(where, "没有任何「## 投影片 N」。每一页前面要有一行「## 投影片 1」…")
+    if not _validate_slide_headers(where, text.splitlines(), r):
         return []
-    for i, s in enumerate(rows[:first_slide], 1):
-        if s.strip() and s.strip() != "#" and not s.strip().startswith("# "):
-            r.err(where, f"第 {i} 行在第一个「## 投影片」之前，不会被念。请移到投影片底下，或改成注解")
-    nums: list[int] = []
-    for i, s in enumerate(rows, 1):
-        if s.strip().startswith("## "):
-            m = re.search(r"\d+", s)
-            if not m:
-                r.err(where, f"第 {i} 行「{s.strip()}」没有页码，请写成「## 投影片 {len(nums) + 1}」")
-                nums.append(len(nums) + 1)
-            else:
-                nums.append(int(m.group()))
-    if nums != list(range(1, len(nums) + 1)):
-        r.err(where, f"投影片编号要从 1 开始连续编号，现在是 {nums}")
     lines = script_mod.parse(text)
     if not lines:
         r.err(where, "没有任何要念的内容")
@@ -233,72 +278,89 @@ def check_script(path: Path, voc: dict[str, Any], r: Report) -> list[script_mod.
 # ---------- scenes.toml ----------
 
 
-def _check_scene_visual(
-    tag: str,
-    s: dict[str, Any],
-    v: str,
-    pptx_pages: int,
-    job: Job,
-    r: Report,
-) -> None:
+@dataclass(frozen=True)
+class SceneCheckContext:
+    """分镜检查所需的工作与报告上下文。
+
+    Attributes:
+        slides: 讲稿包含的投影片编号清册。
+        pptx_pages: PPTX 总页数。
+        job: 工作物件。
+        report: 报告收集物件。
+    """
+
+    slides: list[int]
+    pptx_pages: int
+    job: Job
+    report: Report
+
+
+def _check_poster_region(tag: str, s: dict[str, Any], r: Report) -> None:
+    """检查海报分镜的裁切区域设定。
+
+    Args:
+        tag: 错误标签。
+        s: 分镜资料。
+        r: 报告收集物件。
+    """
+    reg = s.get("region")
+    if not (isinstance(reg, list) and len(reg) == 4 and all(isinstance(x, (int, float)) for x in reg)):
+        r.err(tag, "region 要 4 个数字 [x, y, 宽, 高]，例如 [0.0, 0.1, 1.0, 0.2]")
+        return
+    x, y, w, h = reg
+    if w <= 0 or h <= 0:
+        r.err(tag, f"region 的宽、高要大于 0，现在是 {reg}")
+    if x < -0.5 or y < -0.5 or x + w > 1.5 or y + h > 1.5:
+        r.err(tag, f"region {reg} 超出海报太多")
+    elif x < -0.01 or y < -0.01 or x + w > 1.01 or y + h > 1.01:
+        r.warn(tag, f"region {reg} 有一部分在海报外面")
+
+
+def _check_scene_visual(tag: str, s: dict[str, Any], v: str, ctx: SceneCheckContext) -> None:
     """检查单一分镜的视觉设定。
 
     Args:
         tag: 错误标签。
         s: 分镜资料。
         v: 视觉模式。
-        pptx_pages: PPTX 总页数。
-        job: 工作物件。
-        r: 报告收集物件。
+        ctx: 分镜检查上下文。
     """
+    r = ctx.report
     if v == "poster":
-        reg = s.get("region")
-        if not (isinstance(reg, list) and len(reg) == 4 and all(isinstance(x, (int, float)) for x in reg)):
-            r.err(tag, "region 要 4 个数字 [x, y, 宽, 高]，例如 [0.0, 0.1, 1.0, 0.2]")
-        else:
-            x, y, w, h = reg
-            if w <= 0 or h <= 0:
-                r.err(tag, f"region 的宽、高要大于 0，现在是 {reg}")
-            if x < -0.5 or y < -0.5 or x + w > 1.5 or y + h > 1.5:
-                r.err(tag, f"region {reg} 超出海报太多")
-            elif x < -0.01 or y < -0.01 or x + w > 1.01 or y + h > 1.01:
-                r.warn(tag, f"region {reg} 有一部分在海报外面")
-    if v in ("pptx-slide", "pptx-export"):
+        _check_poster_region(tag, s, r)
+    elif v in ("pptx-slide", "pptx-export"):
         p = s.get("pptx_slide")
         if not isinstance(p, int):
             r.err(tag, "pptx_slide 必填（pptx 的第几页）")
-        elif pptx_pages and not 1 <= p <= pptx_pages:
-            r.err(tag, f"pptx_slide = {p}，但 pptx 只有 {pptx_pages} 页")
-    if v in ("image", "video"):
+        elif ctx.pptx_pages and not 1 <= p <= ctx.pptx_pages:
+            r.err(tag, f"pptx_slide = {p}，但 pptx 只有 {ctx.pptx_pages} 页")
+    elif v in ("image", "video"):
         m = s.get("media", "")
         if not m:
             r.err(tag, "media 必填：input/ 里的档名")
-        elif not (job.input / m).exists():
+        elif not (ctx.job.input / m).exists():
             r.err(tag, f"media「{m}」在 input/ 里找不到")
 
 
-def check_scenes(path: Path, slides: list[int], pptx_pages: int, job: Job, r: Report) -> None:
-    """检查分镜 scenes.toml 的结构与投影片对齐。
+def _validate_scene_entries(
+    where: str,
+    scenes: list[dict[str, Any]],
+    default_visual: str,
+    ctx: SceneCheckContext,
+) -> dict[int, int]:
+    """逐笔检查 [[scene]] 区块设定。
 
     Args:
-        path: scenes.toml 路径。
-        slides: 讲稿包含的投影片编号清册。
-        pptx_pages: PPTX 页数。
-        job: 工作物件。
-        r: 报告收集物件。
+        where: 错误定位路径。
+        scenes: 分镜列表。
+        default_visual: 预设视觉模式。
+        ctx: 分镜检查上下文。
+
+    Returns:
+        已出现的投影片编号与索引对映。
     """
-    where = f"{path.parent.name}/{path.name}"
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as e:
-        r.err(where, f"格式错误：{e}。常见原因：文字没加双引号、逗号用了全形")
-        return
-    default_visual = data.get("defaults", {}).get("visual", "poster")
-    scenes = data.get("scene", [])
-    if not isinstance(scenes, list) or not scenes:
-        r.err(where, "没有任何 [[scene]] 区块")
-        return
     seen: dict[int, int] = {}
+    r = ctx.report
     for k, s in enumerate(scenes, 1):
         n = s.get("slide")
         if not isinstance(n, int):
@@ -314,126 +376,37 @@ def check_scenes(path: Path, slides: list[int], pptx_pages: int, job: Job, r: Re
             continue
         if v not in SUPPORTED_VISUALS:
             r.err(tag, f"visual「{v}」目前只能用 {', '.join(SUPPORTED_VISUALS)}")
-        _check_scene_visual(tag, s, v, pptx_pages, job, r)
+        _check_scene_visual(tag, s, v, ctx)
         callout = str(s.get("callout", ""))
         if callout and len(callout.replace("\n", "")) > 40:
             r.warn(tag, f"callout 有 {len(callout)} 个字，建议 30 字以内")
-    if slides:
-        missing = [n for n in slides if n not in seen]
+    return seen
+
+
+def check_scenes(path: Path, ctx: SceneCheckContext) -> None:
+    """检查分镜 scenes.toml 的结构与投影片对齐。
+
+    Args:
+        path: scenes.toml 路径。
+        ctx: 分镜检查上下文。
+    """
+    where = f"{path.parent.name}/{path.name}"
+    r = ctx.report
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as e:
+        r.err(where, f"格式错误：{e}。常见原因：文字没加双引号、逗号用了全形")
+        return
+    default_visual = data.get("defaults", {}).get("visual", "poster")
+    scenes = data.get("scene", [])
+    if not isinstance(scenes, list) or not scenes:
+        r.err(where, "没有任何 [[scene]] 区块")
+        return
+    seen = _validate_scene_entries(where, scenes, default_visual, ctx)
+    if ctx.slides:
+        missing = [n for n in ctx.slides if n not in seen]
         if missing:
             r.err(where, f"少了这些投影片：{missing}")
-
-
-# ---------- pptx ----------
-
-
-def pptx_info(path: Path) -> dict[str, int]:
-    """页数，以及有几个会自动播放的内嵌音档。
-
-    Args:
-        path: PPTX 档案路径。
-
-    Returns:
-        包含 pages 与 media_calls 次数的字典。
-    """
-    with zipfile.ZipFile(path) as z:
-        slides = [n for n in z.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", n)]
-        media_calls = sum(
-            z.read(n).decode("utf-8", "ignore").count('presetClass="mediacall"') for n in slides
-        )
-        return {"pages": len(slides), "media_calls": media_calls}
-
-
-def check_pptx(path: Path, script_slides: list[int], r: Report) -> int:
-    """检查 PPTX 是否有效并与讲稿比对页数。
-
-    Args:
-        path: PPTX 档案路径。
-        script_slides: 讲稿投影片页码清册。
-        r: 报告收集物件。
-
-    Returns:
-        PPTX 总页数。
-    """
-    where = f"input/{path.name}"
-    try:
-        info = pptx_info(path)
-    except zipfile.BadZipFile:
-        r.err(where, "不是有效的 pptx 档案")
-        return 0
-    n = info["pages"]
-    if script_slides and n != len(script_slides):
-        r.err(where, f"pptx 有 {n} 页，讲稿有 {len(script_slides)} 页；两者要一样多")
-    if info["media_calls"]:
-        r.note(f"pptx 有 {info['media_calls']} 个内嵌音档会自动播放；汇出时会先移除")
-    return n
-
-
-# ---------- cues.tsv（dub） ----------
-
-
-def _sec(t: str) -> float:
-    """时间字串转秒数。
-
-    Args:
-        t: 秒数字串或「分:秒」字串。
-
-    Returns:
-        浮点数秒数。
-    """
-    t = t.strip()
-    if ":" in t:
-        m, s = t.split(":", 1)
-        return int(m) * 60 + float(s)
-    return float(t)
-
-
-def check_cues(path: Path, n_lines: int, r: Report) -> None:
-    """检查配音时间标记 cues.tsv。
-
-    Args:
-        path: cues.tsv 路径。
-        n_lines: 讲稿总句数。
-        r: 报告收集物件。
-    """
-    where = f"input/{path.name}"
-    with open(path, encoding="utf-8") as fh:
-        rows = list(csv.reader(fh, delimiter="\t"))
-    if not rows or rows[0][:2] != ["line", "start"]:
-        r.err(where, "第 1 行（表头）要是 line、start、note，用 Tab 分隔")
-        return
-    prev = -1.0
-    for i, row in enumerate(rows[1:], 2):
-        if not row or not row[0].strip():
-            continue
-        try:
-            no, t = int(row[0]), _sec(row[1])
-        except (ValueError, IndexError):
-            r.err(where, f"第 {i} 行：line 要是整数、start 要是秒数或「分:秒」")
-            continue
-        if t <= prev:
-            r.err(where, f"第 {i} 行：时间 {row[1]} 没有比上一行晚")
-        prev = t
-        if n_lines and not 1 <= no <= n_lines:
-            r.err(where, f"第 {i} 行：line = {no}，讲稿只有 {n_lines} 句")
-
-
-# ---------- brief.md ----------
-
-
-def check_brief(path: Path, r: Report) -> None:
-    """检查大纲 brief.md 是否包含必要标题。
-
-    Args:
-        path: brief.md 路径。
-        r: 报告收集物件。
-    """
-    where = f"input/{path.name}"
-    text = path.read_text(encoding="utf-8")
-    heads = {m.group(1).strip(): m.end() for m in re.finditer(r"^##\s*(.+)$", text, re.M)}
-    for h in BRIEF_HEADINGS:
-        if h not in heads:
-            r.err(where, f"少了「## {h}」这一节")
 
 
 # ---------- 整份工作 ----------
@@ -461,9 +434,10 @@ def check_job(job: Job) -> Report:
     p = job.input_file("pptx")
     if p and p.exists():
         pages = check_pptx(p, slides, r)
+    scene_ctx = SceneCheckContext(slides=slides, pptx_pages=pages, job=job, report=r)
     for sc in (job.input_file("scenes"), job.review / "scenes.toml"):
         if sc and sc.exists():
-            check_scenes(sc, slides, pages, job, r)
+            check_scenes(sc, scene_ctx)
     c = job.input_file("cues")
     if c and c.exists():
         check_cues(c, len(lines), r)

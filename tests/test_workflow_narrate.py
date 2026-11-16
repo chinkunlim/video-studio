@@ -23,6 +23,7 @@ from unittest.mock import MagicMock, patch
 
 from video_studio.services.common import job as J
 from video_studio.services.narrate import narrate
+from video_studio.services.narrate.core.takes import TakeEntry
 from video_studio.services.sv import init_job
 
 
@@ -94,10 +95,12 @@ class TestWorkflowNarrate(unittest.TestCase):
             takes.put(
                 tts_text=tts_text,
                 clip=clip_path,
-                words=[[tts_text, 0.0, 1.2]],
-                source="test-fixture",
-                sim=0.95,
-                locked=True,
+                entry=TakeEntry(
+                    words=[[tts_text, 0.0, 1.2]],
+                    source="test-fixture",
+                    sim=0.95,
+                    locked=True,
+                ),
             )
 
         # 執行 build_narration

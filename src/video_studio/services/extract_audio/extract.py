@@ -13,6 +13,7 @@ import argparse
 import logging
 import re
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -125,35 +126,43 @@ def split_samples(wav: Path | str, out_dir: Path | str) -> list[Path]:
     return sample_files
 
 
+@dataclass(frozen=True)
+class ExtractOptions:
+    """音讯提取的选填参数。
+
+    Attributes:
+        rate: 取样率（预设 48000）。
+        start: 起始时间字串。
+        end: 结束时间字串。
+        samples_dir: 切割样本的储存目录。
+    """
+
+    rate: int = 48000
+    start: str | None = None
+    end: str | None = None
+    samples_dir: Path | str | None = None
+
+
 def extract_audio(
     video: Path | str,
     out: Path | str | None = None,
-    rate: int = 48000,
-    start: str | None = None,
-    end: str | None = None,
-    samples_dir: Path | str | None = None,
+    options: ExtractOptions | None = None,
 ) -> Path:
     """从影片提取音档并可选择性产生声音样本。
 
     Args:
         video: 来源影片档案路径。
         out: 输出 WAV 路径，预设与影片同名。
-        rate: 取样率（预设 48000）。
-        start: 起始时间字串。
-        end: 结束时间字串。
-        samples_dir: 切割样本的储存目录。
+        options: 音讯提取选填参数。
 
     Returns:
         产出的 WAV 档案路径。
     """
+    opts = options or ExtractOptions()
     video_p = Path(video)
     out_p = Path(out) if out else video_p.with_suffix(".wav")
-    rng: list[str] = []
-    if start:
-        rng.extend(["-ss", start])
-    if end:
-        rng.extend(["-to", end])
-    cmd = [
+    rng = [*(["-ss", opts.start] if opts.start else []), *(["-to", opts.end] if opts.end else [])]
+    run(
         "ffmpeg",
         "-v",
         "error",
@@ -165,15 +174,14 @@ def extract_audio(
         "-ac",
         "1",
         "-ar",
-        str(rate),
+        str(opts.rate),
         "-c:a",
         "pcm_s16le",
         str(out_p),
-    ]
-    run(*cmd)
+    )
     logger.info("完成：%s（%.1f 秒）", out_p, duration(out_p))
-    if samples_dir:
-        split_samples(out_p, Path(samples_dir))
+    if opts.samples_dir:
+        split_samples(out_p, Path(opts.samples_dir))
     return out_p
 
 
@@ -197,10 +205,12 @@ def main(argv: list[str] | None = None) -> int:
     extract_audio(
         video=a.video,
         out=a.out,
-        rate=a.rate,
-        start=a.start,
-        end=a.end,
-        samples_dir=a.samples,
+        options=ExtractOptions(
+            rate=a.rate,
+            start=a.start,
+            end=a.end,
+            samples_dir=a.samples,
+        ),
     )
     return 0
 

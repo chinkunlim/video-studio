@@ -232,6 +232,76 @@ class OpenWebUIRunner:
             if line and line.lstrip().startswith(("[", "第", "完成", "要生成", "停止")):
                 await self.emit_status(emitter, f"{label}：{line.strip()[:90]}")
 
+    async def _spawn_cli(
+        self,
+        args: list[str],
+        stdin_text: str | None,
+    ) -> asyncio.subprocess.Process:
+        """Spawn the video-studio CLI subprocess.
+
+        Args:
+            args: CLI subcommand arguments.
+            stdin_text: Optional standard input text.
+
+        Returns:
+            Started asyncio subprocess instance.
+        """
+        proj = self.project()
+        uv = self.which("uv")
+        self.which("ffmpeg")
+        full_cmd = [uv, "run", "python", "-m", "video_studio.entrypoints.cli", *args]
+        proc = await asyncio.create_subprocess_exec(
+            *full_cmd,
+            cwd=proj,
+            env=self.env(),
+            stdin=asyncio.subprocess.PIPE if stdin_text is not None else asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        if stdin_text is not None and proc.stdin:
+            proc.stdin.write(stdin_text.encode("utf-8"))
+            await proc.stdin.drain()
+            proc.stdin.close()
+        return proc
+
+    async def _collect_output(
+        self,
+        proc: asyncio.subprocess.Process,
+        emitter: EventEmitter | None,
+        label: str,
+    ) -> list[str]:
+        """Collect subprocess output with timeout handling.
+
+        Args:
+            proc: Running subprocess instance.
+            emitter: Status event emitter.
+            label: Human-readable action label.
+
+        Returns:
+            Collected output lines.
+
+        Raises:
+            RuntimeError: On timeout or non-zero exit code.
+        """
+        lines: list[str] = []
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(self._stream_reader(proc.stdout, lines, emitter, label), proc.wait()),
+                self.valves.timeout_minutes * 60,
+            )
+        except asyncio.TimeoutError as e:
+            proc.kill()
+            tail_lines = "\n".join(lines[-15:])
+            raise RuntimeError(
+                f"{label}超过 {self.valves.timeout_minutes} 分钟没完成，已中止。最后的输出：\n{tail_lines}"
+            ) from e
+        if proc.returncode != 0:
+            tail = "\n".join(lines[-20:])
+            if "Operation not permitted" in tail or "PermissionError" in tail:
+                tail += f"\n\n{PRIVACY_HINT}"
+            raise RuntimeError(f"{label}失败（结束代码 {proc.returncode}）：\n{tail}")
+        return lines
+
     async def run_command(
         self,
         args: list[str],
@@ -253,40 +323,9 @@ class OpenWebUIRunner:
         Raises:
             RuntimeError: 执行逾时或非 0 结束代码时。
         """
-        proj = self.project()
-        uv = self.which("uv")
-        self.which("ffmpeg")
         await self.emit_status(emitter, f"{label}…")
-        full_cmd = [uv, "run", "python", "-m", "video_studio.entrypoints.cli", *args]
-        proc = await asyncio.create_subprocess_exec(
-            *full_cmd,
-            cwd=proj,
-            env=self.env(),
-            stdin=asyncio.subprocess.PIPE if stdin_text is not None else asyncio.subprocess.DEVNULL,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        if stdin_text is not None and proc.stdin:
-            proc.stdin.write(stdin_text.encode("utf-8"))
-            await proc.stdin.drain()
-            proc.stdin.close()
-        lines: list[str] = []
-        try:
-            await asyncio.wait_for(
-                asyncio.gather(self._stream_reader(proc.stdout, lines, emitter, label), proc.wait()),
-                self.valves.timeout_minutes * 60,
-            )
-        except asyncio.TimeoutError as e:
-            proc.kill()
-            tail_lines = "\n".join(lines[-15:])
-            raise RuntimeError(
-                f"{label}超过 {self.valves.timeout_minutes} 分钟没完成，已中止。最后的输出：\n{tail_lines}"
-            ) from e
-        if proc.returncode != 0:
-            tail = "\n".join(lines[-20:])
-            if "Operation not permitted" in tail or "PermissionError" in tail:
-                tail += f"\n\n{PRIVACY_HINT}"
-            raise RuntimeError(f"{label}失败（结束代码 {proc.returncode}）：\n{tail}")
+        proc = await self._spawn_cli(args, stdin_text)
+        lines = await self._collect_output(proc, emitter, label)
         await self.emit_status(emitter, f"{label}完成", done=True)
         return "\n".join(lines)
 

@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from video_studio.services.extract_audio.extract import duration, extract_audio
+from video_studio.services.extract_audio.extract import ExtractOptions, duration, extract_audio
 
 
 class TestWorkflowExtract(unittest.TestCase):
@@ -78,7 +78,7 @@ class TestWorkflowExtract(unittest.TestCase):
     def test_extract_audio_trimmed_range(self) -> None:
         """測試依起始與結束時間擷取音訊片段。"""
         out_wav = self.tmp / "trimmed.wav"
-        extract_audio(self.test_video, out=out_wav, start="0:00.5", end="0:01.5")
+        extract_audio(self.test_video, out=out_wav, options=ExtractOptions(start="0:00.5", end="0:01.5"))
 
         self.assertTrue(out_wav.exists())
         wav_dur = duration(out_wav)

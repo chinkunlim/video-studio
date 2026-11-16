@@ -205,6 +205,31 @@ def _columns(blocks: list[Block]) -> None:
         b.order = curr
 
 
+def _read_slide_entry(z: zipfile.ZipFile, i: int, sf: str) -> dict[str, Any]:
+    """从投影片压缩包读取单页文字与备忘稿。
+
+    Args:
+        z: 已开启的 PPTX ZipFile 物件。
+        i: 投影片页码（从 1 开始）。
+        sf: 投影片 XML 路径。
+
+    Returns:
+        包含 slide, text, notes 的字典。
+    """
+    xml_data = z.read(sf).decode("utf-8", "ignore")
+    texts = re.findall(r"<a:t[^>]*>(.*?)</a:t>", xml_data)
+    notes_file = f"ppt/notesSlides/notesSlide{i}.xml"
+    notes_text = ""
+    if notes_file in z.namelist():
+        n_xml = z.read(notes_file).decode("utf-8", "ignore")
+        notes_text = "".join(re.findall(r"<a:t[^>]*>(.*?)</a:t>", n_xml)).strip()
+    return {
+        "slide": i,
+        "text": "".join(texts).strip(),
+        "notes": notes_text,
+    }
+
+
 def pptx_slides_text(pptx_path: Path | str) -> list[dict[str, Any]]:
     """从 PowerPoint 档案解开每一页的文字与备忘稿。
 
@@ -217,7 +242,6 @@ def pptx_slides_text(pptx_path: Path | str) -> list[dict[str, Any]]:
     p = Path(pptx_path)
     if not p.exists():
         return []
-    slides: list[dict[str, Any]] = []
 
     def _slide_sort_key(n: str) -> int:
         """从 slide xml 档案名解析投影片编号作为排序键值。
@@ -236,20 +260,4 @@ def pptx_slides_text(pptx_path: Path | str) -> list[dict[str, Any]]:
             [n for n in z.namelist() if n.startswith("ppt/slides/slide") and n.endswith(".xml")],
             key=_slide_sort_key,
         )
-        for i, sf in enumerate(slide_files, start=1):
-            xml_data = z.read(sf).decode("utf-8", "ignore")
-            texts = re.findall(r"<a:t[^>]*>(.*?)</a:t>", xml_data)
-            notes_file = f"ppt/notesSlides/notesSlide{i}.xml"
-            notes_text = ""
-            if notes_file in z.namelist():
-                n_xml = z.read(notes_file).decode("utf-8", "ignore")
-                n_texts = re.findall(r"<a:t[^>]*>(.*?)</a:t>", n_xml)
-                notes_text = "".join(n_texts).strip()
-            slides.append(
-                {
-                    "slide": i,
-                    "text": "".join(texts).strip(),
-                    "notes": notes_text,
-                }
-            )
-    return slides
+        return [_read_slide_entry(z, i, sf) for i, sf in enumerate(slide_files, start=1)]

@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import zipfile
 from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -168,36 +169,15 @@ def _region(pic: Any, width: int, height: int) -> list[float]:
     Returns:
         [x, y, 宽, 高] 比例列表。
     """
-    xf = _xfrm(pic) or (0, 0, width, height)
-    ox, oy, ex, ey = xf
+    ox, oy, ex, ey = _xfrm(pic) or (0, 0, width, height)
     sr = pic.find(".//a:srcRect", NS)
     left, top, right, bottom = (
         (int(sr.get(k, 0)) / 100000.0 if sr is not None and sr.get(k) else 0.0) for k in ("l", "t", "r", "b")
     )
-
-    def u(x_pos: float) -> float:
-        """映射投影片 X 坐标至原始海报比例坐标。
-
-        Args:
-            x_pos: 投影片 X 坐标。
-
-        Returns:
-            海报 X 轴比例浮点数。
-        """
-        return left + (x_pos - ox) / ex * (1.0 - left - right)
-
-    def v(y_pos: float) -> float:
-        """映射投影片 Y 坐标至原始海报比例坐标。
-
-        Args:
-            y_pos: 投影片 Y 坐标。
-
-        Returns:
-            海报 Y 轴比例浮点数。
-        """
-        return top + (y_pos - oy) / ey * (1.0 - top - bottom)
-
-    x0, x1, y0, y1 = u(0.0), u(float(width)), v(0.0), v(float(height))
+    x0 = left + (0.0 - ox) / ex * (1.0 - left - right)
+    x1 = left + (float(width) - ox) / ex * (1.0 - left - right)
+    y0 = top + (0.0 - oy) / ey * (1.0 - top - bottom)
+    y1 = top + (float(height) - oy) / ey * (1.0 - top - bottom)
     return [round(x0, 4), round(y0, 4), round(x1 - x0, 4), round(y1 - y0, 4)]
 
 
@@ -277,50 +257,83 @@ def _image_target(z: zipfile.ZipFile, slide_file: str, pic: Any) -> str | None:
     return Path(t).name if t else None
 
 
-def _extract_callout_style(
-    sp: Any,
-    paras: list[str],
-    style: dict[str, Any],
-    theme: dict[str, str],
-    height: int,
-    width: int,
-) -> str:
+@dataclass(frozen=True)
+class _SlideMeta:
+    """投影片尺寸与样式收集上下文。"""
+
+    width: int
+    height: int
+    style: dict[str, Any]
+    theme: dict[str, str]
+
+
+def _extract_callout_style(sp: Any, paras: list[str], meta: _SlideMeta) -> str:
     """从底部文字框抽取提示栏文字与样式。
 
     Args:
         sp: 文字框节点。
         paras: 段落文字列表。
-        style: 样式收集字典。
-        theme: 主题色彩字典。
-        height: 投影片高度。
-        width: 投影片宽度。
+        meta: 投影片尺寸与样式上下文。
 
     Returns:
         提示栏多行文字。
     """
     callout = "\n".join(paras)
-    if "callout_color" not in style:
-        xf = _xfrm(sp) or (0, 0, width, height)
-        style["callout_height"] = round(xf[3] / height, 4)
-        style["callout_color"] = _color(sp.find("p:spPr", NS), theme, "#D9692E")
-        rpr = sp.find(".//a:rPr", NS)
-        sz = int(rpr.get("sz")) / 100.0 if rpr is not None and rpr.get("sz") else 24.0
-        style["callout_font_size"] = round(sz * EMU_PER_PT / height, 4)
-        fref = sp.find(".//p:style/a:fontRef/a:schemeClr", NS)
-        style["callout_text_color"] = (
-            theme.get(fref.get("val", ""), "#FFFFFF") if fref is not None else "#FFFFFF"
+    if "callout_color" in meta.style:
+        return callout
+    xf = _xfrm(sp) or (0, 0, meta.width, meta.height)
+    meta.style["callout_height"] = round(xf[3] / meta.height, 4)
+    meta.style["callout_color"] = _color(sp.find("p:spPr", NS), meta.theme, "#D9692E")
+    rpr = sp.find(".//a:rPr", NS)
+    sz = int(rpr.get("sz")) / 100.0 if rpr is not None and rpr.get("sz") else 24.0
+    meta.style["callout_font_size"] = round(sz * EMU_PER_PT / meta.height, 4)
+    fref = sp.find(".//p:style/a:fontRef/a:schemeClr", NS)
+    meta.style["callout_text_color"] = (
+        meta.theme.get(fref.get("val", ""), "#FFFFFF") if fref is not None else "#FFFFFF"
+    )
+    bu, bf = sp.find(".//a:buChar", NS), sp.find(".//a:buFont", NS)
+    if bu is not None and bu.get("char"):
+        meta.style["callout_prefix"] = SYMBOL_BULLETS.get(
+            (bf.get("typeface") if bf is not None else "", bu.get("char", "")), bu.get("char", "")
         )
-        ppr = sp.find(".//a:pPr", NS)
-        bu = sp.find(".//a:buChar", NS)
-        bf = sp.find(".//a:buFont", NS)
-        if bu is not None and bu.get("char"):
-            typeface = bf.get("typeface") if bf is not None else ""
-            char_key = bu.get("char", "")
-            style["callout_prefix"] = SYMBOL_BULLETS.get((typeface, char_key), char_key)
-        if ppr is not None and ppr.get("marL"):
-            style["callout_text_x"] = round(int(ppr.get("marL")) / width, 4)
-            style["callout_bullet_x"] = round((int(ppr.get("marL")) + int(ppr.get("indent", 0))) / width, 4)
+    ppr = sp.find(".//a:pPr", NS)
+    if ppr is not None and ppr.get("marL"):
+        meta.style["callout_text_x"] = round(int(ppr.get("marL")) / meta.width, 4)
+        meta.style["callout_bullet_x"] = round(
+            (int(ppr.get("marL")) + int(ppr.get("indent", 0))) / meta.width, 4
+        )
     return callout
+
+
+def _parse_slide_page(k: int, root: Any, pic: Any, meta: _SlideMeta) -> dict[str, Any]:
+    """解析单页投影片的分镜区域、提示栏与其他文字。
+
+    Args:
+        k: 投影片页码。
+        root: 投影片 XML 根节点。
+        pic: 主图片节点。
+        meta: 投影片尺寸与样式上下文。
+
+    Returns:
+        单页分镜资讯字典。
+    """
+    callout, note = "", []
+    for sp, paras in _text_shapes(root):
+        _, y, w, _ = _xfrm(sp) or (0, 0, meta.width, meta.height)
+        if y > meta.height * 0.6 and w > meta.width * 0.6:
+            callout = _extract_callout_style(sp, paras, meta)
+        else:
+            note.append(" / ".join(paras))
+    fr = _frame(root, meta.width, meta.height, meta.theme)
+    if fr and "frame_inset" not in meta.style:
+        meta.style["frame_inset"], meta.style["frame_color"] = fr["inset"], fr["color"]
+    return {
+        "pptx_slide": k,
+        "region": _region(pic, meta.width, meta.height) if pic is not None else None,
+        "callout": callout,
+        "other_text": note,
+        "overlay": None,
+    }
 
 
 def read(pptx_path: Path | str) -> dict[str, Any]:
@@ -334,40 +347,18 @@ def read(pptx_path: Path | str) -> dict[str, Any]:
     """
     with zipfile.ZipFile(pptx_path) as z:
         files, width, height = _slide_files(z)
-        theme = _theme_colors(z)
+        meta = _SlideMeta(width=width, height=height, style={}, theme=_theme_colors(z))
         pages: list[dict[str, Any]] = []
-        style: dict[str, Any] = {}
         images: list[str | None] = []
         for k, f in enumerate(files, 1):
             root = etree.fromstring(z.read(f))
             pic = _main_picture(root)
             images.append(_image_target(z, f, pic) if pic is not None else None)
-            callout: str = ""
-            note: list[str] = []
-            extra: dict[str, Any] = {}
-            for sp, paras in _text_shapes(root):
-                xf = _xfrm(sp) or (0, 0, width, height)
-                _, y, w, _ = xf
-                if y > height * 0.6 and w > width * 0.6:  # 底部、横跨画面的文字方块 = 提示栏
-                    callout = _extract_callout_style(sp, paras, style, theme, height, width)
-                else:
-                    note.append(" / ".join(paras))
-            fr = _frame(root, width, height, theme)
-            if fr and "frame_inset" not in style:
-                style["frame_inset"], style["frame_color"] = fr["inset"], fr["color"]
-            pages.append(
-                {
-                    "pptx_slide": k,
-                    "region": _region(pic, width, height) if pic is not None else None,
-                    "callout": callout,
-                    "other_text": note,
-                    "overlay": extra.get("overlay"),
-                }
-            )
+            pages.append(_parse_slide_page(k, root, pic, meta))
         same = bool(images) and None not in images and len(set(images)) == 1
         return {
             "pages": pages,
-            "style": style,
+            "style": meta.style,
             "slide_size": (width, height),
             "storyboard_like": same,
             "image": images[0] if same else None,
@@ -384,6 +375,36 @@ def _q(s: str) -> str:
         引注后的字串。
     """
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+
+
+def _format_scene_block(p: dict[str, Any]) -> list[str]:
+    """格式化单页 [[scene]] TOML 区块文字。
+
+    Args:
+        p: 单页分镜资讯字典。
+
+    Returns:
+        TOML 文字行列表。
+    """
+    slide_no = p["pptx_slide"]
+    region_line = (
+        f"region = {p['region']}"
+        if p.get("region")
+        else "region = [0.0, 0.0, 1.0, 1.0]   # 这页找不到海报图片，先用整张"
+    )
+    note_str = f"pptx 第 {slide_no} 页"
+    if p.get("other_text"):
+        note_str += "；其他文字：" + "；".join(p["other_text"])
+    return [
+        "",
+        "[[scene]]",
+        f"slide = {slide_no}",
+        f"intent = {_q('（从 pptx 第 ' + str(slide_no) + ' 页读出）')}",
+        'visual = "poster"',
+        region_line,
+        f"callout = {_q(p.get('callout', ''))}",
+        f"notes = {_q(note_str)}",
+    ]
 
 
 def write_scenes(info: dict[str, Any], out_path: Path | str, pptx_name: str) -> None:
@@ -408,7 +429,7 @@ def write_scenes(info: dict[str, Any], out_path: Path | str, pptx_name: str) -> 
         "",
         "[style]                           # 从 pptx 读出的样式；数字都是占画面宽／高的比例",
     ]
-    for k in (
+    style_keys = (
         "callout_height",
         "callout_color",
         "callout_text_color",
@@ -417,28 +438,11 @@ def write_scenes(info: dict[str, Any], out_path: Path | str, pptx_name: str) -> 
         "callout_bullet_x",
         "frame_inset",
         "frame_color",
-    ):
+    )
+    for k in style_keys:
         if k in st:
             v = st[k]
             rows.append(f"{k} = {_q(v) if isinstance(v, str) else v}")
     for p in info.get("pages", []):
-        slide_no = p["pptx_slide"]
-        rows.extend(
-            [
-                "",
-                "[[scene]]",
-                f"slide = {slide_no}",
-                f"intent = {_q('（从 pptx 第 ' + str(slide_no) + ' 页读出）')}",
-                'visual = "poster"',
-            ]
-        )
-        if p.get("region"):
-            rows.append(f"region = {p['region']}")
-        else:
-            rows.append("region = [0.0, 0.0, 1.0, 1.0]   # 这页找不到海报图片，先用整张")
-        rows.append(f"callout = {_q(p.get('callout', ''))}")
-        note_str = "pptx 第 %d 页" % slide_no
-        if p.get("other_text"):
-            note_str += "；其他文字：" + "；".join(p["other_text"])
-        rows.append(f"notes = {_q(note_str)}")
+        rows.extend(_format_scene_block(p))
     Path(out_path).write_text("\n".join(rows) + "\n", encoding="utf-8")

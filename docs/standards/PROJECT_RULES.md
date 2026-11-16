@@ -30,9 +30,9 @@
 
 ## 3. 和通用規範不同的例外（要寫理由）
 
-- **部分遷移服務函式行數上限暫時寬限**：
-  - `video_studio.adapters.openwebui_tool`（Tools 類別）、`services.video.engine.media`、`services.video.engine.poster`、`services.video.engine.pptx`：
-  - 理由：此類別與模組繼承自舊專案核心影音合成與 AppleScript 控制邏輯，涉及多步驟外部 ffmpeg 與系統呼叫。目前已以完善單元與端到端測試鎖定行為，待後續專屬重構任務依單一職責拆分，期間維持 Code Review Guard 警告狀態（不中斷部署）。
+- **Open WebUI Tool 對外方法參數數量例外**：
+  - `video_studio.adapters.openwebui_tool.Tools.create_job`（5 參數）與 `set_vocabulary`（7 參數）：
+  - 理由：Open WebUI Tool 需將扁平化型別參數直接暴露給 LLM Function Calling Schema 解析，若封裝為 DTO 會影響模型參數填寫；此處維持扁平參數（Code Review Guard 僅顯示 Warning，不阻擋建置）。原舊專案遷移之 `services.video.engine.{media,poster,pptx}` 已完成重構，不再需要例外寬限。
 
 ## 4. 禁止事項
 

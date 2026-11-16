@@ -18,6 +18,7 @@ import logging
 import math
 import subprocess
 import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -278,69 +279,86 @@ def _fade(layer: Image.Image, alpha: float) -> Image.Image:
     return Image.merge("RGBA", (r, g, b, a_faded))
 
 
-def render(
-    cfg: dict[str, Any],
-    poster_img: Image.Image,
-    scenes: dict[int, dict[str, Any]],
-    slides: list[Any],
-    out_mp4: Path | str,
-) -> int:
-    """逐格渲染，直接送进 ffmpeg 编码。
+@dataclass(frozen=True)
+class RenderRequest:
+    """海报影片渲染输入参数。
 
-    Args:
+    Attributes:
         cfg: 设定字典。
         poster_img: 海报大图。
         scenes: 每一幕分镜设定。
         slides: 投影片时间。
+    """
+
+    cfg: dict[str, Any]
+    poster_img: Image.Image
+    scenes: dict[int, dict[str, Any]]
+    slides: list[Any]
+
+
+def _spawn_ffmpeg_encoder(
+    size: tuple[int, int], fps: int, crf: Any, out_mp4: Path | str
+) -> subprocess.Popen[bytes]:
+    """启动接收 rawvideo 的 ffmpeg 编码子行程。
+
+    Args:
+        size: 画面 (宽, 高) 像素。
+        fps: 影格率。
+        crf: x264 编码品质参数。
+        out_mp4: 输出 MP4 路径。
+
+    Returns:
+        启动的 ffmpeg Popen 物件。
+    """
+    cmd = [
+        "ffmpeg",
+        "-v",
+        "error",
+        "-y",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "rgb24",
+        "-s",
+        f"{size[0]}x{size[1]}",
+        "-r",
+        str(fps),
+        "-i",
+        "-",
+        "-c:v",
+        "libx264",
+        "-crf",
+        str(crf),
+        "-preset",
+        "medium",
+        "-pix_fmt",
+        "yuv420p",
+        str(out_mp4),
+    ]
+    return subprocess.Popen(cmd, stdin=subprocess.PIPE)
+
+
+def render(req: RenderRequest, out_mp4: Path | str) -> int:
+    """逐格渲染，直接送进 ffmpeg 编码。
+
+    Args:
+        req: 海报渲染输入参数。
         out_mp4: 输出 MP4 路径。
 
     Returns:
         总渲染帧数。
     """
-    o = cfg.get("output", {})
-    cam = cfg.get("camera", {})
-    width = int(o.get("width", 1920))
-    height = int(o.get("height", 1080))
-    size = (width, height)
+    o = req.cfg.get("output", {})
+    cam = req.cfg.get("camera", {})
+    size = (int(o.get("width", 1920)), int(o.get("height", 1080)))
     fps = int(o.get("fps", 30))
-    aspect = size[0] / size[1]
     bg = overlay.hex_rgb(str(cam.get("background", "#F0EFEB")))
-    plan: list[tuple[Any, Any, Any, Any, Any]] = []
-    for s in slides:
-        sc = scenes.get(s.slide, {})
-        a, b = _views(sc.get("region", [0, 0, 1, 1]), poster_img.size, aspect)
-        bar = overlay.callout(cfg, sc.get("callout", ""), size)
-        plan.append((s, a, b, bar, None))
-    total = slides[-1].end
-    frames = int(math.ceil(total * fps))
-    proc = subprocess.Popen(
-        [
-            "ffmpeg",
-            "-v",
-            "error",
-            "-y",
-            "-f",
-            "rawvideo",
-            "-pix_fmt",
-            "rgb24",
-            "-s",
-            f"{size[0]}x{size[1]}",
-            "-r",
-            str(fps),
-            "-i",
-            "-",
-            "-c:v",
-            "libx264",
-            "-crf",
-            str(o.get("crf", 18)),
-            "-preset",
-            "medium",
-            "-pix_fmt",
-            "yuv420p",
-            str(out_mp4),
-        ],
-        stdin=subprocess.PIPE,
-    )
+    for s in req.slides:
+        sc = req.scenes.get(s.slide, {})
+        _views(sc.get("region", [0, 0, 1, 1]), req.poster_img.size, size[0] / size[1])
+        overlay.callout(req.cfg, sc.get("callout", ""), size)
+    frames = int(math.ceil(req.slides[-1].end * fps))
+    proc = _spawn_ffmpeg_encoder(size, fps, o.get("crf", 18), out_mp4)
     k = 0
     if proc.stdin:
         blank_frame = Image.new("RGB", size, bg).tobytes()

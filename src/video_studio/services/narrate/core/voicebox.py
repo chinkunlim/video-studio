@@ -92,20 +92,15 @@ class Voicebox:
             self._profile = profiles[self.profile_name]
         return self._profile
 
-    def generate(self, text: str, language: str | None = None) -> bytes:
-        """送出生成，轮询到完成，回传 wav bytes。
+    def _submit_generate(self, text: str, language: str | None) -> str:
+        """送出 TTS 生成请求并回传任务 ID。
 
         Args:
             text: 要念的文字。
             language: 指定发音语言。
 
         Returns:
-            生成的 WAV 位元组资料。
-
-        Raises:
-            VoiceboxBroken: Voicebox 崩溃或连线中断。
-            TimeoutError: 超过超时时间。
-            RuntimeError: 生成出错。
+            Voicebox 生成任务 ID。
         """
         p = self.profile()
         body = {
@@ -124,28 +119,18 @@ class Voicebox:
             with urllib.request.urlopen(req, timeout=60) as r:
                 gid = str(json.loads(r.read().decode("utf-8"))["id"])
             self.sent.append(gid)
+            return gid
         except urllib.error.URLError as e:
             if isinstance(getattr(e, "reason", None), ConnectionRefusedError):
                 raise VoiceboxBroken("连不上 Voicebox：可能已经关闭或崩溃") from e
             raise
-        deadline = time.time() + self.timeout
-        while time.time() < deadline:
-            h = json.loads(self._get(f"/history/{gid}").decode("utf-8"))
-            if h.get("status") == "completed":
-                wav = self._get(f"/audio/{gid}", 60)
-                if self.cleanup:
-                    self.delete(gid)  # 音档已经拿到，不留在 Voicebox 的纪录里
-                return wav
-            if h.get("status") in ("failed", "error", "cancelled"):
-                err = str(h.get("error") or h["status"])
-                if self.cleanup:
-                    self.delete(gid)
-                if "no Stream(gpu" in err:
-                    raise VoiceboxBroken(
-                        f"Voicebox 内部出错（{err}）：请 ⌘Q 后从 Dock 重开，并在 app 里生成一句"
-                    )
-                raise RuntimeError(err)
-            time.sleep(1)
+
+    def _cancel_generate(self, gid: str) -> None:
+        """逾时取消远端生成任务并视设定清理纪录。
+
+        Args:
+            gid: 生成任务 ID。
+        """
         try:
             cancel_req = urllib.request.Request(f"{self.url}/generate/{gid}/cancel", method="POST")
             urllib.request.urlopen(cancel_req, timeout=10)
@@ -153,7 +138,62 @@ class Voicebox:
                 self.delete(gid)
         except Exception:
             pass
+
+    def _handle_failed_status(self, gid: str, h: dict[str, Any]) -> None:
+        """处理失败状态的生成任务并抛出对应例外。
+
+        Args:
+            gid: 生成任务 ID。
+            h: 历史纪录响应字典。
+        """
+        err = str(h.get("error") or h.get("status"))
+        if self.cleanup:
+            self.delete(gid)
+        if "no Stream(gpu" in err:
+            raise VoiceboxBroken(f"Voicebox 内部出错（{err}）：请 ⌘Q 后从 Dock 重开，并在 app 里生成一句")
+        raise RuntimeError(err)
+
+    def _poll_generate(self, gid: str) -> bytes:
+        """轮询任务直到完成或失败并回传 WAV 位元组。
+
+        Args:
+            gid: 生成任务 ID。
+
+        Returns:
+            生成的 WAV 位元组资料。
+        """
+        deadline = time.time() + self.timeout
+        while time.time() < deadline:
+            h = json.loads(self._get(f"/history/{gid}").decode("utf-8"))
+            status = h.get("status")
+            if status == "completed":
+                wav = self._get(f"/audio/{gid}", 60)
+                if self.cleanup:
+                    self.delete(gid)
+                return wav
+            if status in ("failed", "error", "cancelled"):
+                self._handle_failed_status(gid, h)
+            time.sleep(1)
+        self._cancel_generate(gid)
         raise TimeoutError(f"超过 {self.timeout} 秒仍未完成")
+
+    def generate(self, text: str, language: str | None = None) -> bytes:
+        """送出生成，轮询到完成，回传 wav bytes。
+
+        Args:
+            text: 要念的文字。
+            language: 指定发音语言。
+
+        Returns:
+            生成的 WAV 位元组资料。
+
+        Raises:
+            VoiceboxBroken: Voicebox 崩溃或连线中断。
+            TimeoutError: 超过超时时间。
+            RuntimeError: 生成出错。
+        """
+        gid = self._submit_generate(text, language)
+        return self._poll_generate(gid)
 
     def delete(self, gid: str, tries: int = 3) -> bool:
         """删除一笔生成纪录（连同音档）。刚生成完时 Voicebox 可能还在处理档案，失败就隔一秒再试。

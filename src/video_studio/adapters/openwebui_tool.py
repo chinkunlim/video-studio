@@ -14,11 +14,12 @@ import re
 from pathlib import Path
 
 from video_studio.adapters.openwebui_runner import EventEmitter, OpenWebUIRunner, ToolValves
+from video_studio.adapters.openwebui_video_mixin import OpenWebUIVideoMixin
 
 logger = logging.getLogger(__name__)
 
 
-class Tools:
+class Tools(OpenWebUIVideoMixin):
     """Open WebUI integration tools for video studio."""
 
     Valves = ToolValves
@@ -136,24 +137,21 @@ class Tools:
 
     async def _write_script_md(
         self,
-        job_type: str,
-        name: str,
-        title: str,
+        job_meta: tuple[str, str, str],
         script_text: str,
         emitter: EventEmitter | None,
     ) -> str:
         """Write speech script and format it to script.md.
 
         Args:
-            job_type: Job type (dub / generate).
-            name: Job slug name.
-            title: Job title.
+            job_meta: (job_type, name, title) tuple.
             script_text: Raw input script text.
             emitter: Status emitter.
 
         Returns:
             Formatted script note.
         """
+        job_type, name, title = job_meta
         d = self._workspace() / job_type / name / "input"
         d.mkdir(parents=True, exist_ok=True)
         raw = d / "speech_script.txt"
@@ -192,18 +190,14 @@ class Tools:
             if job_type not in ("extract", "dub", "generate"):
                 raise RuntimeError("job_type 只能是 extract、dub、generate 其中一个")
             if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", name):
-                msg = (
+                raise RuntimeError(
                     f"名称「{name}」不合格：只能用小写英文、数字、连字号，例如 final-report。中文放在 title。"
                 )
-                raise RuntimeError(msg)
             out = await self._runner.run_command(
-                ["job", "init", job_type, name, "--title", title or name],
-                __event_emitter__,
-                "建立工作",
+                ["job", "init", job_type, name, "--title", title or name], __event_emitter__, "建立工作"
             )
             if script_text.strip() and job_type in ("dub", "generate"):
-                note = await self._write_script_md(job_type, name, title, script_text, __event_emitter__)
-                out += note
+                out += await self._write_script_md((job_type, name, title), script_text, __event_emitter__)
             chk = await self._runner.run_ok(["job", "check", name], __event_emitter__, "检查工作")
             return f"{out}\n\n检查结果：\n{chk}"
 
@@ -352,17 +346,14 @@ class Tools:
 
         async def action() -> str:
             """执行更新词汇表。"""
-            args = ["narrate", "vocab", "set", key]
-            flags = [
+            pairs = [
                 ("--subtitle", subtitle),
                 ("--tts", tts),
                 ("--type", word_type),
                 ("--tested", tested),
                 ("--note", note),
             ]
-            for flag, val in flags:
-                if val:
-                    args.extend([flag, val])
+            args = ["narrate", "vocab", "set", key, *(p for flag, val in pairs if val for p in (flag, val))]
             return await self._runner.run_command(args, __event_emitter__, "更新词汇表")
 
         return await self._runner.guard(__event_emitter__, action)
@@ -497,109 +488,3 @@ class Tools:
             return await self._runner.run_command(cmd, __event_emitter__, "清除 Voicebox 纪录")
 
         return await self._runner.guard(__event_emitter__, action)
-
-    # ---------- 影片 ----------
-
-    async def video_slide_timing(
-        self,
-        job: str,
-        __event_emitter__: EventEmitter | None = None,
-    ) -> str:
-        """列出每一页在配音里的起止时间、长度，以及每个 [click] 在页内第几秒。需要先 build_narration。
-
-        Args:
-            job: 工作名称。
-            __event_emitter__: Open WebUI 状态回报函式。
-
-        Returns:
-            每页时间长度报告。
-        """
-        cmd = ["video", "timing", self._job(job)]
-        return await self._runner.guard(
-            __event_emitter__,
-            lambda: self._runner.run_command(cmd, __event_emitter__, "计算每页时间"),
-        )
-
-    async def video_draft_scenes(
-        self,
-        job: str,
-        source: str = "auto",
-        __event_emitter__: EventEmitter | None = None,
-    ) -> str:
-        """起草分镜到 <工作>/review/scenes.toml，并画出区域预览图。
-
-        Args:
-            job: 工作名称。
-            source: auto、pptx 或 even。
-            __event_emitter__: Open WebUI 状态回报函式。
-
-        Returns:
-            起草分镜结果。
-        """
-        cmd = ["video", "scenes", self._job(job), "--source", source, "--force"]
-        return await self._runner.guard(
-            __event_emitter__,
-            lambda: self._runner.run_command(cmd, __event_emitter__, "起草分镜"),
-        )
-
-    async def video_from_poster(
-        self,
-        job: str,
-        __event_emitter__: EventEmitter | None = None,
-    ) -> str:
-        """海报影片：依 input/scenes.toml，镜头在海报上移动，加上外框、提示栏，合成配音、烧字幕、验收。
-
-        Args:
-            job: 工作名称。
-            __event_emitter__: Open WebUI 状态回报函式。
-
-        Returns:
-            海报影片合成结果。
-        """
-        cmd = ["video", "poster", self._job(job)]
-        return await self._runner.guard(
-            __event_emitter__,
-            lambda: self._runner.run_command(cmd, __event_emitter__, "海报影片"),
-        )
-
-    async def video_from_pptx(
-        self,
-        job: str,
-        __event_emitter__: EventEmitter | None = None,
-    ) -> str:
-        """PowerPoint 汇出影片（保留动画与转场）：移除旧录音，依配音设定换页与动画时间。
-
-        Args:
-            job: 工作名称。
-            __event_emitter__: Open WebUI 状态回报函式。
-
-        Returns:
-            PowerPoint 影片汇出结果。
-        """
-        cmd = ["video", "pptx", self._job(job)]
-        return await self._runner.guard(
-            __event_emitter__,
-            lambda: self._runner.run_command(cmd, __event_emitter__, "PowerPoint 影片"),
-        )
-
-    async def video_mux(
-        self,
-        job: str,
-        video_path: str,
-        __event_emitter__: EventEmitter | None = None,
-    ) -> str:
-        """把一支现成的画面影片跟配音合成，烧字幕并验收。
-
-        Args:
-            job: 工作名称。
-            video_path: 画面影片（完整路径，或 input/ 里的档名）。
-            __event_emitter__: Open WebUI 状态回报函式。
-
-        Returns:
-            合成影片结果。
-        """
-        cmd = ["video", "mux", self._job(job), "--video", video_path]
-        return await self._runner.guard(
-            __event_emitter__,
-            lambda: self._runner.run_command(cmd, __event_emitter__, "合成影片"),
-        )

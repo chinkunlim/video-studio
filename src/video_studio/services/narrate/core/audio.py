@@ -7,6 +7,7 @@ import logging
 import math
 import subprocess
 import wave
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -46,28 +47,36 @@ def duration(path: Path | str) -> float:
     return float(r.stdout.strip())
 
 
-def cut(
-    src: Path | str,
-    dst: Path | str,
-    start: float | None = None,
-    end: float | None = None,
-    rate: int = 24000,
-) -> None:
+@dataclass(frozen=True)
+class CutOptions:
+    """音讯切割参数。
+
+    Attributes:
+        start: 起始秒数。
+        end: 结束秒数。
+        rate: 取样率。
+    """
+
+    start: float | None = None
+    end: float | None = None
+    rate: int = 24000
+
+
+def cut(src: Path | str, dst: Path | str, options: CutOptions | None = None) -> None:
     """切割音讯片段并转为单声道 PCM。
 
     Args:
         src: 来源音档路径。
         dst: 输出目标路径。
-        start: 起始秒数。
-        end: 结束秒数。
-        rate: 取样率。
+        options: 切割与取样率参数。
     """
+    opts = options or CutOptions()
     rng: list[str] = []
-    if start is not None:
-        rng.extend(["-ss", f"{start:.3f}"])
-    if end is not None:
-        rng.extend(["-to", f"{end:.3f}"])
-    ff("-i", src, *rng, "-ar", rate, "-ac", 1, "-c:a", "pcm_s16le", dst)
+    if opts.start is not None:
+        rng.extend(["-ss", f"{opts.start:.3f}"])
+    if opts.end is not None:
+        rng.extend(["-to", f"{opts.end:.3f}"])
+    ff("-i", src, *rng, "-ar", opts.rate, "-ac", 1, "-c:a", "pcm_s16le", dst)
 
 
 def frames_db(path: Path | str) -> list[float]:

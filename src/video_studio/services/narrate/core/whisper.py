@@ -41,19 +41,13 @@ def _load(model_name: str) -> tuple[Any, Any]:
     return _model, _t2s
 
 
-def words(wav: Path | str, model_name: str = "small", language: str = "zh") -> list[tuple[str, float, float]]:
-    """[(词, 开始秒, 结束秒)]，简体。
+def _pad_audio(wav: Path | str, padded: Path) -> None:
+    """在音频前后补静音以便 Whisper 精准辨识首尾字词。
 
     Args:
-        wav: 输入音频路径。
-        model_name: 模型尺寸。
-        language: 语言代码。
-
-    Returns:
-        逐词时间戳列表。
+        wav: 来源音频路径。
+        padded: 输出填充后 WAV 路径。
     """
-    model, t2s = _load(model_name)
-    padded = Path(tempfile.gettempdir()) / "narrate_pad.wav"
     subprocess.run(
         [
             "ffmpeg",
@@ -68,6 +62,22 @@ def words(wav: Path | str, model_name: str = "small", language: str = "zh") -> l
         ],
         check=True,
     )
+
+
+def words(wav: Path | str, model_name: str = "small", language: str = "zh") -> list[tuple[str, float, float]]:
+    """[(词, 开始秒, 结束秒)]，简体。
+
+    Args:
+        wav: 输入音频路径。
+        model_name: 模型尺寸。
+        language: 语言代码。
+
+    Returns:
+        逐词时间戳列表。
+    """
+    model, t2s = _load(model_name)
+    padded = Path(tempfile.gettempdir()) / "narrate_pad.wav"
+    _pad_audio(wav, padded)
     kw = {"initial_prompt": "以下是普通话的句子。"} if language == "zh" else {}
     segs, _ = model.transcribe(
         str(padded),
@@ -76,12 +86,11 @@ def words(wav: Path | str, model_name: str = "small", language: str = "zh") -> l
         condition_on_previous_text=False,
         **kw,
     )
-    res: list[tuple[str, float, float]] = []
-    for s in segs:
-        for w in getattr(s, "words", []):
-            clean_w = t2s.convert(w.word).strip(" ,，。!！?？…")
-            res.append((clean_w, float(w.start) - PAD, float(w.end) - PAD))
-    return res
+    return [
+        (t2s.convert(w.word).strip(" ,，。!！?？…"), float(w.start) - PAD, float(w.end) - PAD)
+        for s in segs
+        for w in getattr(s, "words", [])
+    ]
 
 
 def norm(t: str) -> str:

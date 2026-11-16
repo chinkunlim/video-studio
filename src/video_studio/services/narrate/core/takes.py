@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,23 @@ def key(tts_text: str) -> str:
         12 码 16 进位哈希值。
     """
     return hashlib.sha1(tts_text.encode("utf-8")).hexdigest()[:12]
+
+
+@dataclass(frozen=True)
+class TakeEntry:
+    """单一选用音档的记录内容。
+
+    Attributes:
+        words: 逐字时间戳清单。
+        source: 来源描述。
+        sim: Whisper 比对相似度。
+        locked: 是否锁定。
+    """
+
+    words: list[dict[str, Any]]
+    source: str
+    sim: float | None = None
+    locked: bool = False
 
 
 class Takes:
@@ -57,33 +75,22 @@ class Takes:
             return t
         return None
 
-    def put(
-        self,
-        tts_text: str,
-        clip: Path | str,
-        words: list[dict[str, Any]],
-        source: str,
-        sim: float | None = None,
-        locked: bool = False,
-    ) -> None:
+    def put(self, tts_text: str, clip: Path | str, entry: TakeEntry) -> None:
         """记录单一发音文字的选用音档。
 
         Args:
             tts_text: 念法文字。
             clip: 音档路径。
-            words: 逐字时间戳清单。
-            source: 来源描述。
-            sim: Whisper 比对相似度。
-            locked: 是否锁定。
+            entry: Take 元资料。
         """
         rel = Path(clip).resolve().relative_to(self.dir.resolve())
         self.data[key(tts_text)] = {
             "tts": tts_text,
             "clip": str(rel),
-            "words": words,
-            "source": source,
-            "sim": sim,
-            "locked": locked,
+            "words": entry.words,
+            "source": entry.source,
+            "sim": entry.sim,
+            "locked": entry.locked,
         }
         self.save()
 

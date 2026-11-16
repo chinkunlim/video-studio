@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import math
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -192,48 +193,73 @@ def _caption_no(group: list[Block]) -> int | None:
     return None
 
 
-def _refine(
-    sec: Section,
+@dataclass(frozen=True)
+class _RefineContext:
+    """_refine 所需的海报比对上下文。"""
+
+    tok_of: dict[int, set[str]]
+    idf: dict[str, float]
+    figs: list[list[Block]]
+
+
+def _score_units(
+    units: list[list[Block]],
     slide_tok: set[str],
-    tok_of: dict[int, set[str]],
-    idf: dict[str, float],
-    figs: list[list[Block]],
-    slide_text: str = "",
-    seen: Any = (),
-) -> list[Block]:
-    """段落很高时，只框这一幕讲到的部分。
+    slide_text: str,
+    seen_and_ctx: tuple[Any, _RefineContext],
+) -> tuple[list[tuple[list[Block], float]], float]:
+    """计算段落内各候选单元与讲稿的匹配分数。
 
     Args:
-        sec: 段落 Section 物件。
+        units: 候选区块群组列表。
         slide_tok: 投影片 token 集合。
-        tok_of: 每个 Block 的 token 对照。
-        idf: IDF 权重字典。
-        figs: 图表区块列表。
         slide_text: 投影片讲稿原文。
-        seen: 上一幕已看过的区块 ID 集合。
+        seen_and_ctx: (已看过区块集合, 比对上下文) 元组。
 
     Returns:
-        精选后的 Block 列表。
+        (评分结果列表, 最高分数) 元组。
     """
-    box = sec.box
-    if box[3] - box[1] <= 0.16:
-        return sec.blocks
-    groups = [g for g in figs if all(b in sec.blocks for b in g)]
-    units = [[b] for b in sec.blocks if b.role == "body"] + groups
-    if not units:
-        return sec.blocks
+    seen, ctx = seen_and_ctx
     refs = _fig_refs(slide_text)
     top_w = 0.0
     scored: list[tuple[list[Block], float]] = []
     for u in units:
-        t: set[str] = set().union(*(tok_of[id(b)] for b in u))
-        w = sum(idf.get(x, 0.0) for x in slide_tok & t)
+        t: set[str] = set().union(*(ctx.tok_of[id(b)] for b in u))
+        w = sum(ctx.idf.get(x, 0.0) for x in slide_tok & t)
         if (len(u) > 1 or u[0].role == "small") and _caption_no(u) in refs:
             w += 20.0
         if id(u[0]) in seen:
             w *= 0.5
         scored.append((u, w))
         top_w = max(top_w, w)
+    return scored, top_w
+
+
+def _refine(
+    sec: Section,
+    slide_tok: set[str],
+    slide_text: str,
+    seen_and_ctx: tuple[Any, _RefineContext],
+) -> list[Block]:
+    """段落很高时，只框这一幕讲到的部分。
+
+    Args:
+        sec: 段落 Section 物件。
+        slide_tok: 投影片 token 集合。
+        slide_text: 投影片讲稿原文。
+        seen_and_ctx: (已看过区块集合, 比对上下文) 元组。
+
+    Returns:
+        精选后的 Block 列表。
+    """
+    _, ctx = seen_and_ctx
+    if sec.box[3] - sec.box[1] <= 0.16:
+        return sec.blocks
+    groups = [g for g in ctx.figs if all(b in sec.blocks for b in g)]
+    units = [[b] for b in sec.blocks if b.role == "body"] + groups
+    if not units:
+        return sec.blocks
+    scored, top_w = _score_units(units, slide_tok, slide_text, seen_and_ctx)
     if top_w <= 0:
         return sec.blocks
     chosen = [b for u, score in scored if score >= 0.6 * top_w for b in u]
@@ -243,13 +269,73 @@ def _refine(
         chosen.extend(heads)
     chosen_box = union([b.box for b in chosen])
     chosen.extend(
-        [
-            b
-            for b in sec.blocks
-            if b not in chosen and b.box[1] >= chosen_box[1] - 0.001 and b.box[3] <= chosen_box[3] + 0.001
-        ]
+        b
+        for b in sec.blocks
+        if b not in chosen and b.box[1] >= chosen_box[1] - 0.001 and b.box[3] <= chosen_box[3] + 0.001
     )
     return chosen
+
+
+def _low_sim_entry(sections: list[Section], prev_sec: int | None, pad: float) -> tuple[int, dict[str, Any]]:
+    """处理相似度过低的投影片预设镜头范围。
+
+    Args:
+        sections: 海报所有 Section 列表。
+        prev_sec: 上一幕使用的 Section 索引。
+        pad: 镜头外框缓冲距离比例。
+
+    Returns:
+        (选定的 Section 索引, 分镜预设结果字典) 元组。
+    """
+    j = 0 if prev_sec is None else min(prev_sec + 1, len(sections) - 1)
+    sec = sections[j]
+    box = [0.0, 0.0, 1.0, sec.box[3]] if j == 0 else sec.box
+    return j, {
+        "region": _pad(box, pad),
+        "confidence": "低",
+        "section": sec.title,
+        "matched": f"（对不上，先放「{sec.title}」）",
+    }
+
+
+def _align_slides(
+    slides: list[int],
+    slide_texts: dict[int, str],
+    sections: list[Section],
+    sim_data: tuple[list[list[float]], list[int], list[set[str]], _RefineContext, float],
+) -> dict[int, dict[str, Any]]:
+    """依最佳路径逐幕计算镜头区域与信心度。
+
+    Args:
+        slides: 排序后的投影片编号列表。
+        slide_texts: {slide: 文字} 字典。
+        sections: 海报所有 Section 列表。
+        sim_data: (sims, path, ttoks, ctx, pad) 封装元组。
+
+    Returns:
+        {slide: {region, confidence, matched, section}} 对齐结果字典。
+    """
+    sims, path, ttoks, ctx, pad = sim_data
+    out: dict[int, dict[str, Any]] = {}
+    prev_sec: int | None = None
+    seen: set[int] = set()
+    for i, slide in enumerate(slides):
+        j, sim = path[i], sims[i][path[i]]
+        if sim < MIN_SIM:
+            prev_sec, out[slide] = _low_sim_entry(sections, prev_sec, pad)
+            continue
+        sec = sections[j]
+        chosen = _refine(sec, ttoks[i], slide_texts[slide], (seen if prev_sec == j else (), ctx))
+        seen = {id(b) for b in chosen}
+        conf = "高" if sim >= 0.25 else ("中" if sim >= 0.12 else "低")
+        out[slide] = {
+            "region": _pad(union([b.box for b in chosen]), pad),
+            "confidence": conf,
+            "section": sec.title,
+            "matched": sec.title or chosen[0].text.replace("\n", "")[:20],
+        }
+        prev_sec = j
+    return out
 
 
 def align(
@@ -275,51 +361,34 @@ def align(
     slides = sorted(slide_texts)
     ttoks = [tokens(slide_texts[k]) for k in slides]
     sims = [[_sim(t, st, idf) for st in stoks] for t in ttoks]
-    path = _order(sims)
-    figs = _figures(blocks)
-    tok_of = {id(b): t for b, t in zip(blocks, btoks, strict=False)}
+    ctx = _RefineContext(
+        tok_of={id(b): t for b, t in zip(blocks, btoks, strict=False)}, idf=idf, figs=_figures(blocks)
+    )
+    return _align_slides(slides, slide_texts, sections, (sims, _order(sims), ttoks, ctx, pad))
 
-    out: dict[int, dict[str, Any]] = {}
-    prev_sec: int | None = None
-    seen: set[int] = set()
 
-    for i, slide in enumerate(slides):
-        j, sim = path[i], sims[i][path[i]]
-        if sim < MIN_SIM:
-            j = 0 if prev_sec is None else min(prev_sec + 1, len(sections) - 1)
-            sec = sections[j]
-            box = sec.box
-            if j == 0:
-                box = [0.0, 0.0, 1.0, box[3]]
-            out[slide] = {
-                "region": _pad(box, pad),
-                "confidence": "低",
-                "section": sec.title,
-                "matched": f"（对不上，先放「{sec.title}」）",
-            }
-            prev_sec = j
-            continue
-        sec = sections[j]
-        chosen = _refine(
-            sec,
-            ttoks[i],
-            tok_of,
-            idf,
-            figs,
-            slide_texts[slide],
-            seen if prev_sec == j else (),
-        )
-        seen = {id(b) for b in chosen}
-        box = union([b.box for b in chosen])
-        conf = "高" if sim >= 0.25 else ("中" if sim >= 0.12 else "低")
-        out[slide] = {
-            "region": _pad(box, pad),
-            "confidence": conf,
-            "section": sec.title,
-            "matched": sec.title or chosen[0].text.replace("\n", "")[:20],
-        }
-        prev_sec = j
-    return out
+def _format_align_scene(slide: int, r: dict[str, Any], intent: str) -> list[str]:
+    """格式化单幕 scenes.toml 区块。
+
+    Args:
+        slide: 投影片编号。
+        r: align 结果字典。
+        intent: 该幕讲稿摘要。
+
+    Returns:
+        TOML 文字行列表。
+    """
+    x0, y0, x1, y1 = r["region"]
+    matched = str(r["matched"]).replace('"', "'")
+    return [
+        "[[scene]]",
+        f"slide = {slide}",
+        f'intent = "{intent.replace(chr(34), chr(39))}"',
+        f"region = [{x0:.4f}, {y0:.4f}, {x1 - x0:.4f}, {y1 - y0:.4f}]",
+        'callout = ""',
+        f'notes = "对到：{matched}；信心：{r["confidence"]}"',
+        "",
+    ]
 
 
 def write_scenes(
@@ -350,18 +419,5 @@ def write_scenes(
         "",
     ]
     for slide, r in sorted(result.items()):
-        x0, y0, x1, y1 = r["region"]
-        intent = slide_intents.get(slide, "").replace('"', "'")
-        matched = str(r["matched"]).replace('"', "'")
-        rows.extend(
-            [
-                "[[scene]]",
-                f"slide = {slide}",
-                f'intent = "{intent}"',
-                f"region = [{x0:.4f}, {y0:.4f}, {x1 - x0:.4f}, {y1 - y0:.4f}]",
-                'callout = ""',
-                f'notes = "对到：{matched}；信心：{r["confidence"]}"',
-                "",
-            ]
-        )
+        rows.extend(_format_align_scene(slide, r, slide_intents.get(slide, "")))
     out_path.write_text("\n".join(rows), encoding="utf-8")

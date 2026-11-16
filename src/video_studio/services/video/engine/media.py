@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -106,12 +107,39 @@ def read_srt(path: Path | str) -> list[tuple[float, float, str]]:
     return cues
 
 
+@dataclass(frozen=True)
+class MuxOptions:
+    """影音合成设定参数。
+
+    Attributes:
+        target_duration: 目标总秒数。
+        cfg: 设定字典。
+    """
+
+    target_duration: float
+    cfg: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SubtitleBurnOptions:
+    """字幕烧录设定参数。
+
+    Attributes:
+        cfg: 设定字典。
+        work: 暂存处理资料夹。
+        bottom_reserved: 底部保留高度。
+    """
+
+    cfg: dict[str, Any]
+    work: Path | str
+    bottom_reserved: int = 0
+
+
 def mux(
     picture: Path | str,
     narration: Path | str,
     out: Path | str,
-    target_duration: float,
-    cfg: dict[str, Any],
+    options: MuxOptions,
 ) -> None:
     """画面 + 配音 → mp4。画面比配音短就停在最后一格补足，比较长就剪掉。
 
@@ -119,16 +147,16 @@ def mux(
         picture: 画面影片路径。
         narration: 配音音讯路径。
         out: 输出影片路径。
-        target_duration: 目标总秒数。
-        cfg: 设定字典。
+        options: 合成设定参数。
     """
     pd = duration(picture)
-    vf: list[str] = []
-    if pd < target_duration - 0.02:
-        vf.append(f"tpad=stop_mode=clone:stop_duration={target_duration - pd + 0.1:.3f}")
-    fps = cfg.get("output", {}).get("fps", 30)
-    crf = str(cfg.get("output", {}).get("crf", "18"))
-    vf.append(f"fps={fps},format=yuv420p")
+    vf = (
+        [f"tpad=stop_mode=clone:stop_duration={options.target_duration - pd + 0.1:.3f}"]
+        if pd < options.target_duration - 0.02
+        else []
+    )
+    out_cfg = options.cfg.get("output", {})
+    vf.append(f"fps={out_cfg.get('fps', 30)},format=yuv420p")
     cmd = [
         "-i",
         str(picture),
@@ -143,7 +171,7 @@ def mux(
         "-c:v",
         "libx264",
         "-crf",
-        crf,
+        str(out_cfg.get("crf", "18")),
         "-preset",
         "medium",
         "-c:a",
@@ -151,7 +179,7 @@ def mux(
         "-b:a",
         "192k",
         "-t",
-        f"{target_duration:.3f}",
+        f"{options.target_duration:.3f}",
         "-movflags",
         "+faststart",
         str(out),
@@ -159,30 +187,21 @@ def mux(
     ff(*cmd)
 
 
-def burn_subtitles(
-    video: Path | str,
-    srt: Path | str,
-    out: Path | str,
-    cfg: dict[str, Any],
-    work: Path | str,
-    bottom_reserved: int = 0,
-) -> None:
-    """把字幕画成透明图层再叠到画面上。
+def _render_subtitle_track(
+    srt: Path | str, size: tuple[int, int], total: float, opts: SubtitleBurnOptions
+) -> Path:
+    """渲染透明字幕 PNG 序列并串接为 mov 轨道。
 
     Args:
-        video: 原始视讯档案。
         srt: SRT 字幕档案。
-        out: 烧录字幕后的视讯输出路径。
-        cfg: 设定字典。
-        work: 暂存处理资料夹。
-        bottom_reserved: 底部保留高度。
+        size: 影片宽高。
+        total: 影片总秒数。
+        opts: 烧录设定参数。
+
+    Returns:
+        字幕透明轨道路径。
     """
-    work_p = Path(work)
-    work_p.mkdir(parents=True, exist_ok=True)
-    info = probe(video)
-    vs = next(s for s in info["streams"] if s["codec_type"] == "video")
-    size = (int(vs["width"]), int(vs["height"]))
-    total = float(info["format"]["duration"])
+    work_p = Path(opts.work)
     blank = work_p / "blank.png"
     Image.new("RGBA", size, (0, 0, 0, 0)).save(blank)
     entries: list[tuple[Path, float]] = []
@@ -191,7 +210,7 @@ def burn_subtitles(
         if a > t + 0.001:
             entries.append((blank, a - t))
         png = work_p / f"sub_{k:04d}.png"
-        overlay.subtitle(cfg, text, size, bottom_reserved).save(png)
+        overlay.subtitle(opts.cfg, text, size, opts.bottom_reserved).save(png)
         entries.append((png, b - a))
         t = b
     if total > t:
@@ -205,10 +224,32 @@ def burn_subtitles(
         encoding="utf-8",
     )
     track = work_p / "subs.mov"
-    fps = cfg.get("output", {}).get("fps", 30)
-    crf = str(cfg.get("output", {}).get("crf", "18"))
+    fps = opts.cfg.get("output", {}).get("fps", 30)
     ff("-f", "concat", "-safe", "0", "-i", str(lst), "-r", str(fps), "-c:v", "png", str(track))
-    ff(
+    return track
+
+
+def burn_subtitles(
+    video: Path | str,
+    srt: Path | str,
+    out: Path | str,
+    options: SubtitleBurnOptions,
+) -> None:
+    """把字幕画成透明图层再叠到画面上。
+
+    Args:
+        video: 原始视讯档案。
+        srt: SRT 字幕档案。
+        out: 烧录字幕后的视讯输出路径。
+        options: 烧录设定参数。
+    """
+    Path(options.work).mkdir(parents=True, exist_ok=True)
+    info = probe(video)
+    vs = next(s for s in info["streams"] if s["codec_type"] == "video")
+    size = (int(vs["width"]), int(vs["height"]))
+    track = _render_subtitle_track(srt, size, float(info["format"]["duration"]), options)
+    crf = str(options.cfg.get("output", {}).get("crf", "18"))
+    cmd = [
         "-i",
         str(video),
         "-i",
@@ -230,62 +271,24 @@ def burn_subtitles(
         "-movflags",
         "+faststart",
         str(out),
-    )
+    ]
+    ff(*cmd)
 
 
-def check(
-    video: Path | str,
-    narration: Path | str,
-    slides: list[Any],
-    sheet: Path | str,
-    work: Path | str,
-) -> tuple[bool, list[str]]:
-    """验收：有画面也有声音、长度对、声音不是静音；每一页抽一格做成缩图总览。
+def _build_contact_sheet(
+    video: Path | str, slides: list[Any], sheet: Path | str, work: Path | str
+) -> str | None:
+    """为每一页投影片抽一格做成缩图总览。
 
     Args:
         video: 检查影片。
-        narration: 参考配音。
         slides: 投影片资讯。
         sheet: 输出总览联络表路径。
         work: 暂存处理路径。
 
     Returns:
-        (是否合格, 检查报告文字列表)。
+        缩图生成提示讯息，若无投影片则回传 None。
     """
-    info = probe(video)
-    kinds = [s["codec_type"] for s in info["streams"]]
-    report: list[str] = []
-    ok = True
-    if "video" not in kinds or "audio" not in kinds:
-        ok = False
-        report.append(f"❌ 轨道不完整：{kinds}（缺画面或缺声音）")
-    vd, nd = float(info["format"]["duration"]), duration(narration)
-    report.append(f"影片 {vd:.2f}s，配音 {nd:.2f}s")
-    if vd < nd - 0.1:
-        ok = False
-        report.append("❌ 影片比配音短，结尾会被切掉")
-    vol_cmd = [
-        "ffmpeg",
-        "-hide_banner",
-        "-i",
-        str(video),
-        "-map",
-        "0:a:0",
-        "-af",
-        "volumedetect",
-        "-f",
-        "null",
-        "-",
-    ]
-    r = subprocess.run(vol_cmd, capture_output=True, text=True)
-    m = re.search(r"max_volume:\s*(-?[\d.]+)\s*dB", r.stderr)
-    if m:
-        mv = float(m.group(1))
-        report.append(f"最大音量 {mv:.1f} dBFS")
-        if mv < -40.0:
-            ok = False
-            report.append("❌ 声音几乎是静音")
-
     work_path = Path(work)
     work_path.mkdir(parents=True, exist_ok=True)
     thumbs: list[tuple[int, Path]] = []
@@ -294,22 +297,95 @@ def check(
         thumb_path = work_path / f"thumb_{getattr(s, 'slide', 1):02d}.jpg"
         ff("-ss", f"{t:.2f}", "-i", video, "-frames:v", "1", "-vf", "scale=480:-1", thumb_path)
         thumbs.append((getattr(s, "slide", 1), thumb_path))
+    if not thumbs or not thumbs[0][1].exists():
+        return None
+    cols = 4
+    with Image.open(thumbs[0][1]) as first_img:
+        w, h = first_img.size
+    rows = (len(thumbs) + cols - 1) // cols
+    canvas = Image.new("RGB", (cols * w, rows * (h + 36)), "white")
+    draw = ImageDraw.Draw(canvas)
+    for k, (n, p) in enumerate(thumbs):
+        x, y = (k % cols) * w, (k // cols) * (h + 36)
+        with Image.open(p) as img:
+            canvas.paste(img, (x, y + 36))
+        draw.text((x + 8, y + 8), f"slide {n}", fill="black")
+    Path(sheet).parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(sheet, quality=85)
+    return f"缩图总览：{sheet}（每一页抽一格，请用眼睛确认画面）"
 
-    if thumbs and thumbs[0][1].exists():
-        cols = 4
-        with Image.open(thumbs[0][1]) as first_img:
-            w, h = first_img.size
-        rows = (len(thumbs) + cols - 1) // cols
-        canvas = Image.new("RGB", (cols * w, rows * (h + 36)), "white")
-        draw = ImageDraw.Draw(canvas)
-        for k, (n, p) in enumerate(thumbs):
-            x, y = (k % cols) * w, (k // cols) * (h + 36)
-            with Image.open(p) as img:
-                canvas.paste(img, (x, y + 36))
-            draw.text((x + 8, y + 8), f"slide {n}", fill="black")
-        Path(sheet).parent.mkdir(parents=True, exist_ok=True)
-        canvas.save(sheet, quality=85)
-        report.append(f"缩图总览：{sheet}（每一页抽一格，请用眼睛确认画面）")
 
+def _check_audio_volume(video: Path | str, report: list[str]) -> bool:
+    """检测影片音轨最大音量，判断是否静音。
+
+    Args:
+        video: 检查影片路径。
+        report: 检查报告文字列表。
+
+    Returns:
+        音量是否正常（非静音）。
+    """
+    r = subprocess.run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-i",
+            str(video),
+            "-map",
+            "0:a:0",
+            "-af",
+            "volumedetect",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    m = re.search(r"max_volume:\s*(-?[\d.]+)\s*dB", r.stderr)
+    if not m:
+        return True
+    mv = float(m.group(1))
+    report.append(f"最大音量 {mv:.1f} dBFS")
+    if mv < -40.0:
+        report.append("❌ 声音几乎是静音")
+        return False
+    return True
+
+
+def check(
+    video: Path | str,
+    narration: Path | str,
+    slides: list[Any],
+    sheet_and_work: tuple[Path | str, Path | str],
+) -> tuple[bool, list[str]]:
+    """验收：有画面也有声音、长度对、声音不是静音；每一页抽一格做成缩图总览。
+
+    Args:
+        video: 检查影片。
+        narration: 参考配音。
+        slides: 投影片资讯。
+        sheet_and_work: (输出总览联络表路径, 暂存处理路径) 元组。
+
+    Returns:
+        (是否合格, 检查报告文字列表)。
+    """
+    sheet, work = sheet_and_work
+    info = probe(video)
+    kinds = [s["codec_type"] for s in info["streams"]]
+    report: list[str] = []
+    ok = "video" in kinds and "audio" in kinds
+    if not ok:
+        report.append(f"❌ 轨道不完整：{kinds}（缺画面或缺声音）")
+    vd, nd = float(info["format"]["duration"]), duration(narration)
+    report.append(f"影片 {vd:.2f}s，配音 {nd:.2f}s")
+    if vd < nd - 0.1:
+        ok = False
+        report.append("❌ 影片比配音短，结尾会被切掉")
+    if not _check_audio_volume(video, report):
+        ok = False
+    sheet_msg = _build_contact_sheet(video, slides, sheet, work)
+    if sheet_msg:
+        report.append(sheet_msg)
     report.append("✅ 验收通过" if ok else "⚠️ 验收有项目未通过")
     return ok, report

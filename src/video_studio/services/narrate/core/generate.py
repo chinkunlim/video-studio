@@ -10,6 +10,7 @@ import logging
 import shutil
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,26 @@ WRAPS: list[tuple[str, str]] = [
     ("现在开始。", "现在结束。"),
     ("开始……", "……结束！"),
 ]
+
+
+def _find_end_marker(words: list[tuple[str, float, float]], k0: int, body: str) -> int | None:
+    """定位正文最后一个字在时间戳中的索引。
+
+    Args:
+        words: 逐词时间戳列表。
+        k0: 开头 marker 索引。
+        body: 原文正规化字串。
+
+    Returns:
+        匹配到的词汇索引，找不到则回传 None。
+    """
+    k1 = next((k for k in range(len(words) - 1, k0, -1) if same_last(words[k][0], body)), None)
+    if k1 is None and body[-1:].isascii():
+        k1 = next(
+            (k for k in range(len(words) - 1, k0, -1) if words[k][0] and not is_marker(words[k][0])),
+            None,
+        )
+    return k1
 
 
 def cut_points(
@@ -54,12 +75,7 @@ def cut_points(
     if not runs:
         return None, None, "「开始」和正文之间没有静音"
     a = runs[-1][1] - 0.02
-    k1 = next((k for k in range(len(words) - 1, k0, -1) if same_last(words[k][0], body)), None)
-    if k1 is None and body[-1:].isascii():  # 句尾是英文时 Whisper 常听成别的字
-        k1 = next(
-            (k for k in range(len(words) - 1, k0, -1) if words[k][0] and not is_marker(words[k][0])),
-            None,
-        )
+    k1 = _find_end_marker(words, k0, body)
     if k1 is None:
         return None, None, "对不上原文最后一个字"
     s1, e1 = words[k1][1], words[k1][2]
@@ -73,80 +89,130 @@ def cut_points(
     return a, b, ""
 
 
+@dataclass(frozen=True)
+class TakeOptions:
+    """单句生成的可选控制参数。
+
+    Attributes:
+        tries: 最大重试尝试次数。
+        keep_all: 是否保留所有通过版本（用于试听）。
+        log: 记录函式，预设使用 logger.info。
+    """
+
+    tries: int | None = None
+    keep_all: bool = False
+    log: Callable[[str], None] | None = None
+
+
+@dataclass(frozen=True)
+class _AttemptCtx:
+    """单次重试所需参数上下文。"""
+
+    vb: Any
+    text: str
+    body: str
+    work: Path
+    model: str
+    accept_sim: float
+    logger_fn: Callable[[str], None]
+
+
+def _verify_clip_quality(k: int, clip: Path, ctx: _AttemptCtx, t0: float) -> dict[str, Any] | None:
+    """用 Whisper 检验切割后音档的相似度与头尾残留。
+
+    Args:
+        k: 尝试索引。
+        clip: 切割后音档路径。
+        ctx: 单次重试上下文。
+        t0: 本次尝试开始时间戳。
+
+    Returns:
+        通过检验的 take 字典，未通过则回传 None。
+    """
+    ws = whisper.words(clip, ctx.model)
+    hyp = "".join(w for w, _, _ in ws)
+    sim = whisper.similarity(ctx.text, hyp)
+    head, tail = whisper.residue(ctx.text, hyp)
+    if head or tail or sim < ctx.accept_sim:
+        msg = f"    第{k + 1}次：相似度 {sim:.2f}"
+        if head:
+            msg += f" 残留{head}"
+        if tail:
+            msg += f" {tail}"
+        ctx.logger_fn(f"{msg}｜{hyp}")
+        return None
+    ctx.logger_fn(f"    第{k + 1}次：通过，相似度 {sim:.2f}（{time.time() - t0:.0f}s）｜{hyp}")
+    return {"clip": clip, "words": ws, "hyp": hyp, "sim": round(sim, 3), "wrap": k + 1}
+
+
+def _run_single_attempt(k: int, ctx: _AttemptCtx) -> dict[str, Any] | None:
+    """执行单次 TTS 生成、切割与品质检验。
+
+    Args:
+        k: 尝试索引（从 0 开始）。
+        ctx: 单次重试上下文。
+
+    Returns:
+        通过检验的 take 字典，未通过则回传 None。
+    """
+    pre, post = WRAPS[k % len(WRAPS)]
+    raw = ctx.work / f"raw{k + 1}.wav"
+    clip = ctx.work / f"take{k + 1}.wav"
+    t0 = time.time()
+    try:
+        raw.write_bytes(ctx.vb.generate(f"{pre}{ctx.text}{post}"))
+    except (TimeoutError, RuntimeError) as e:
+        ctx.logger_fn(f"    第{k + 1}次：生成失败（{e}）")
+        return None
+    a, b, why = cut_points(whisper.words(raw, ctx.model), ctx.body, raw)
+    if a is None:
+        ctx.logger_fn(f"    第{k + 1}次：{why}")
+        return None
+    audio.cut(raw, clip, audio.CutOptions(start=a, end=b))
+    probs = audio.edge_problems(clip)
+    if probs:
+        ctx.logger_fn(f"    第{k + 1}次：{'、'.join(probs)}")
+        return None
+    return _verify_clip_quality(k, clip, ctx, t0)
+
+
 def take(
     vb: Any,
     text: str,
-    work: Path,
-    cfg: dict[str, Any],
-    tries: int | None = None,
-    keep_all: bool = False,
-    log: Callable[[str], None] | None = None,
+    work_and_cfg: tuple[Path, dict[str, Any]],
+    options: TakeOptions | None = None,
 ) -> list[dict[str, Any]]:
     """生成一句。回传通过检查的版本 [{clip, words, hyp, sim, wrap}]。
 
     Args:
         vb: Voicebox 客户端。
         text: 要发音的文字。
-        work: 暂存输出目录。
-        cfg: 设定字典。
-        tries: 最大重试尝试次数。
-        keep_all: 是否保留所有通过版本（用于试听）。
-        log: 记录函式，预设使用 logger.info。
+        work_and_cfg: (暂存输出目录, 设定字典) 元组。
+        options: 重试与记录设定。
 
     Returns:
         通过的 take 资料字典列表。
     """
+    work, cfg = work_and_cfg
+    opts = options or TakeOptions()
     work.mkdir(parents=True, exist_ok=True)
-    body = norm(text)
-    max_tries = tries or int(cfg.get("generate", {}).get("tries", 8))
-    model = str(cfg.get("whisper", {}).get("model", "small"))
-    accept_sim = float(cfg.get("generate", {}).get("accept_similarity", 0.85))
-    logger_fn = log or logger.info
+    max_tries = opts.tries or int(cfg.get("generate", {}).get("tries", 8))
+    ctx = _AttemptCtx(
+        vb=vb,
+        text=text,
+        body=norm(text),
+        work=work,
+        model=str(cfg.get("whisper", {}).get("model", "small")),
+        accept_sim=float(cfg.get("generate", {}).get("accept_similarity", 0.85)),
+        logger_fn=opts.log or logger.info,
+    )
     passed: list[dict[str, Any]] = []
-
     for k in range(max_tries):
-        pre, post = WRAPS[k % len(WRAPS)]
-        raw = work / f"raw{k + 1}.wav"
-        clip = work / f"take{k + 1}.wav"
-        t0 = time.time()
-        try:
-            raw.write_bytes(vb.generate(f"{pre}{text}{post}"))
-        except (TimeoutError, RuntimeError) as e:
-            logger_fn(f"    第{k + 1}次：生成失败（{e}）")
-            continue
-        a, b, why = cut_points(whisper.words(raw, model), body, raw)
-        if a is None:
-            logger_fn(f"    第{k + 1}次：{why}")
-            continue
-        audio.cut(raw, clip, a, b)
-        probs = audio.edge_problems(clip)
-        if probs:
-            logger_fn(f"    第{k + 1}次：{'、'.join(probs)}")
-            continue
-        ws = whisper.words(clip, model)
-        hyp = "".join(w for w, _, _ in ws)
-        sim = whisper.similarity(text, hyp)
-        head, tail = whisper.residue(text, hyp)
-        if head or tail or sim < accept_sim:
-            msg = f"    第{k + 1}次：相似度 {sim:.2f}"
-            if head:
-                msg += f" 残留{head}"
-            if tail:
-                msg += f" {tail}"
-            logger_fn(f"{msg}｜{hyp}")
-            continue
-        logger_fn(f"    第{k + 1}次：通过，相似度 {sim:.2f}（{time.time() - t0:.0f}s）｜{hyp}")
-        passed.append(
-            {
-                "clip": clip,
-                "words": ws,
-                "hyp": hyp,
-                "sim": round(sim, 3),
-                "wrap": k + 1,
-            }
-        )
-        if not keep_all:
-            break
+        item = _run_single_attempt(k, ctx)
+        if item is not None:
+            passed.append(item)
+            if not opts.keep_all:
+                break
     return passed
 
 
