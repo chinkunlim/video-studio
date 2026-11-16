@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initDraftAutosave();
   initLiveTerminal();
   initAspectAndPreviewFit();
-  initReviewHistoryAndPlanPreset();
+  initReviewHistory();
 });
 
 let _resumedRunId = null;
@@ -256,13 +256,6 @@ function initAspectAndPreviewFit() {
   fitReviewPreviewFrame();
 }
 
-const DEFAULT_PLAN_RULES = [
-  '- 講解中的 section 寬度約為總螢幕的 3/4（~75%），一般高度須垂直居中；若該 section 高度大於螢幕畫面，講解到該部分時使用平滑 scrolling 下滑呈現。',
-  '- 左右欄版位須嚴格「鏡像對稱」（左欄距左邊緣多少距離，右欄距右邊緣也要相同距離，或統一水平垂直置中）；若留出側邊 1/4 空間（講左欄時留右、講右欄時留左），請善用該空間做手寫筆記與手繪箭頭加強說明。',
-  '- 必要時適當使用手寫（SVG 筆畫）、手繪標記（圓圈／底線／箭頭）增加動畫。',
-  '- 移除所有 emoji，背景海報輪廓水平與垂直置中。',
-].join('\n');
-
 /**
  * 重新載入目前工作的 review/ 草稿版本快照清單。
  * @param {string} jobName 工作名稱。
@@ -287,16 +280,10 @@ async function refreshReviewSnapshots(jobName) {
 }
 
 /**
- * 初始化草稿快照儲存／退回按鈕與預設規則插入按鈕。
+ * 初始化草稿快照儲存與退回按鈕。
  * @returns {void}
  */
-function initReviewHistoryAndPlanPreset() {
-  document.getElementById('insertPlanPresetBtn')?.addEventListener('click', () => {
-    const box = document.getElementById('planInstruction');
-    if (!box) return;
-    box.value = box.value.trim() ? `${box.value.trim()}\n${DEFAULT_PLAN_RULES}` : DEFAULT_PLAN_RULES;
-    box.dispatchEvent(new Event('input'));
-  });
+function initReviewHistory() {
   document.getElementById('saveSnapshotBtn')?.addEventListener('click', async () => {
     if (!state?.currentJob) return;
     const note = window.prompt('輸入此草稿快照備註（方便日後識別）：', '手動備份') ?? '';

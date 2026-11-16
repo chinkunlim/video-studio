@@ -279,7 +279,6 @@ class TestAvatarScriptBilingual(unittest.TestCase):
 
     def test_review_snapshot_and_rollback(self) -> None:
         """Verify review/ snapshot creation, listing, and rollback restore."""
-        from video_studio.services import planner
         from video_studio.services.common import job as J
 
         job = J.find("einstein-demo")
@@ -301,9 +300,3 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         list_res = self.client.get("/api/jobs/einstein-demo/review/snapshots")
         self.assertEqual(list_res.status_code, 200)
         self.assertGreaterEqual(len(list_res.json()["snapshots"]), 2)
-
-        # Poster rules include 3/4 width, scrolling, and hand-drawn animation
-        (job.input / "poster.png").write_bytes(b"fake")
-        prompt = planner.build_plan_prompt("einstein-demo")
-        self.assertIn("3/4", prompt)
-        self.assertIn("scrolling", prompt)
