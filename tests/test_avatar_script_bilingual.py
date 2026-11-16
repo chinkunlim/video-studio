@@ -65,6 +65,37 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         self.assertTrue(rev.json()["exists"])
         self.assertIn("相對論", rev.json()["content"])
 
+        # Edit input/script.md and verify original draft remains untouched
+        self.client.put(
+            "/api/jobs/einstein-demo/script",
+            json={"content": "# 講稿：相對論\n\n## 投影片 1\n修改後的講稿。", "auto_format": False},
+        )
+        orig = self.client.get("/api/jobs/einstein-demo/original-script")
+        self.assertTrue(orig.json()["exists"])
+        self.assertIn("大家好，我是愛因斯坦", orig.json()["content"])
+        self.assertNotIn("修改後的講稿", orig.json()["content"])
+
+    def test_agy_models_and_prosody_static_asset(self) -> None:
+        """Verify /api/agy/models, plan model forwarding, and studio-prosody.js asset."""
+        with patch(
+            "video_studio.services.planner.list_agy_models",
+            return_value=[{"id": "gemini-4-argon-high", "label": "Gemini 4 Argon (High)"}],
+        ):
+            res = self.client.get("/api/agy/models")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["models"][0]["id"], "gemini-4-argon-high")
+
+        with patch("video_studio.services.planner.start_agy_plan", return_value={"ok": True}) as mock_plan:
+            self.client.post(
+                "/api/jobs/einstein-demo/plan",
+                json={"instruction": "test", "mode": "html", "model": "gemini-4-argon-high"},
+            )
+            mock_plan.assert_called_once_with("einstein-demo", "test", "html", "gemini-4-argon-high")
+
+        js = self.client.get("/studio-prosody.js")
+        self.assertEqual(js.status_code, 200)
+        self.assertIn("wrapScriptProsody", js.text)
+
     def test_bilingual_translation_and_subtitle_output(self) -> None:
         """Verify bilingual TSV parsing and dual-line SRT/VTT/ASS generation."""
         lines = ["Hello everyone, welcome to relativity.", "Time slows down near gravity."]

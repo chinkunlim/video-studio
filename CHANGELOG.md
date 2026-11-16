@@ -12,6 +12,7 @@ All notable changes to **video-studio** are documented here
 - feat(ui): add voice language settings, toast stack, collapsible dock, and WYSIWYG layout guides (by `@Antigravity`)
 - feat(studio): add AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B) (by `@Antigravity`)
 - feat(studio): add 10s Avatar A/B preview, 10s prosody A/B/C preview, and word-level prosody tags (by `@Antigravity`)
+- feat(studio): add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

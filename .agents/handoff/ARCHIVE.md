@@ -83,3 +83,15 @@
 - **下一步**: 全專案遷移、測試與文件同步全數完成，可開展新功能或整合實務影片素材
 - **交接備註**: 34 項測試與品質檢查全綠，遠端分支 origin/main 已同步
 - **本機對話紀錄**: `.agents/conversations/2026-10-22-0215-antigravity-summary.md`（只在這台電腦）
+
+### [2026-11-16 02:26 UTC] 建立任務 `TASK-007`: Refactor oversized functions and resolve all Code Review Guard warnings (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-16 02:26 UTC] 認領任務 `TASK-007` (Refactor oversized functions and resolve all Code Review Guard warnings) (by `antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `antigravity`
+
+### [2026-11-16 02:40 UTC] 完成任務 `TASK-007` — Refactor oversized functions and resolve all Code Review Guard warnings (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Added graphify-out/ to .gitignore, refactored oversized/deep-nesting/multi-param functions across entrypoints, adapters, and services, updated PROJECT_RULES.md §3, and verified 34/34 tests + ruff + mypy strict + graphify update.

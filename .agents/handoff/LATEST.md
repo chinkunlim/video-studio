@@ -5,20 +5,32 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 04:09 UTC`
+- **最後更新時間**: `2026-11-16 04:18 UTC`
 - **最近操作 Agent**: `Antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `42417df feat(studio): add AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B) [agent:Antigravity]`
+- **最新 Git Commit**: `1da6cd7 feat(studio): add 10s Avatar A/B preview, 10s prosody A/B/C preview, and word-level prosody tags [agent:Antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-013**<br/>Add 10s Avatar A/B preview, 10s Voice Prosody A/B/C preview, inline word-level prosody tags, and SadTalker checkpoints | 🟢 `in_progress` | `Antigravity` | `-` | - | - | - |
+| **TASK-014**<br/>Add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection | 🟢 `in_progress` | `Antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-16 04:18 UTC] 認領任務 `TASK-014` (Add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection) (by `Antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `Antigravity`
+
+### [2026-11-16 04:18 UTC] 建立任務 `TASK-014`: Add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection (by `Antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-16 04:15 UTC] 完成任務 `TASK-013` — Add 10s Avatar A/B preview, 10s Voice Prosody A/B/C preview, inline word-level prosody tags, and SadTalker checkpoints (by `Antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: (無)
 
 ### [2026-11-16 04:09 UTC] 認領任務 `TASK-013` (Add 10s Avatar A/B preview, 10s Voice Prosody A/B/C preview, inline word-level prosody tags, and SadTalker checkpoints) (by `Antigravity`)
 - **相關範圍**: `-`
@@ -85,17 +97,5 @@
 - **接棒自**: `antigravity`
 
 ### [2026-11-16 02:41 UTC] 建立任務 `TASK-008`: Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-11-16 02:40 UTC] 完成任務 `TASK-007` — Refactor oversized functions and resolve all Code Review Guard warnings (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Added graphify-out/ to .gitignore, refactored oversized/deep-nesting/multi-param functions across entrypoints, adapters, and services, updated PROJECT_RULES.md §3, and verified 34/34 tests + ruff + mypy strict + graphify update.
-
-### [2026-11-16 02:26 UTC] 認領任務 `TASK-007` (Refactor oversized functions and resolve all Code Review Guard warnings) (by `antigravity`)
-- **相關範圍**: `-`
-- **接棒自**: `antigravity`
-
-### [2026-11-16 02:26 UTC] 建立任務 `TASK-007`: Refactor oversized functions and resolve all Code Review Guard warnings (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`

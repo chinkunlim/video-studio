@@ -100,5 +100,8 @@ def draft_script_to_review(
     job.review.mkdir(parents=True, exist_ok=True)
     out_path = job.review / "script.md"
     out_path.write_text(formatted.rstrip() + "\n", encoding="utf-8")
+    orig_path = job.review / "script.original.md"
+    if not orig_path.exists():
+        orig_path.write_text(formatted.rstrip() + "\n", encoding="utf-8")
     logger.info("Drafted review script for %s -> %s", job.name, out_path)
     return out_path, formatted

@@ -65,6 +65,7 @@ class PlanRequest(BaseModel):
 
     instruction: str = Field(default="", description="User planning instruction or follow-up")
     mode: str = Field(default="html", description="html | poster")
+    model: str = Field(default="", description="Optional agy CLI model ID")
 
 
 class EnvUpdateRequest(BaseModel):
@@ -238,6 +239,10 @@ def update_job_script(job_name: str, req: TextContentUpdate) -> dict[str, Any]:
     text = script_mod.split_sentences(req.content) if req.auto_format else req.content
     target = job.script or (job.input / "script.md")
     target.parent.mkdir(parents=True, exist_ok=True)
+    orig = job.review / "script.original.md"
+    if not orig.exists() and req.content.strip():
+        job.review.mkdir(parents=True, exist_ok=True)
+        orig.write_text(target.read_text(encoding="utf-8") if target.is_file() else text, encoding="utf-8")
     target.write_text(text, encoding="utf-8")
     return {"ok": True, "content": text, "output": f"已儲存 {target.name}"}
 
@@ -291,7 +296,33 @@ def start_plan(job_name: str, req: PlanRequest) -> dict[str, Any]:
     Returns:
         Run handle with run_id and initial status.
     """
-    return planner.start_agy_plan(job_name, req.instruction, req.mode)
+    return planner.start_agy_plan(job_name, req.instruction, req.mode, req.model)
+
+
+@router.get("/api/agy/models")
+def get_agy_models() -> dict[str, Any]:
+    """List available Antigravity (agy CLI) models.
+
+    Returns:
+        Dictionary with models list of {id, label}.
+    """
+    return {"models": planner.list_agy_models()}
+
+
+@router.get("/api/jobs/{job_name}/original-script")
+def get_original_script(job_name: str) -> dict[str, Any]:
+    """Return the preserved immutable original script draft (review/script.original.md).
+
+    Args:
+        job_name: Target job name.
+
+    Returns:
+        Dictionary with exists flag and content string.
+    """
+    orig = J.find(job_name).review / "script.original.md"
+    if not orig.is_file():
+        return {"exists": False, "content": ""}
+    return {"exists": True, "content": orig.read_text(encoding="utf-8")}
 
 
 @router.get("/api/plan/{run_id}")

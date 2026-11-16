@@ -240,9 +240,19 @@
             <div class="row">
               <button class="btn btn-soft" id="draftScriptBtn" type="button">✨ AI 生成講稿草稿</button>
               <button class="btn btn-ghost btn-sm" id="loadReviewScriptBtn" type="button">載入 review/script.md</button>
+              <button class="btn btn-ghost btn-sm" id="restoreOriginalScriptBtn" type="button">⏪ 還原最原始初稿</button>
               <button class="btn btn-ghost btn-sm" id="approveScriptBtn" type="button">核可 review/script.md → input/</button>
             </div>
-            <textarea id="scriptEditor" style="min-height:200px;"></textarea>
+            <div class="prosody-toolbar">
+              <span class="muted">選取文字標記語氣：</span>
+              <button type="button" class="btn btn-ghost btn-sm" data-prosody-tag="loud">🔊 強音</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-prosody-tag="soft">🔈 弱音</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-prosody-tag="fast">⚡ 加速</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-prosody-tag="slow">🐢 放慢</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="clearProsodyBtn">✖️ 移除選取標記</button>
+            </div>
+            <div class="prosody-highlight-view" id="prosodyHighlightView" title="點擊彩色標記可直接移除"></div>
+            <textarea id="scriptEditor" style="min-height:170px;"></textarea>
             <p class="muted">句內韻律標記：支援 <code>[loud]強音詞[/loud]</code>、<code>**強調詞**</code>、<code>[soft]弱音詞[/soft]</code>、<code>[fast]整句加速[/fast]</code>、<code>[slow]整句放慢[/slow]</code>（字幕會自動隱藏標記）。</p>
             <div class="row">
               <button class="btn" id="saveScriptBtn" type="button">儲存講稿 (input/script.md)</button>
@@ -309,6 +319,11 @@
                   <option value="poster">海報鏡頭分鏡 (review/scenes.toml)</option>
                 </select>
               </label>
+              <label class="field">Antigravity (agy CLI) 模型
+                <select id="planModelSelect">
+                  <option value="">預設 (agy 預設模型)</option>
+                </select>
+              </label>
             </div>
             <label class="field">補充給 Antigravity 的指示
               <textarea id="planInstruction" placeholder="例如：第 1 幕用大標題淡入，第 2 幕強調數據對比…"></textarea>
@@ -366,6 +381,7 @@
   <div class="qa-drawer-head">
     <strong>✨ Antigravity 分鏡規劃對話 (agy CLI)</strong>
     <div class="row">
+      <select id="qaModelSelect" aria-label="選擇 agy 模型" style="width:auto;max-width:165px;padding:4px 8px;font-size:12px;"></select>
       <button class="btn btn-ghost btn-sm" id="copyPromptBtn" type="button">複製提示詞</button>
       <button class="btn btn-ghost btn-sm" id="qaCloseBtn" type="button">關閉</button>
     </div>
@@ -385,6 +401,7 @@
 </div><!-- /.app -->
 
 <script src="/studio-layout-tune.js"></script>
+<script src="/studio-prosody.js"></script>
 <script src="/studio.js"></script>
 </body>
 </html>

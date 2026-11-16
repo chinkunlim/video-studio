@@ -180,6 +180,7 @@ async function loadJobDetail(name) {
   document.getElementById('cfgInPoster').value = c.inputs?.poster || '';
   document.getElementById('cfgInScenes').value = c.inputs?.scenes || '';
   document.getElementById('scriptEditor').value = d.script || '';
+  if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
   document.getElementById('briefEditor').value = d.brief || '';
   updateMediaPreview(name, d.latest_version, d.latest_files);
 }
@@ -254,9 +255,10 @@ async function runAntigravityPlan(instruction) {
   const typingEl = appendChatMsg('ai', '', true);
   try {
     const mode = document.getElementById('planModeSelect').value;
+    const model = document.getElementById('planModelSelect')?.value || '';
     const startRes = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/plan`, {
       method: 'POST',
-      body: JSON.stringify({ instruction, mode }),
+      body: JSON.stringify({ instruction, mode, model }),
     });
     state.lastPrompt = startRes.prompt || '';
     if (!startRes.available) {
@@ -421,7 +423,10 @@ async function saveScript(autoFormat) {
   const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/script`, {
     method: 'PUT', body: JSON.stringify({ content: document.getElementById('scriptEditor').value, auto_format: autoFormat }),
   });
-  if (autoFormat) document.getElementById('scriptEditor').value = res.content;
+  if (autoFormat) {
+    document.getElementById('scriptEditor').value = res.content;
+    if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
+  }
   showToast(res.output || '已儲存講稿', 'success');
 }
 
@@ -542,6 +547,7 @@ async function handleDraftScript() {
     }),
   });
   document.getElementById('scriptEditor').value = res.content || '';
+  if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
   showToast(res.output || '已生成講稿草稿至 review/script.md，可修改後核可', 'success', 3200);
 }
 
@@ -554,6 +560,7 @@ async function handleLoadReviewScript() {
   const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/review-script`);
   if (!res.exists) { showToast('尚無 review/script.md 草稿', 'warning'); return; }
   document.getElementById('scriptEditor').value = res.content;
+  if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
   showToast('已載入 review/script.md，修改後可儲存或核可', 'info');
 }
 

@@ -1,0 +1,27 @@
+{
+  "id": "TASK-014",
+  "title": "Add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection",
+  "status": "in_progress",
+  "agent": "Antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-16 04:18 UTC",
+  "updated_at": "2026-11-16 04:18 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-16 04:18 UTC",
+      "action": "created_and_claimed",
+      "agent": "Antigravity"
+    },
+    {
+      "timestamp": "2026-11-16 04:18 UTC",
+      "action": "claimed",
+      "agent": "Antigravity",
+      "previous_agent": "Antigravity"
+    }
+  ]
+}

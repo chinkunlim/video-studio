@@ -24,6 +24,7 @@ class PlanRun:
     run_id: str
     job_name: str
     prompt: str
+    model: str = ""
     status: str = "running"
     lines: list[str] = field(default_factory=list)
     error: str | None = None
@@ -87,8 +88,11 @@ def _run_agy_worker(run: PlanRun, agy_bin: str) -> None:
         agy_bin: Resolved path to agy executable.
     """
     try:
+        cmd = [agy_bin, "-p", run.prompt, "--mode", "accept-edits"]
+        if run.model.strip():
+            cmd.extend(["--model", run.model.strip()])
         proc = subprocess.Popen(
-            [agy_bin, "-p", run.prompt, "--mode", "accept-edits"],
+            cmd,
             cwd=PROJECT_ROOT,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -113,21 +117,61 @@ def _run_agy_worker(run: PlanRun, agy_bin: str) -> None:
             run.error = str(exc)
 
 
-def start_agy_plan(job_name: str, user_instruction: str = "", mode: str = "html") -> dict[str, Any]:
+def _resolve_agy_bin() -> str | None:
+    """Locate the agy CLI executable on PATH or ~/.local/bin/agy.
+
+    Returns:
+        Path string to agy executable, or None if unavailable.
+    """
+    local_agy = Path.home() / ".local/bin/agy"
+    return shutil.which("agy") or (str(local_agy) if local_agy.exists() else None)
+
+
+def list_agy_models() -> list[dict[str, str]]:
+    """Query available models from `agy models`.
+
+    Returns:
+        List of {'id': ..., 'label': ...} dictionaries.
+    """
+    agy_bin = _resolve_agy_bin()
+    if not agy_bin:
+        return []
+    try:
+        proc = subprocess.run([agy_bin, "models"], capture_output=True, text=True, timeout=10, check=False)
+    except Exception:
+        return []
+    if proc.returncode != 0:
+        return []
+    models: list[dict[str, str]] = []
+    for raw in proc.stdout.splitlines():
+        line = raw.strip()
+        if not line or "Fetching available models" in line:
+            continue
+        parts = line.split(None, 1)
+        if len(parts) == 2 and "-" in parts[0]:
+            models.append({"id": parts[0].strip(), "label": parts[1].strip()})
+    return models
+
+
+def start_agy_plan(
+    job_name: str,
+    user_instruction: str = "",
+    mode: str = "html",
+    model: str = "",
+) -> dict[str, Any]:
     """Start a background agy CLI planning run for a job.
 
     Args:
         job_name: Target job name.
         user_instruction: Optional user instruction or follow-up message.
         mode: Target output mode ('html' or 'poster').
+        model: Optional agy model ID.
 
     Returns:
         Dictionary containing run_id, status, available flag, and prompt.
     """
     prompt = build_plan_prompt(job_name, user_instruction, mode)
-    agy_bin = shutil.which("agy") or (
-        str(Path.home() / ".local/bin/agy") if (Path.home() / ".local/bin/agy").exists() else None
-    )
+    agy_bin = _resolve_agy_bin()
     run_id = uuid.uuid4().hex[:12]
     if not agy_bin:
         return {
@@ -137,7 +181,7 @@ def start_agy_plan(job_name: str, user_instruction: str = "", mode: str = "html"
             "prompt": prompt,
             "error": "找不到 agy CLI，請複製提示詞到 Antigravity App 執行。",
         }
-    run = PlanRun(run_id=run_id, job_name=job_name, prompt=prompt)
+    run = PlanRun(run_id=run_id, job_name=job_name, prompt=prompt, model=model)
     with _LOCK:
         _RUNS[run_id] = run
     threading.Thread(target=_run_agy_worker, args=(run, agy_bin), daemon=True).start()
