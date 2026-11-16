@@ -5,20 +5,32 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 03:56 UTC`
+- **最後更新時間**: `2026-11-16 04:09 UTC`
 - **最近操作 Agent**: `Antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `fbf729c feat(ui): add voice language settings, toast stack, collapsible dock, and WYSIWYG layout guides [agent:Antigravity]`
+- **最新 Git Commit**: `42417df feat(studio): add AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B) [agent:Antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-012**<br/>Implement AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B) | 🟢 `in_progress` | `Antigravity` | `-` | - | - | - |
+| **TASK-013**<br/>Add 10s Avatar A/B preview, 10s Voice Prosody A/B/C preview, inline word-level prosody tags, and SadTalker checkpoints | 🟢 `in_progress` | `Antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-16 04:09 UTC] 認領任務 `TASK-013` (Add 10s Avatar A/B preview, 10s Voice Prosody A/B/C preview, inline word-level prosody tags, and SadTalker checkpoints) (by `Antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `Antigravity`
+
+### [2026-11-16 04:09 UTC] 建立任務 `TASK-013`: Add 10s Avatar A/B preview, 10s Voice Prosody A/B/C preview, inline word-level prosody tags, and SadTalker checkpoints (by `Antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-16 04:02 UTC] 完成任務 `TASK-012` — Implement AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B) (by `Antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: (無)
 
 ### [2026-11-16 03:56 UTC] 認領任務 `TASK-012` (Implement AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B)) (by `Antigravity`)
 - **相關範圍**: `-`
@@ -87,19 +99,3 @@
 ### [2026-11-16 02:26 UTC] 建立任務 `TASK-007`: Refactor oversized functions and resolve all Code Review Guard warnings (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
-
-### [2026-10-21 18:15 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
-- **檢查結果**: 測試與 Code Review Guard 通過
-- **目標**: 更新並校驗專案所有 Markdown 文件、架構決策與已知問題，並完成推送
-- **錯誤與根因**: macOS 內建 Python 3.9 環境下 setup_env.py 誤判 tomllib 為第三方依賴，已於 is_stdlib 補齊判定並提 TEMPLATE_FEEDBACK
-- **下一步**: 全專案遷移、測試與文件同步全數完成，可開展新功能或整合實務影片素材
-- **交接備註**: 34 項測試與品質檢查全綠，遠端分支 origin/main 已同步
-- **本機對話紀錄**: `.agents/conversations/2026-10-22-0215-antigravity-summary.md`（只在這台電腦）
-
-### [2026-10-21 18:14 UTC] 完成任務 `TASK-006` — 更新所有 Markdown 文件與架構決策紀錄 (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: 更新並同步所有 Markdown 文件（規格超連結、ADR-001/002/003、ISSUE-001/002、MIGRATION 完成清單、PROJECT_RULES 領域規則、TEMPLATES 連結修復與反向同步）
-
-### [2026-10-21 18:14 UTC] 認領任務 `TASK-006` (更新所有 Markdown 文件與架構決策紀錄) (by `antigravity`)
-- **相關範圍**: `-`
-- **接棒自**: `antigravity`

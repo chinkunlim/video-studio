@@ -23,6 +23,7 @@ from video_studio.services.narrate.core import (
     concat,
     generate,
     numbers,
+    prosody,
     script,
     subtitles,
     vocab,
@@ -135,8 +136,9 @@ def load_lines(job: J.Job) -> tuple[list[script.Line], dict[str, dict[str, str]]
         raise RuntimeError(f"找不到讲稿档案：{job.script}")
     lines = script.parse(job.script.read_text(encoding="utf-8"))
     for ln in lines:
-        ln.subtitle = vocab.expand(ln.raw, voc, "subtitle")
-        ln.tts = numbers.normalize(vocab.expand(ln.raw, voc, "tts"))
+        clean_raw, _ = prosody.parse_prosody_tags(ln.raw)
+        ln.subtitle = vocab.expand(clean_raw, voc, "subtitle")
+        ln.tts = numbers.normalize(vocab.expand(clean_raw, voc, "tts"))
     return lines, voc
 
 
@@ -174,6 +176,43 @@ def list_lines(job: J.Job) -> str:
             out.append(f"{'':10}念法：{tts_val}")
     out.append("\n✓ 已有音档  🔒 已锁定  · 还没生成")
     return "\n".join(out)
+
+
+def preview_prosody_10s(job: J.Job, sample_text: str = "") -> dict[str, str]:
+    """Generate 10-second normal/energetic/calm prosody audio previews into review/.
+
+    Args:
+        job: Target Job instance.
+        sample_text: Optional custom sample sentence(s) with prosody markup.
+
+    Returns:
+        Mapping of preset name ('normal', 'energetic', 'calm') to review filename.
+    """
+    cfg = load_narrate_config(job)
+    text = sample_text.strip()
+    if not text and job.script and job.script.exists():
+        lines, _ = load_lines(job)
+        text = " ".join(ln.raw for ln in lines[:2])
+    if not text:
+        text = "大家好，歡迎來到今天的分享。今天我們來聊聊 [loud]核心關鍵[/loud] 與未來的發展。"
+    clean_text, spans = prosody.parse_prosody_tags(text)
+    vb = _build_tts_client(cfg)
+    vb.check_ready()
+    raw_bytes = vb.generate(clean_text, cfg["voicebox"].get("language"))
+    job.review.mkdir(parents=True, exist_ok=True)
+    base_wav = job.work / "prosody_base_10s.wav"
+    base_wav.parent.mkdir(parents=True, exist_ok=True)
+    raw_tmp = job.work / "prosody_raw.wav"
+    raw_tmp.write_bytes(raw_bytes)
+    audio.cut(raw_tmp, base_wav, audio.CutOptions(start=0.0, end=10.0, rate=24000))
+    words = whisper.words(base_wav, cfg["whisper"]["model"])
+    timed = prosody.match_word_spans(spans, words)
+    out: dict[str, str] = {}
+    for preset in ("normal", "energetic", "calm"):
+        fname = f"prosody_{preset}.wav"
+        prosody.apply_prosody_to_wav(base_wav, job.review / fname, timed, preset=preset)
+        out[preset] = fname
+    return out
 
 
 def scan_vocab(job: J.Job) -> str:
@@ -233,6 +272,13 @@ def _generate_missing_takes(job: J.Job, missing: list[script.Line], cfg: dict[st
             logger.warning("    全部失败：第 %d 句生成失败", ln.no)
             continue
         dest = generate.store(res[0], job.takes_dir / f"{take_key(tts_val)}.wav")
+        _, spans = prosody.parse_prosody_tags(ln.raw)
+        preset = str(job.cfg.get("voice", {}).get("prosody_preset", "normal"))
+        if spans or preset != "normal":
+            timed = prosody.match_word_spans(spans, res[0]["words"])
+            tmp_wav = dest.with_suffix(".prosody.wav")
+            prosody.apply_prosody_to_wav(dest, tmp_wav, timed, preset=preset)
+            tmp_wav.replace(dest)
         takes.put(
             tts_val,
             dest,

@@ -165,6 +165,13 @@
               </select>
             </label>
             <label class="field">edge-tts 語速<input type="text" id="cfgEdgeRate" value="+0%" /></label>
+            <label class="field">預設韻律風格 (prosody_preset)
+              <select id="cfgProsodyPreset">
+                <option value="normal">標準自然 (normal)</option>
+                <option value="energetic">活力強音加速 (energetic)</option>
+                <option value="calm">沉穩放慢輕柔 (calm)</option>
+              </select>
+            </label>
             <label class="field">Whisper 字幕辨識模型
               <select id="cfgWhisperModel">
                 <option value="tiny">tiny (最快)</option>
@@ -236,6 +243,7 @@
               <button class="btn btn-ghost btn-sm" id="approveScriptBtn" type="button">核可 review/script.md → input/</button>
             </div>
             <textarea id="scriptEditor" style="min-height:200px;"></textarea>
+            <p class="muted">句內韻律標記：支援 <code>[loud]強音詞[/loud]</code>、<code>**強調詞**</code>、<code>[soft]弱音詞[/soft]</code>、<code>[fast]整句加速[/fast]</code>、<code>[slow]整句放慢[/slow]</code>（字幕會自動隱藏標記）。</p>
             <div class="row">
               <button class="btn" id="saveScriptBtn" type="button">儲存講稿 (input/script.md)</button>
               <button class="btn btn-soft" id="formatScriptBtn" type="button">自動斷句並儲存</button>
@@ -283,9 +291,11 @@
             <h2>Step 3A：先聲後影（生成配音與量測秒數）</h2>
             <p class="muted">先依設定（Voicebox 或 edge-tts）產生配音與字幕，再用 ffprobe 算出每頁秒數。</p>
             <div class="row">
+              <button class="btn btn-soft" id="prosodyPreviewBtn" type="button">🎧 生成 10 秒韻律試聽（標準 / 活力 / 沉穩）</button>
               <button class="btn" id="buildNarrationBtn" type="button">1. 生成配音與字幕 (narrate build)</button>
               <button class="btn btn-soft" id="calcTimingBtn" type="button">2. 計算投影片秒數 (video timing)</button>
             </div>
+            <div id="prosodyPreviewBox" class="field-grid" style="display:none;"></div>
             <pre class="logbox" id="narrateLog">尚未執行</pre>
           </div>
 
@@ -327,10 +337,12 @@
           <div class="row">
             <button class="btn" id="renderHtmlBtn" type="button">渲染 HTML 影片 (HyperFrames)</button>
             <button class="btn btn-soft" id="renderPosterBtn" type="button">渲染海報影片 (Poster)</button>
+            <button class="btn btn-soft" id="previewAvatarAbBtn" type="button">🧪 10 秒 Avatar A/B 試看對比</button>
             <button class="btn btn-soft" id="applyAvatarBtn" type="button">🧑‍🏫 合成 Avatar 講者頭像</button>
             <button class="btn btn-ghost" id="checkVideoBtn" type="button">執行影片驗收 (video check)</button>
           </div>
           <div class="muted" id="avatarStatusBadge">Avatar 引擎檢查中…</div>
+          <div id="avatarAbBox" class="grid-2" style="display:none;"></div>
           <pre class="logbox" id="renderLog">尚未渲染</pre>
         </div>
 

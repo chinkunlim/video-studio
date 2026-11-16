@@ -162,6 +162,7 @@ async function loadJobDetail(name) {
   document.getElementById('cfgVoiceProfile').value = c.voice?.profile || 'My Voice';
   document.getElementById('cfgEdgeVoice').value = c.voice?.edge_voice || 'zh-TW-HsiaoChenNeural';
   document.getElementById('cfgEdgeRate').value = c.voice?.edge_rate || '+0%';
+  document.getElementById('cfgProsodyPreset').value = c.voice?.prosody_preset || 'normal';
   document.getElementById('cfgWhisperModel').value = c.whisper?.model || 'small';
   document.getElementById('cfgOpenccMode').value = c.whisper?.opencc_mode || 's2tw';
   document.getElementById('cfgLoudness').value = c.output?.loudness ?? -16;
@@ -387,6 +388,7 @@ async function handleSaveJobConfig() {
     voice_profile: document.getElementById('cfgVoiceProfile').value,
     edge_voice: document.getElementById('cfgEdgeVoice').value,
     edge_rate: document.getElementById('cfgEdgeRate').value,
+    prosody_preset: document.getElementById('cfgProsodyPreset').value,
     whisper_model: document.getElementById('cfgWhisperModel').value,
     opencc_mode: document.getElementById('cfgOpenccMode').value,
     loudness: Number(document.getElementById('cfgLoudness').value || -16),
@@ -463,6 +465,7 @@ async function handleSaveEnv() {
  * @returns {void}
  */
 function bindWorkflowEvents() {
+  document.getElementById('prosodyPreviewBtn')?.addEventListener('click', handleProsodyPreview);
   document.getElementById('buildNarrationBtn').addEventListener('click', async () => {
     const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/narrate/build`, { method: 'POST' });
     document.getElementById('narrateLog').textContent = res.output;
@@ -489,6 +492,7 @@ function bindWorkflowEvents() {
   document.getElementById('approveScenesBtn').addEventListener('click', () => approveReviewFile('scenes.toml'));
   document.getElementById('renderHtmlBtn').addEventListener('click', () => runRenderEndpoint('html'));
   document.getElementById('renderPosterBtn').addEventListener('click', () => runRenderEndpoint('poster'));
+  document.getElementById('previewAvatarAbBtn')?.addEventListener('click', handlePreviewAvatarAb);
   document.getElementById('applyAvatarBtn')?.addEventListener('click', handleApplyAvatar);
   document.getElementById('checkVideoBtn').addEventListener('click', async () => {
     const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/check`);
@@ -587,6 +591,72 @@ async function handleApplyAvatar() {
   document.getElementById('renderLog').textContent = res.output;
   showToast('Avatar 合成完成！', 'success');
   await loadJobDetail(state.currentJob);
+}
+
+/**
+ * 產生 10 秒標準 / 活力 / 沉穩韻律試聽音檔，讓使用者試聽並套用。
+ * @returns {Promise<void>}
+ */
+async function handleProsodyPreview() {
+  if (!state.currentJob) return;
+  showToast('正在產生 10 秒韻律試聽（標準 / 活力 / 沉穩）…', 'info', 4000);
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/narrate/prosody-preview`, {
+    method: 'POST', body: JSON.stringify({ sample_text: '' }),
+  });
+  const box = document.getElementById('prosodyPreviewBox');
+  const labels = { normal: '標準自然 (normal)', energetic: '活力強音加速 (energetic)', calm: '沉穩放慢輕柔 (calm)' };
+  box.style.display = 'grid';
+  box.innerHTML = Object.entries(res.files || {}).map(([preset, fname]) => `
+    <div class="card" style="padding:12px;">
+      <strong>${esc(labels[preset] || preset)}</strong>
+      <audio controls style="width:100%;" src="/api/jobs/${encodeURIComponent(state.currentJob)}/review/${encodeURIComponent(fname)}?t=${Date.now()}"></audio>
+      <button type="button" class="btn btn-soft btn-sm" onclick="selectProsodyPreset('${esc(preset)}')">套用此風格</button>
+    </div>`).join('');
+  showToast(res.output, 'success');
+}
+
+/**
+ * 將試聽選定的韻律風格套用至目前工作設定並儲存。
+ * @param {string} preset 韻律預設名稱。
+ * @returns {Promise<void>}
+ */
+async function selectProsodyPreset(preset) {
+  document.getElementById('cfgProsodyPreset').value = preset;
+  await handleSaveJobConfig();
+}
+
+/**
+ * 產生 10 秒 Avatar 路線 A 與路線 B 並排預覽供選擇。
+ * @returns {Promise<void>}
+ */
+async function handlePreviewAvatarAb() {
+  if (!state.currentJob) return;
+  showToast('正在產生 10 秒 Avatar 路線 A/B 對比預覽（路線 A 若執行中約需 30-90 秒）…', 'info', 5000);
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/avatar-preview`, {
+    method: 'POST', body: JSON.stringify({ image_name: document.getElementById('cfgAvatarImage').value.trim() }),
+  });
+  const box = document.getElementById('avatarAbBox');
+  box.style.display = 'grid';
+  const bUrl = `/api/jobs/${encodeURIComponent(state.currentJob)}/review/${encodeURIComponent(res.route_b_file)}?t=${Date.now()}`;
+  const aHtml = res.route_a_file
+    ? `<video class="player" controls src="/api/jobs/${encodeURIComponent(state.currentJob)}/review/${encodeURIComponent(res.route_a_file)}?t=${Date.now()}"></video>
+       <button type="button" class="btn btn-sm" onclick="selectAvatarEngine('sadtalker')">採用路線 A</button>`
+    : `<p class="muted">${esc(res.route_a_error || '路線 A 尚未就緒')}</p>`;
+  box.innerHTML = `
+    <div class="card"><strong>路線 B：輕量動態頭像 (FFmpeg)</strong><video class="player" controls src="${bUrl}"></video>
+      <button type="button" class="btn btn-soft btn-sm" onclick="selectAvatarEngine('lightweight')">採用路線 B</button></div>
+    <div class="card"><strong>路線 A：SadTalker AI 對嘴</strong>${aHtml}</div>`;
+  showToast(res.output, 'success');
+}
+
+/**
+ * 選定 Avatar 路線並儲存設定。
+ * @param {'lightweight'|'sadtalker'} engine 選定的引擎。
+ * @returns {Promise<void>}
+ */
+async function selectAvatarEngine(engine) {
+  document.getElementById('cfgAvatarEngine').value = engine;
+  await handleSaveJobConfig();
 }
 
 initTheme();

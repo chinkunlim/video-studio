@@ -67,3 +67,19 @@
 ### [2026-10-21 18:14 UTC] 建立任務 `TASK-006`: 更新所有 Markdown 文件與架構決策紀錄 (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-10-21 18:14 UTC] 認領任務 `TASK-006` (更新所有 Markdown 文件與架構決策紀錄) (by `antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `antigravity`
+
+### [2026-10-21 18:14 UTC] 完成任務 `TASK-006` — 更新所有 Markdown 文件與架構決策紀錄 (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: 更新並同步所有 Markdown 文件（規格超連結、ADR-001/002/003、ISSUE-001/002、MIGRATION 完成清單、PROJECT_RULES 領域規則、TEMPLATES 連結修復與反向同步）
+
+### [2026-10-21 18:15 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: 更新並校驗專案所有 Markdown 文件、架構決策與已知問題，並完成推送
+- **錯誤與根因**: macOS 內建 Python 3.9 環境下 setup_env.py 誤判 tomllib 為第三方依賴，已於 is_stdlib 補齊判定並提 TEMPLATE_FEEDBACK
+- **下一步**: 全專案遷移、測試與文件同步全數完成，可開展新功能或整合實務影片素材
+- **交接備註**: 34 項測試與品質檢查全綠，遠端分支 origin/main 已同步
+- **本機對話紀錄**: `.agents/conversations/2026-10-22-0215-antigravity-summary.md`（只在這台電腦）

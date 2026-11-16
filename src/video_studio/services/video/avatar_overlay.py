@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 from pathlib import Path
 
 from video_studio.config.settings import load_config as load_app_config
@@ -112,3 +113,72 @@ def apply_avatar_to_job(
         )
     logger.info("Applied %s avatar overlay to %s", engine, main_video)
     return AvatarResult(engine=engine, avatar_video=avatar_clip, composited_video=main_video)
+
+
+def _find_preview_audio(job: J.Job) -> Path:
+    """Find an audio file for 10s avatar preview (output narration, prosody preview, or first take).
+
+    Args:
+        job: Loaded Job instance.
+
+    Returns:
+        Path to an existing WAV file.
+
+    Raises:
+        FileNotFoundError: If no WAV file exists yet for this job.
+    """
+    out_v = job.latest_output()
+    if out_v and (out_v / "narration.wav").is_file():
+        return out_v / "narration.wav"
+    if (job.review / "prosody_normal.wav").is_file():
+        return job.review / "prosody_normal.wav"
+    takes = sorted(job.takes_dir.glob("*.wav")) if job.takes_dir.is_dir() else []
+    if takes:
+        return takes[0]
+    raise FileNotFoundError("找不到音檔：請先執行「10 秒韻律試聽」或「生成配音 (narrate build)」。")
+
+
+def preview_avatar_ab_10s(job_name: str, image_name: str = "") -> dict[str, object]:
+    """Generate 10-second Route B (lightweight) and Route A (SadTalker) previews into review/.
+
+    Args:
+        job_name: Target job name.
+        image_name: Optional portrait image filename inside input/.
+
+    Returns:
+        Dictionary with route_b_file, route_a_file (if ready), and route_a_error (if unavailable).
+    """
+    job = J.find(job_name)
+    portrait = find_avatar_image(job, image_name)
+    src_audio = _find_preview_audio(job)
+    job.work.mkdir(parents=True, exist_ok=True)
+    job.review.mkdir(parents=True, exist_ok=True)
+
+    audio_10s = job.work / "avatar_preview_10s.wav"
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(src_audio), "-t", "10", str(audio_10s)],
+        check=True,
+        capture_output=True,
+    )
+    out_b = job.review / "avatar_preview_b.mp4"
+    render_lightweight_avatar(portrait, audio_10s, out_b)
+
+    app_cfg = load_app_config()
+    sad_status = avatar_environment_status(app_cfg.sadtalker_dir)["sadtalker"]
+    route_a_file = ""
+    route_a_error = ""
+    if sad_status["ready"] and app_cfg.sadtalker_dir is not None:
+        try:
+            out_a = job.review / "avatar_preview_a.mp4"
+            render_sadtalker_avatar(portrait, audio_10s, out_a, app_cfg.sadtalker_dir)
+            route_a_file = out_a.name
+        except Exception as exc:
+            route_a_error = str(exc)
+    else:
+        route_a_error = "SadTalker 權重尚未備齊或模型載入中"
+
+    return {
+        "route_b_file": out_b.name,
+        "route_a_file": route_a_file,
+        "route_a_error": route_a_error,
+    }

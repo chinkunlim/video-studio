@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from video_studio.config.settings import AppConfig
 from video_studio.entrypoints.api import create_app
 from video_studio.services.common import job as J
-from video_studio.services.narrate.core import bilingual, subtitles
+from video_studio.services.narrate.core import bilingual, prosody, subtitles
 from video_studio.services.video.engine.avatar_engine import (
     avatar_environment_status,
     overlay_avatar_pip,
@@ -145,3 +145,35 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         pip_out = self.data_dir / "pip.mp4"
         overlay_avatar_pip(base_mp4, avatar_clip, pip_out, position="bottom-right")
         self.assertTrue(pip_out.is_file() and pip_out.stat().st_size > 0)
+
+        # Verify 10s Avatar A/B preview endpoint using takes/ audio (mock Route A offline)
+        job.takes_dir.mkdir(parents=True, exist_ok=True)
+        (job.takes_dir / "sample.wav").write_bytes(audio.read_bytes())
+        with patch(
+            "video_studio.services.video.avatar_overlay.avatar_environment_status",
+            return_value={"lightweight": {"ready": True}, "sadtalker": {"ready": False}},
+        ):
+            ab_res = self.client.post("/api/jobs/einstein-demo/video/avatar-preview", json={})
+        self.assertEqual(ab_res.status_code, 200)
+        self.assertEqual(ab_res.json()["route_b_file"], "avatar_preview_b.mp4")
+        self.assertTrue((job.review / "avatar_preview_b.mp4").is_file())
+
+    def test_word_level_and_sentence_prosody(self) -> None:
+        """Verify inline word-level [loud]/[soft] and sentence [fast] tags + FFmpeg filter."""
+        clean, spans = prosody.parse_prosody_tags("今天聊聊 [loud]相對論[/loud] 與 [soft]細節[/soft]。")
+        self.assertEqual(clean, "今天聊聊 相對論 與 細節。")
+        self.assertEqual([(s.tag, s.phrase) for s in spans], [("loud", "相對論"), ("soft", "細節")])
+
+        words = [("今天聊聊", 0.0, 0.5), ("相對論", 0.5, 1.0), ("與", 1.0, 1.2), ("細節", 1.2, 1.6)]
+        timed = prosody.match_word_spans(spans, words)
+        self.assertEqual(timed, [("loud", 0.5, 1.0), ("soft", 1.2, 1.6)])
+
+        src_wav = self.data_dir / "src.wav"
+        dst_wav = self.data_dir / "dst.wav"
+        subprocess.run(
+            ["ffmpeg", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=2", str(src_wav)],
+            check=True,
+            capture_output=True,
+        )
+        prosody.apply_prosody_to_wav(src_wav, dst_wav, timed, preset="energetic")
+        self.assertTrue(dst_wav.is_file() and dst_wav.stat().st_size > 0)

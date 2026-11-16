@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from video_studio.config.settings import PROJECT_ROOT, load_config
 from video_studio.services import planner, script_drafter
 from video_studio.services.common import job as J
+from video_studio.services.narrate import narrate as narrate_svc
 from video_studio.services.narrate.core import bilingual
 from video_studio.services.narrate.core import script as script_mod
 from video_studio.services.video import avatar_overlay
@@ -35,6 +36,7 @@ class JobConfigUpdate(BaseModel):
     voice_profile: str = Field(default="My Voice", description="Voicebox profile name")
     edge_voice: str = Field(default="zh-TW-HsiaoChenNeural", description="edge-tts voice name")
     edge_rate: str = Field(default="+0%", description="edge-tts speaking rate")
+    prosody_preset: str = Field(default="normal", description="normal | energetic | calm")
     whisper_model: str = Field(default="small", description="Whisper model (tiny, base, small, medium)")
     opencc_mode: str = Field(default="s2tw", description="OpenCC conversion (s2tw, s2t, none)")
     subtitles_formats: list[str] = Field(default_factory=lambda: ["youtube", "powerpoint", "vlc"])
@@ -93,6 +95,12 @@ class AvatarApplyRequest(BaseModel):
     image_name: str = Field(default="", description="Optional portrait image filename inside input/")
 
 
+class ProsodyPreviewRequest(BaseModel):
+    """Request payload for generating 10-second prosody A/B/C previews."""
+
+    sample_text: str = Field(default="", description="Optional sample text with [loud]/[fast] tags")
+
+
 def _toml_str(val: str) -> str:
     """Escape a string as a TOML basic string.
 
@@ -133,6 +141,7 @@ def _serialize_job_toml(job_type: str, req: JobConfigUpdate) -> str:
         f"profile = {_toml_str(req.voice_profile)}",
         f"edge_voice = {_toml_str(req.edge_voice)}",
         f"edge_rate = {_toml_str(req.edge_rate)}",
+        f"prosody_preset = {_toml_str(req.prosody_preset)}",
         "",
         "[whisper]",
         f"model = {_toml_str(req.whisper_model)}",
@@ -478,5 +487,41 @@ def apply_avatar_route(job_name: str, req: AvatarApplyRequest) -> dict[str, Any]
             "composited_video": str(res.composited_video or ""),
             "output": f"已完成 {res.engine} Avatar 合成：{res.composited_video}",
         }
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/api/jobs/{job_name}/narrate/prosody-preview")
+def preview_prosody_route(job_name: str, req: ProsodyPreviewRequest) -> dict[str, Any]:
+    """Generate 10-second normal/energetic/calm prosody audio previews into review/.
+
+    Args:
+        job_name: Target job name.
+        req: ProsodyPreviewRequest with optional sample text.
+
+    Returns:
+        Dictionary mapping preset names to review audio URLs.
+    """
+    try:
+        files = narrate_svc.preview_prosody_10s(J.find(job_name), req.sample_text)
+        return {"ok": True, "files": files, "output": "已產生 10 秒韻律風格試聽（標準 / 活力 / 沉穩）"}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/api/jobs/{job_name}/video/avatar-preview")
+def preview_avatar_ab_route(job_name: str, req: AvatarApplyRequest) -> dict[str, Any]:
+    """Generate 10-second Route B and Route A avatar previews for side-by-side comparison.
+
+    Args:
+        job_name: Target job name.
+        req: AvatarApplyRequest specifying optional image filename.
+
+    Returns:
+        Dictionary with route_b_file, route_a_file, and route_a_error.
+    """
+    try:
+        res = avatar_overlay.preview_avatar_ab_10s(job_name, req.image_name)
+        return {"ok": True, **res, "output": "已產生 10 秒 Avatar 路線 A/B 對比預覽"}
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
