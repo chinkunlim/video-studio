@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "video-studio": {
+        "type": "local",
+        "command": ["uv", "run", "video-studio-mcp"]
+      }
+    }
+  }
+}

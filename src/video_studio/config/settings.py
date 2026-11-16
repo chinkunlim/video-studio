@@ -78,6 +78,9 @@ class AppConfig:
     timeout_seconds: int = 15
     ollama_base_url: str = "http://127.0.0.1:11434"
     voicebox_url: str = "http://127.0.0.1:17493"
+    http_host: str = "127.0.0.1"
+    http_port: int = 8772
+    http_allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8772", "http://127.0.0.1:8080")
     workspace_dir: Path | None = None
     data_dir: Path = resolve_data_dir(DEFAULT_DATA_DIR)
 
@@ -182,6 +185,11 @@ def load_config() -> AppConfig:
         timeout_seconds=int(os.environ.get("API_TIMEOUT_SECONDS", "15")),
         ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/"),
         voicebox_url=os.environ.get("VOICEBOX_URL", "http://127.0.0.1:17493").strip().rstrip("/"),
+        http_host=os.environ.get("HTTP_HOST", "127.0.0.1").strip(),
+        http_port=int(os.environ.get("HTTP_PORT", "8772")),
+        http_allowed_origins=_csv(
+            os.environ.get("HTTP_ALLOWED_ORIGINS", "http://127.0.0.1:8772,http://127.0.0.1:8080")
+        ),
         workspace_dir=workspace_dir,
         data_dir=data_dir,
     )

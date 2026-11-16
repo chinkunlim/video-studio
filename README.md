@@ -13,7 +13,14 @@ AI 語音配音、字幕生成與影片製作工作站（整合 Voicebox、ffmpe
 | `video-studio narrate` | 講稿配音、單句試聽、組裝字幕 | `uv run video-studio narrate build my-job` |
 | `video-studio video` | 配音與畫面合成、海報分鏡渲染、PPTX 匯出 | `uv run video-studio video poster my-job` |
 
-Open WebUI 使用者可直接載入 `src/video_studio/adapters/openwebui_tool.py` 作為 Tool。詳細規格請參閱 [`docs/specs/`](docs/specs/) 與 [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)。
+Open WebUI 使用者可直接載入 `src/video_studio/adapters/openwebui_tool.py` 作為 Tool，或啟動整合伺服器：
+
+| 入口 | 指令 | 網址 / 端點 |
+|---|---|---|
+| **FastAPI + Web UI + OpenAPI** | `uv run video-studio-api` | `http://127.0.0.1:8772`（Swagger：`/docs`、MCP：`/mcp`） |
+| **MCP Stdio Server** | `uv run video-studio-mcp` | 供 Claude Code / Antigravity / OpenCode / Cursor 呼叫 |
+
+詳細規格請參閱 [`docs/specs/`](docs/specs/) 與 [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)。
 
 ## 第一次在這台電腦使用
 

@@ -5,22 +5,28 @@ description = "AI-assisted software project with standard structure and agent ha
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.163.1",
     "faster-whisper>=1.2.1",
     "lxml>=6.1.3",
+    "mcp>=2.3.0",
     "opencc-python-reimplemented>=0.1.7",
     "pillow>=13.0.0",
     "pydantic>=2.14.1",
     "pymupdf>=2.0",
+    "uvicorn>=0.54.0",
 ]  # add with `uv add <package>` (never `pip install`)
 
 [project.scripts]
 video-studio = "video_studio.entrypoints.cli:main"
+video-studio-api = "video_studio.entrypoints.api:main"
+video-studio-mcp = "video_studio.entrypoints.mcp_server:main"
 
 [dependency-groups]
 dev = [
     "ruff>=0.6.0",
     "mypy>=1.11",
     "lxml-stubs>=0.5.1",
+    "httpx>=0.28.1",
 ]  # add with `uv add --dev <package>`
 
 [build-system]

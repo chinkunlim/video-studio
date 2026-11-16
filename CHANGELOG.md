@@ -5,6 +5,9 @@ All notable changes to **video-studio** are documented here
 
 ## [Unreleased]
 
+### Added
+- feat(api): add FastAPI HTTP API, MCP server, Web UI, and tool configs (TASK-008) (`TASK-008`, by `@antigravity`)
+
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)
 - refactor(services): conform services layer to architecture and typing standards (TASK-002) (`TASK-002`, by `@antigravity`)

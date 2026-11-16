@@ -4,6 +4,11 @@
       "type": "http",
       "url": "http://127.0.0.1:17493/mcp",
       "headers": { "X-Voicebox-Client-Id": "claude-code" }
+    },
+    "video-studio": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "video-studio-mcp"]
     }
   }
 }

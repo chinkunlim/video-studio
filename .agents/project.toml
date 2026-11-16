@@ -6,7 +6,7 @@
 name = "video-studio"
 description = "AI-assisted software project with standard structure and agent handoff."
 stack = "python"
-addons = []
+addons = ["api"]
 languages = ["python"]
 # Monorepo: list workspace folders, e.g. ["apps/api", "packages/core"]
 workspaces = ["."]

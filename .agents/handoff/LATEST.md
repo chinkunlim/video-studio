@@ -5,20 +5,32 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 02:26 UTC`
+- **最後更新時間**: `2026-11-16 02:41 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `0c13a21 chore(framework): update to v3.5.0 [agent:update_all]`
+- **最新 Git Commit**: `c40504c refactor(quality): resolve Code Review Guard warnings and ignore graphify-out (TASK-007) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-007**<br/>Refactor oversized functions and resolve all Code Review Guard warnings | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
+| **TASK-008**<br/>Add FastAPI HTTP API, MCP Server, and Web UI | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-16 02:41 UTC] 認領任務 `TASK-008` (Add FastAPI HTTP API, MCP Server, and Web UI) (by `antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `antigravity`
+
+### [2026-11-16 02:41 UTC] 建立任務 `TASK-008`: Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-16 02:40 UTC] 完成任務 `TASK-007` — Refactor oversized functions and resolve all Code Review Guard warnings (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Added graphify-out/ to .gitignore, refactored oversized/deep-nesting/multi-param functions across entrypoints, adapters, and services, updated PROJECT_RULES.md §3, and verified 34/34 tests + ruff + mypy strict + graphify update.
 
 ### [2026-11-16 02:26 UTC] 認領任務 `TASK-007` (Refactor oversized functions and resolve all Code Review Guard warnings) (by `antigravity`)
 - **相關範圍**: `-`
@@ -91,15 +103,3 @@
 
 ### [2026-10-21 17:00 UTC] 認領任務 `TASK-001` (遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O）) (by `antigravity`)
 - **相關範圍**: `src/video_studio/adapters/, legacy`
-
-### [2026-10-21 16:53 UTC] 建立任務 `TASK-004`: 遷移批次 4：其他（資料、資源、需人工判斷） (by `system`)
-- **狀態**: `open`
-- **相關範圍**: `legacy, legacy`
-
-### [2026-10-21 16:53 UTC] 建立任務 `TASK-003`: 遷移批次 3：文件（README、規格、決策、已知問題） (by `system`)
-- **狀態**: `open`
-- **相關範圍**: `docs/architecture/ARCHITECTURE.md, docs/specs/, openwebui/OPENWEBUI.md, templates/TEMPLATES.md, video/VIDEO.md, legacy`
-
-### [2026-10-21 16:53 UTC] 建立任務 `TASK-002`: 遷移批次 2：services 層（業務流程） (by `system`)
-- **狀態**: `open`
-- **相關範圍**: `src/video_studio/services/, legacy`

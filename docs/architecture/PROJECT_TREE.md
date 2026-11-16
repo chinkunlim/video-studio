@@ -71,12 +71,15 @@ video-studio/
 │   │   ├── TASK-004-4.json
 │   │   ├── TASK-005-extract-narrate-video-job-sv-ope.json
 │   │   ├── TASK-006-markdown.json
-│   │   └── TASK-007-refactor-oversized-functions-and.json
+│   │   ├── TASK-007-refactor-oversized-functions-and.json
+│   │   └── TASK-008-add-fastapi-http-api-mcp-server-.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
+│   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
 ├── .cursor/                                # [Agent 轉接] Cursor 規則 (自動產生)
-│   └── rules/
-│       └── 00-project-constitution.mdc
+│   ├── rules/
+│   │   └── 00-project-constitution.mdc
+│   └── mcp.json
 ├── .github/                                # 【自動化護欄層】CI、PR 範本與 Copilot 入口
 │   ├── workflows/                          # CI/CD 自動化檢查工作流程
 │   │   └── ci.yml                          # 金鑰掃描、目錄樹檢查、程式審查與離線測試
@@ -84,6 +87,7 @@ video-studio/
 ├── .vscode/
 │   ├── extensions.json
 │   ├── launch.json
+│   ├── mcp.json
 │   └── settings.json
 ├── .windsurf/                              # [Agent 轉接] Windsurf 規則 (自動產生)
 │   └── rules/
@@ -109,6 +113,7 @@ video-studio/
 │   │   ├── 001-openwebui-tool.md
 │   │   ├── 002-video-engine.md
 │   │   ├── 003-templates-and-inputs.md
+│   │   ├── 004-fastapi-mcp-server.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -157,8 +162,13 @@ video-studio/
 │       │   ├── __init__.py
 │       │   └── models.py
 │       ├── entrypoints/
+│       │   ├── static/
+│       │   │   └── index.html
 │       │   ├── __init__.py
-│       │   └── cli.py
+│       │   ├── api.py
+│       │   ├── cli.py
+│       │   ├── mcp_server.py
+│       │   └── schemas.py
 │       ├── services/
 │       │   ├── common/
 │       │   │   ├── __init__.py
@@ -221,6 +231,7 @@ video-studio/
 │   └── TEMPLATES.md
 ├── tests/                                  # 【測試層】單元與整合測試
 │   ├── __init__.py
+│   ├── test_api_and_mcp.py
 │   ├── test_cli.py
 │   ├── test_openwebui_tool.py
 │   ├── test_services_core.py
@@ -239,6 +250,7 @@ video-studio/
 ├── CHANGELOG.md                            # [版本歷史] commit 寫入 Unreleased；agentctl finish --tag 發布版本
 ├── CLAUDE.md                               # [Agent 轉接檔] Claude Code 入口，匯入 AGENTS.md (自動產生)
 ├── GEMINI.md                               # [Agent 轉接檔] Gemini CLI 入口，指向 AGENTS.md (自動產生)
+├── opencode.json                           # [AI 工具] OpenCode 的專案設定（MCP）
 ├── pyproject.toml                          # [PEP 621 單一真相來源] Python 中繼資料、依賴分組、pytest 與 ruff 設定
 └── README.md                               # [唯一 README] 專案入口、快速開始與文件索引
 ```

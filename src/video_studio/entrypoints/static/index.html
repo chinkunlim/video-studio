@@ -1,0 +1,116 @@
+<!-- video-studio 本機管理控制台頁面，提供健康檢查、工作清單與 /docs OpenAPI 入口。 -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>video-studio 工作室控制台</title>
+  <style>
+    :root {
+      --bg: #f6f4ef;
+      --card: #ffffff;
+      --ink: #1e2421;
+      --muted: #5c6660;
+      --accent: #c85a27;
+      --border: #e1ddd4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    header h1 { margin: 0; font-size: 1.2rem; }
+    nav a {
+      text-decoration: none;
+      color: var(--accent);
+      font-weight: 600;
+      margin-left: 16px;
+    }
+    main {
+      max-width: 960px;
+      margin: 28px auto;
+      padding: 0 20px;
+      display: grid;
+      gap: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+    .meta { color: var(--muted); font-size: 0.92rem; }
+    pre {
+      background: #f2efe8;
+      padding: 14px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 0;
+      font-size: 0.9rem;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>video-studio 本機工作站</h1>
+    <nav>
+      <a href="/docs" target="_blank" rel="noopener">📖 OpenAPI 文件</a>
+      <a href="/health" target="_blank" rel="noopener">🩺 健康狀態</a>
+    </nav>
+  </header>
+  <main>
+    <section class="card">
+      <div class="row">
+        <h2>環境與入口端點</h2>
+        <button id="refreshBtn" type="button">重新整理</button>
+      </div>
+      <p class="meta" id="healthText">載入中…</p>
+      <p class="meta">MCP Streamable HTTP：<code>http://127.0.0.1:8772/mcp</code> ｜ OpenAPI Swagger：<code>/docs</code></p>
+    </section>
+    <section class="card">
+      <h2>工作清單 (DATA_DIR/workspace)</h2>
+      <pre id="jobsText">載入中…</pre>
+    </section>
+  </main>
+  <script>
+    async function loadDashboard() {
+      try {
+        const [hRes, jRes] = await Promise.all([fetch('/health'), fetch('/api/jobs')]);
+        const health = await hRes.json();
+        const jobs = await jRes.json();
+        document.getElementById('healthText').textContent =
+          `狀態：${health.status} ｜ 環境：${health.app_env} ｜ 工作區：${health.workspace}`;
+        document.getElementById('jobsText').textContent = jobs.output || '尚無工作';
+      } catch (err) {
+        document.getElementById('healthText').textContent = '連線失敗：' + err;
+      }
+    }
+    document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+    loadDashboard();
+  </script>
+</body>
+</html>

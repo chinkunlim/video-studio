@@ -16,7 +16,8 @@
 flowchart TD
     subgraph Ent["進入點層 (entrypoints)"]
         CLI["video_studio.entrypoints.cli"]
-        MCP["video_studio.entrypoints.mcp_server (預備)"]
+        API["video_studio.entrypoints.api (127.0.0.1:8772 / /docs / Web UI)"]
+        MCP["video_studio.entrypoints.mcp_server (/mcp & stdio)"]
     end
 
     subgraph Ada["配接層 (adapters)"]
@@ -38,6 +39,8 @@ flowchart TD
     end
 
     CLI --> Srv
+    API --> Srv
+    MCP --> Srv
     OWUI --> Srv
     Ext --> FF
     Nar --> VB
@@ -78,7 +81,7 @@ workspace/
 ## 分層
 
 見 `.agents/project.toml` 的 `[architecture] layers` 與 [`ARCHITECTURE_RULES.md`](../standards/ARCHITECTURE_RULES.md)。
-- `entrypoints`: 命令列入口與 CLI 分發。
+- `entrypoints`: 命令列入口 (`cli.py`)、FastAPI HTTP + 管理網頁 (`api.py`, `http://127.0.0.1:8772/docs`) 與 MCP Server (`mcp_server.py`, `/mcp` 與 stdio)。
 - `adapters`: 外部平台（如 Open WebUI Tool）配接與隔離。
 - `services`: 業務流程（音訊提取、朗讀配音、分鏡與影片渲染、工作區檢核）。
 - `domain`: 領域型別與共用實體。

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "video-studio": {
+      "command": "uv",
+      "args": ["run", "video-studio-mcp"]
+    }
+  }
+}

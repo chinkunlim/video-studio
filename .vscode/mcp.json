@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "video-studio": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "video-studio-mcp"]
+    }
+  }
+}
