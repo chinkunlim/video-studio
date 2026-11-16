@@ -108,6 +108,13 @@ def build_plan_prompt(
     out_cfg = job.cfg.get("output", {})
     out_w = int(out_cfg.get("width", 1920))
     out_h = int(out_cfg.get("height", 1080))
+    burn_in = bool(job.cfg.get("subtitles", {}).get("burn_in", True))
+    sub_mode_note = (
+        "字幕模式：有字幕（渲染時會在畫面最下方自動預留 96px 專用字幕帶，不會遮擋內容；"
+        "請避免在 HTML 底部重複製作字幕條）"
+        if burn_in
+        else "字幕模式：無字幕（可使用 100% 滿版高度進行版面設計）"
+    )
     return "\n".join(
         [
             f"請為 video-studio 工作 `{job.type}/{job.name}`（標題：{job.title}）規劃分鏡草稿。",
@@ -117,6 +124,7 @@ def build_plan_prompt(
                 f"目標影片解析度：{out_w}x{out_h}（若輸出 index.html，請於 <html> 設定 "
                 f'data-width="{out_w}" data-height="{out_h}" 且內容完全配合此尺寸不超出、不裁切）'
             ),
+            sub_mode_note,
             "",
             "【使用者規劃說明 (brief.md)】",
             brief_text or "（無額外 brief.md）",
