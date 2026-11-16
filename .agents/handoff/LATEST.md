@@ -5,20 +5,22 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 02:41 UTC`
+- **最後更新時間**: `2026-11-16 02:46 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `c40504c refactor(quality): resolve Code Review Guard warnings and ignore graphify-out (TASK-007) [agent:antigravity]`
+- **最新 Git Commit**: `8de331a feat(api): add FastAPI HTTP API, MCP server, Web UI, and tool configs (TASK-008) [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
-|---|---|---|---|---|---|---|
-| **TASK-008**<br/>Add FastAPI HTTP API, MCP Server, and Web UI | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
+> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-16 02:46 UTC] 完成任務 `TASK-008` — Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Implemented FastAPI HTTP API (127.0.0.1:8772), Streamable HTTP /mcp and stdio MCP server with confirm gates, lightweight Web UI with /docs link, updated PORTS.md and AI tool configs, and passed all 38 tests.
 
 ### [2026-11-16 02:41 UTC] 認領任務 `TASK-008` (Add FastAPI HTTP API, MCP Server, and Web UI) (by `antigravity`)
 - **相關範圍**: `-`
@@ -100,6 +102,3 @@
 ### [2026-10-21 17:07 UTC] 完成任務 `TASK-001` — 遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O） (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: 完成批次 1：遷移並重構 openwebui_tool adapter 與 runner，補齊完整型別與測試
-
-### [2026-10-21 17:00 UTC] 認領任務 `TASK-001` (遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O）) (by `antigravity`)
-- **相關範圍**: `src/video_studio/adapters/, legacy`

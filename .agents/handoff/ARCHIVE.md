@@ -19,3 +19,6 @@
 ### [2026-10-21 16:53 UTC] 建立任務 `TASK-004`: 遷移批次 4：其他（資料、資源、需人工判斷） (by `system`)
 - **狀態**: `open`
 - **相關範圍**: `legacy, legacy`
+
+### [2026-10-21 17:00 UTC] 認領任務 `TASK-001` (遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O）) (by `antigravity`)
+- **相關範圍**: `src/video_studio/adapters/, legacy`

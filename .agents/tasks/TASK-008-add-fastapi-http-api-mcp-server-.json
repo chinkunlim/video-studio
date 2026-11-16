@@ -1,16 +1,16 @@
 {
   "id": "TASK-008",
   "title": "Add FastAPI HTTP API, MCP Server, and Web UI",
-  "status": "in_progress",
+  "status": "done",
   "agent": "antigravity",
   "handed_off_from": "",
   "handed_off_to": "",
   "paths": [],
-  "done_items": "",
+  "done_items": "Implemented FastAPI HTTP API (127.0.0.1:8772), Streamable HTTP /mcp and stdio MCP server with confirm gates, lightweight Web UI with /docs link, updated PORTS.md and AI tool configs, and passed all 38 tests.",
   "todo_items": "",
   "blockers": "",
   "created_at": "2026-11-16 02:41 UTC",
-  "updated_at": "2026-11-16 02:41 UTC",
+  "updated_at": "2026-11-16 02:46 UTC",
   "history": [
     {
       "timestamp": "2026-11-16 02:41 UTC",
@@ -22,6 +22,13 @@
       "action": "claimed",
       "agent": "antigravity",
       "previous_agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-16 02:46 UTC",
+      "action": "done",
+      "agent": "antigravity",
+      "summary": "Implemented FastAPI HTTP API (127.0.0.1:8772), Streamable HTTP /mcp and stdio MCP server with confirm gates, lightweight Web UI with /docs link, updated PORTS.md and AI tool configs, and passed all 38 tests."
     }
-  ]
+  ],
+  "summary": "Implemented FastAPI HTTP API (127.0.0.1:8772), Streamable HTTP /mcp and stdio MCP server with confirm gates, lightweight Web UI with /docs link, updated PORTS.md and AI tool configs, and passed all 38 tests."
 }
