@@ -300,3 +300,17 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         list_res = self.client.get("/api/jobs/einstein-demo/review/snapshots")
         self.assertEqual(list_res.status_code, 200)
         self.assertGreaterEqual(len(list_res.json()["snapshots"]), 2)
+
+    def test_render_lock_prevents_duplicate_concurrent_renders(self) -> None:
+        """Verify concurrent POST /video/html for the same job returns 409 Conflict."""
+        import threading
+
+        from video_studio.entrypoints import api as api_mod
+
+        lock = api_mod._RENDER_LOCKS.setdefault("einstein-demo", threading.Lock())
+        lock.acquire()
+        try:
+            res = self.client.post("/api/jobs/einstein-demo/video/html", json={})
+            self.assertEqual(res.status_code, 409)
+        finally:
+            lock.release()

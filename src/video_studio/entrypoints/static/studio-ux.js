@@ -319,5 +319,37 @@ function initReviewHistory() {
   });
 }
 
+/**
+ * 觸發影片渲染並鎖定重複點擊，即時顯示渲染狀態與錯誤提示。
+ * @param {string} mode 渲染模式（html 或 poster）。
+ * @returns {Promise<void>}
+ */
+async function runRenderEndpoint(mode) {
+  if (!state.currentJob || state.busyRender) return;
+  state.busyRender = true;
+  const htmlBtn = document.getElementById('renderHtmlBtn');
+  const posterBtn = document.getElementById('renderPosterBtn');
+  const logEl = document.getElementById('renderLog');
+  if (htmlBtn) htmlBtn.disabled = true;
+  if (posterBtn) posterBtn.disabled = true;
+  if (logEl) logEl.textContent = `⏳ 正在執行 ${mode.toUpperCase()} 影片渲染，請稍候並查看下方即時 Terminal 日誌…`;
+  showToast('已開始渲染影片，過程約需 1–5 分鐘', 'info');
+  try {
+    const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/${mode}`, {
+      method: 'POST', body: JSON.stringify({}),
+    });
+    if (logEl) logEl.textContent = res.output;
+    showToast('影片渲染完成', 'success');
+    await loadJobDetail(state.currentJob);
+  } catch (err) {
+    if (logEl) logEl.textContent = `渲染失敗：${err.message}`;
+    showToast(`渲染失敗：${err.message}`, 'error');
+  } finally {
+    state.busyRender = false;
+    if (htmlBtn) htmlBtn.disabled = false;
+    if (posterBtn) posterBtn.disabled = false;
+  }
+}
+
 
 

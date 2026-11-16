@@ -676,19 +676,6 @@ async function approveReviewFile(filename) {
 }
 
 /**
- * 觸發影片渲染並重新載入成品預覽。
- * @param {string} mode 渲染模式（html 或 poster）。
- * @returns {Promise<void>}
- */
-async function runRenderEndpoint(mode) {
-  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/${mode}`, {
-    method: 'POST', body: JSON.stringify({}),
-  });
-  document.getElementById('renderLog').textContent = res.output;
-  await loadJobDetail(state.currentJob);
-}
-
-/**
  * 依使用者指令呼叫 AI 起草講稿並寫入 review/script.md。
  * @returns {Promise<void>}
  */

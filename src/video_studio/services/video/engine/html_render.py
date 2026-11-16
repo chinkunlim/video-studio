@@ -149,8 +149,25 @@ def render(html_path: Path, out_mp4: Path, cfg: dict[str, Any]) -> Path:
         "looks",
     ]
     logger.info("執行 HyperFrames 渲染：%s", " ".join(cmd))
-    res = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
-    if res.returncode != 0 or not out_mp4.exists():
-        tail = (res.stderr or res.stdout).strip()[-400:]
-        raise RuntimeError(f"HyperFrames 渲染失敗（code={res.returncode}）：{tail}")
+    proc = subprocess.Popen(
+        cmd,
+        cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+    )
+    tail_lines: list[str] = []
+    if proc.stdout:
+        for raw in proc.stdout:
+            line = raw.strip()
+            if not line:
+                continue
+            tail_lines.append(line)
+            if len(tail_lines) > 20:
+                tail_lines.pop(0)
+            logger.info("[hyperframes] %s", line)
+    rc = proc.wait()
+    if rc != 0 or not out_mp4.exists():
+        raise RuntimeError(f"HyperFrames 渲染失敗（code={rc}）：{' | '.join(tail_lines[-5:])}")
     return out_mp4

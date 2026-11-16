@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import socket
+import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -39,6 +40,33 @@ from video_studio.services.video import video as video_mod
 
 logger = logging.getLogger(__name__)
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+_RENDER_GUARD_LOCK = threading.Lock()
+_RENDER_LOCKS: dict[str, threading.Lock] = {}
+
+
+def _run_with_render_lock(job_name: str, fn: Callable[[], str]) -> TextOutputResponse:
+    """Execute a video render callable under a non-blocking per-job lock.
+
+    Args:
+        job_name: Target job name.
+        fn: Zero-argument render callable returning summary output.
+
+    Returns:
+        TextOutputResponse from the render callable.
+
+    Raises:
+        HTTPException: 409 Conflict if the same job is already rendering.
+    """
+    with _RENDER_GUARD_LOCK:
+        lock = _RENDER_LOCKS.setdefault(job_name, threading.Lock())
+    if not lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail=f"工作 {job_name} 正在渲染影片中，請勿重複觸發")
+    try:
+        return TextOutputResponse(output=fn())
+    finally:
+        lock.release()
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -320,7 +348,7 @@ def _register_video_routes(app: FastAPI) -> None:
         Returns:
             Render summary text.
         """
-        return TextOutputResponse(output=video_mod.render_poster_video(job_name, req.version))
+        return _run_with_render_lock(job_name, lambda: video_mod.render_poster_video(job_name, req.version))
 
     @app.post("/api/jobs/{job_name}/video/html", response_model=TextOutputResponse, tags=["video"])
     def api_render_html(job_name: str, req: VersionRequest) -> TextOutputResponse:
@@ -333,7 +361,7 @@ def _register_video_routes(app: FastAPI) -> None:
         Returns:
             Render summary text.
         """
-        return TextOutputResponse(output=video_mod.render_html_video(job_name, req.version))
+        return _run_with_render_lock(job_name, lambda: video_mod.render_html_video(job_name, req.version))
 
     @app.post("/api/jobs/{job_name}/video/mux", response_model=TextOutputResponse, tags=["video"])
     def api_mux_video(job_name: str, req: MuxVideoRequest) -> TextOutputResponse:
