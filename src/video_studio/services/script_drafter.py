@@ -20,6 +20,7 @@ def build_script_draft_prompt(
     instruction: str,
     language: str = "zh",
     duration_sec: int = 90,
+    input_context: str = "",
 ) -> str:
     """Build a prompt for drafting a spoken video script in Markdown format.
 
@@ -29,6 +30,7 @@ def build_script_draft_prompt(
         instruction: User's script generation instruction.
         language: Spoken language code ('zh', 'en', 'ja', 'ko').
         duration_sec: Target spoken duration in seconds.
+        input_context: Optional description of input/ directory and uploaded files.
 
     Returns:
         Prompt string instructing the LLM to output clean Markdown script.
@@ -48,6 +50,9 @@ def build_script_draft_prompt(
             "",
             "【工作規劃說明 (brief.md)】",
             brief_text.strip() or "（無額外 brief.md）",
+            "",
+            "【已上傳素材 (input/)】",
+            input_context or "（無額外素材）",
             "",
             "【使用者指令】",
             instruction.strip() or "請依主題撰寫結構清晰、有開場、重點與結尾的影片講稿。",
@@ -86,7 +91,12 @@ def draft_script_to_review(
     job = J.find(job_name)
     brief_path = job.input / "brief.md"
     brief_text = brief_path.read_text(encoding="utf-8") if brief_path.exists() else ""
-    prompt = build_script_draft_prompt(job.title, brief_text, instruction, language, duration_sec)
+    in_files = sorted(p.name for p in job.input.iterdir() if p.is_file()) if job.input.is_dir() else []
+    files_str = ", ".join(in_files) if in_files else "無"
+    input_ctx = f"目錄：{job.input}\n檔案：{files_str}（若有 PDF/PPTX 請優先讀取內容再撰稿）"
+    prompt = build_script_draft_prompt(
+        job.title, brief_text, instruction, language, duration_sec, input_context=input_ctx
+    )
     raw = run_agy_prompt(prompt, model=model or "")
     if raw is None:
         if not is_ollama_reachable(app_cfg.ollama_base_url):

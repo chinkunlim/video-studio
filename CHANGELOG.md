@@ -17,6 +17,7 @@ All notable changes to **video-studio** are documented here
 - feat(ai): make agy-cli primary brain for script drafting and bilingual translation with Ollama fallback (by `@Antigravity`)
 - feat(ui): support batch multi-file upload to job input/ (by `@Antigravity`)
 - feat(ui): add drag-drop multi-file upload queue and prominent input file chips (by `@Antigravity`)
+- feat(script): include input/ directory and uploaded files in agy script draft prompt (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)
