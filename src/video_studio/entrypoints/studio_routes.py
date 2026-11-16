@@ -525,6 +525,24 @@ def get_bilingual_route(job_name: str) -> dict[str, Any]:
     return {"exists": True, "rows": rows}
 
 
+@router.get("/api/logs/tail")
+def tail_app_logs(lines: int = 50) -> dict[str, Any]:
+    """Return the latest lines from DATA_DIR/logs/app.log for the Web UI live terminal.
+
+    Args:
+        lines: Maximum number of trailing lines to return.
+
+    Returns:
+        Dictionary with log lines list and log file path.
+    """
+    log_file = load_config().data_dir / "logs" / "app.log"
+    if not log_file.is_file():
+        return {"lines": [], "path": str(log_file)}
+    raw_lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    n = max(1, min(200, lines))
+    return {"lines": raw_lines[-n:], "path": str(log_file)}
+
+
 @router.get("/api/avatar/status")
 def get_avatar_status_route() -> dict[str, Any]:
     """Return availability status of Route B (lightweight) and Route A (SadTalker).

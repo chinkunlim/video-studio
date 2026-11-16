@@ -70,6 +70,15 @@ class TestStudioUIAndPlanner(unittest.TestCase):
         self.assertIn("toggleLayoutGuides", tune_js.text)
         self.assertIn("toggleLayoutTuneMode", tune_js.text)
 
+        ux_js = self.client.get("/studio-ux.js")
+        self.assertEqual(ux_js.status_code, 200)
+        self.assertIn("initDraftAutosave", ux_js.text)
+        self.assertIn("refreshLiveTerminal", ux_js.text)
+
+        tail = self.client.get("/api/logs/tail?lines=10")
+        self.assertEqual(tail.status_code, 200)
+        self.assertIn("lines", tail.json())
+
     def test_job_config_script_brief_and_upload(self) -> None:
         """Verify creating a job, saving brief/script/job.toml, and uploading an asset."""
         self.assertEqual(

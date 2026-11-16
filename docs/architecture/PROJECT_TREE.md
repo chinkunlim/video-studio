@@ -179,6 +179,7 @@ video-studio/
 │       │   │   ├── studio-layout-tune.js
 │       │   │   ├── studio-prosody.js
 │       │   │   ├── studio-theme.css
+│       │   │   ├── studio-ux.js
 │       │   │   ├── studio.css
 │       │   │   └── studio.js
 │       │   ├── __init__.py

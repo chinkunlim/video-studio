@@ -143,6 +143,7 @@ async function refreshJobs() {
     .map(l => l.trim().match(/^(generate|dub|extract)\s+([A-Za-z0-9._-]+)/))
     .filter(Boolean)
     .map(m => m[2]);
+  state.jobs = names;
   const sel = document.getElementById('jobSelect');
   const prev = state.currentJob || sel.value;
   sel.innerHTML = names.length ? names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') : '<option value="">尚無工作</option>';
@@ -195,6 +196,13 @@ async function loadJobDetail(name) {
   document.getElementById('scriptEditor').value = d.script || '';
   if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
   document.getElementById('briefEditor').value = d.brief || '';
+  const draftName = localStorage.getItem('vs.draft.newName');
+  if (!draftName || draftName === d.name) {
+    document.getElementById('newType').value = d.type || 'generate';
+    document.getElementById('newName').value = d.name || '';
+    document.getElementById('newTitle').value = d.title || '';
+    document.getElementById('newBrief').value = d.brief || '';
+  }
   syncConfigVisibility();
   loadBilingualPreview(name);
   updateMediaPreview(name, d.latest_version, d.latest_files);
@@ -339,6 +347,13 @@ function bindOverviewEvents() {
   document.getElementById('qaCloseBtn').addEventListener('click', () => toggleDrawer(false));
   document.getElementById('copyPromptBtn').addEventListener('click', () => navigator.clipboard.writeText(state.lastPrompt || ''));
   document.getElementById('createJobBtn').addEventListener('click', handleCreateJob);
+  document.getElementById('resetNewJobBtn')?.addEventListener('click', () => {
+    ['newName', 'newTitle', 'newBrief'].forEach(id => {
+      document.getElementById(id).value = '';
+      localStorage.removeItem(`vs.draft.${id}`);
+    });
+    showToast('已清空 Step 1 欄位，可建立新工作', 'info', 1800);
+  });
   document.getElementById('uploadAssetBtn').addEventListener('click', handleUploadAsset);
   document.getElementById('clearStagedBtn')?.addEventListener('click', () => { state.stagedFiles = []; renderStagedFiles(); });
   document.getElementById('assetFileInput')?.addEventListener('change', e => {
@@ -369,9 +384,19 @@ async function handleCreateJob() {
   const name = document.getElementById('newName').value.trim();
   const title = document.getElementById('newTitle').value.trim();
   const brief = document.getElementById('newBrief').value;
-  const res = await api('/api/jobs', { method: 'POST', body: JSON.stringify({ job_type, name, title }) });
-  if (brief.trim()) await api(`/api/jobs/${encodeURIComponent(name)}/brief`, { method: 'PUT', body: JSON.stringify({ content: brief }) });
-  document.getElementById('createJobLog').textContent = res.output;
+  if (!name) { showToast('請先填寫英文代號 (slug)', 'warning'); return; }
+  let outMsg = '';
+  if (state.jobs.includes(name)) {
+    const res = await api(`/api/jobs/${encodeURIComponent(name)}/brief`, { method: 'PUT', body: JSON.stringify({ content: brief }) });
+    outMsg = res.output || `已更新 ${name}/input/brief.md`;
+    showToast(`已更新工作 ${name} 說明`, 'success');
+  } else {
+    const res = await api('/api/jobs', { method: 'POST', body: JSON.stringify({ job_type, name, title }) });
+    if (brief.trim()) await api(`/api/jobs/${encodeURIComponent(name)}/brief`, { method: 'PUT', body: JSON.stringify({ content: brief }) });
+    outMsg = res.output;
+    showToast(`已建立工作 ${name}`, 'success');
+  }
+  document.getElementById('createJobLog').textContent = outMsg;
   state.currentJob = name;
   await refreshJobs();
 }
@@ -706,38 +731,6 @@ async function handleApplyAvatar() {
   document.getElementById('renderLog').textContent = res.output;
   showToast('Avatar 合成完成！', 'success');
   await loadJobDetail(state.currentJob);
-}
-
-/**
- * 產生 10 秒標準 / 活力 / 沉穩韻律試聽音檔，讓使用者試聽並套用。
- * @returns {Promise<void>}
- */
-async function handleProsodyPreview() {
-  if (!state.currentJob) return;
-  showToast('正在產生 10 秒韻律試聽（標準 / 活力 / 沉穩）…', 'info', 4000);
-  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/narrate/prosody-preview`, {
-    method: 'POST', body: JSON.stringify({ sample_text: '' }),
-  });
-  const box = document.getElementById('prosodyPreviewBox');
-  const labels = { normal: '標準自然 (normal)', energetic: '活力強音加速 (energetic)', calm: '沉穩放慢輕柔 (calm)' };
-  box.style.display = 'grid';
-  box.innerHTML = Object.entries(res.files || {}).map(([preset, fname]) => `
-    <div class="card" style="padding:12px;">
-      <strong>${esc(labels[preset] || preset)}</strong>
-      <audio controls style="width:100%;" src="/api/jobs/${encodeURIComponent(state.currentJob)}/review/${encodeURIComponent(fname)}?t=${Date.now()}"></audio>
-      <button type="button" class="btn btn-soft btn-sm" onclick="selectProsodyPreset('${esc(preset)}')">套用此風格</button>
-    </div>`).join('');
-  showToast(res.output, 'success');
-}
-
-/**
- * 將試聽選定的韻律風格套用至目前工作設定並儲存。
- * @param {string} preset 韻律預設名稱。
- * @returns {Promise<void>}
- */
-async function selectProsodyPreset(preset) {
-  document.getElementById('cfgProsodyPreset').value = preset;
-  await handleSaveJobConfig();
 }
 
 /**

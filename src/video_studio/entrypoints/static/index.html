@@ -88,7 +88,8 @@
               <textarea id="newBrief" placeholder="說明這支影片的受眾、風格、希望 HTML/GSAP 怎麼呈現每一幕、重點要強調什麼…"></textarea>
             </label>
             <div class="row">
-              <button class="btn" id="createJobBtn" type="button">建立工作並儲存說明</button>
+              <button class="btn" id="createJobBtn" type="button">建立 / 更新工作說明</button>
+              <button class="btn btn-ghost" id="resetNewJobBtn" type="button">＋ 清空建立新工作</button>
             </div>
             <pre class="logbox" id="createJobLog">尚未執行</pre>
           </div>
@@ -421,6 +422,19 @@
         </div>
       </section>
     </div>
+
+    <section class="terminal-wrap">
+      <div class="card terminal-card" id="liveTerminalCard">
+        <div class="terminal-head">
+          <strong>🖥️ 即時執行 Terminal 日誌 (DATA_DIR/logs/app.log)</strong>
+          <div class="row">
+            <button type="button" class="btn btn-ghost btn-sm on" id="termAutoBtn">🟢 即時追蹤中 (1.5s)</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="termRefreshBtn">立即刷新</button>
+          </div>
+        </div>
+        <pre class="terminal-box" id="terminalLogOutput">載入日誌中…</pre>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -450,6 +464,7 @@
 
 <script src="/studio-layout-tune.js"></script>
 <script src="/studio-prosody.js"></script>
+<script src="/studio-ux.js"></script>
 <script src="/studio.js"></script>
 </body>
 </html>

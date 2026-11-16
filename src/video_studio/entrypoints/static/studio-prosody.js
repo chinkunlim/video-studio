@@ -189,4 +189,36 @@ async function loadBilingualPreview(jobName) {
   box.textContent = res.rows.map(r => `[${r.index}] ${r.primary}\n    ${r.secondary}`).join('\n');
 }
 
+/**
+ * 產生 10 秒標準 / 活力 / 沉穩韻律試聽音檔，讓使用者試聽並套用。
+ * @returns {Promise<void>}
+ */
+async function handleProsodyPreview() {
+  if (!state.currentJob) return;
+  showToast('正在產生 10 秒韻律試聽（標準 / 活力 / 沉穩）…', 'info', 4000);
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/narrate/prosody-preview`, {
+    method: 'POST', body: JSON.stringify({ sample_text: '' }),
+  });
+  const box = document.getElementById('prosodyPreviewBox');
+  const labels = { normal: '標準自然 (normal)', energetic: '活力強音加速 (energetic)', calm: '沉穩放慢輕柔 (calm)' };
+  box.style.display = 'grid';
+  box.innerHTML = Object.entries(res.files || {}).map(([preset, fname]) => `
+    <div class="card" style="padding:12px;">
+      <strong>${esc(labels[preset] || preset)}</strong>
+      <audio controls style="width:100%;" src="/api/jobs/${encodeURIComponent(state.currentJob)}/review/${encodeURIComponent(fname)}?t=${Date.now()}"></audio>
+      <button type="button" class="btn btn-soft btn-sm" onclick="selectProsodyPreset('${esc(preset)}')">套用此風格</button>
+    </div>`).join('');
+  showToast(res.output, 'success');
+}
+
+/**
+ * 將試聽選定的韻律風格套用至目前工作設定並儲存。
+ * @param {string} preset 韻律預設名稱。
+ * @returns {Promise<void>}
+ */
+async function selectProsodyPreset(preset) {
+  document.getElementById('cfgProsodyPreset').value = preset;
+  await handleSaveJobConfig();
+}
+
 document.addEventListener('DOMContentLoaded', initProsodyAndAgyControls);
