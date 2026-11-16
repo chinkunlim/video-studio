@@ -138,17 +138,35 @@ async function refreshJobs() {
   document.getElementById('envSadtalkerDir').value = envRes.SADTALKER_DIR || '';
   document.getElementById('envLogLevel').value = envRes.LOG_LEVEL || 'INFO';
 
-  const names = (jobsRes.output || '')
+  const rows = (jobsRes.output || '')
     .split('\n')
-    .map(l => l.trim().match(/^(generate|dub|extract)\s+([A-Za-z0-9._-]+)/))
+    .map(l => l.trim().match(/^(generate|dub|extract)\s+([A-Za-z0-9._-]+)(?:\s+(.*))?$/))
     .filter(Boolean)
-    .map(m => m[2]);
+    .map(m => ({ type: m[1], name: m[2], meta: (m[3] || '').trim() }));
+  const names = rows.map(r => r.name);
   state.jobs = names;
   const sel = document.getElementById('jobSelect');
   const prev = state.currentJob || sel.value;
-  sel.innerHTML = names.length ? names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') : '<option value="">尚無工作</option>';
+  sel.innerHTML = names.length ? names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') : '<option value="">尚無專案</option>';
   if (names.includes(prev)) sel.value = prev;
   state.currentJob = sel.value;
+  const grid = document.getElementById('projectCardsGrid');
+  if (grid) {
+    grid.innerHTML = rows.length
+      ? rows.map(r => {
+          const on = r.name === state.currentJob ? ' on' : '';
+          return `<button type="button" class="proj-card${on}" data-proj="${esc(r.name)}"><div class="proj-card-head"><span>${esc(r.name)}</span><span class="pill">${esc(r.type)}</span></div><div class="muted">${esc(r.meta || '點擊載入專案')}</div></button>`;
+        }).join('')
+      : '<span class="muted">尚無專案，請點右上「＋ 建立新專案」。</span>';
+    grid.querySelectorAll('[data-proj]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.currentJob = btn.dataset.proj;
+        sel.value = state.currentJob;
+        loadJobDetail(state.currentJob);
+        refreshJobs();
+      });
+    });
+  }
   if (state.currentJob) await loadJobDetail(state.currentJob);
 }
 
@@ -165,7 +183,7 @@ async function loadJobDetail(name) {
   const listEl = document.getElementById('inputFilesList');
   if (listEl) {
     listEl.innerHTML = d.input_files.length
-      ? d.input_files.map(f => `<span class="file-chip">📄 ${esc(f)}</span>`).join('')
+      ? d.input_files.map(f => `<span class="file-chip">${esc(f)}</span>`).join('')
       : '<span class="muted">（input/ 目前無檔案）</span>';
   }
   const c = d.config || {};
@@ -191,13 +209,9 @@ async function loadJobDetail(name) {
   document.getElementById('cfgSubtitleSecondaryLang').value = c.subtitles?.secondary_lang || 'zh-TW';
   document.getElementById('cfgSubtitleFontSize').value = c.subtitles?.font_size ?? 22;
   document.getElementById('cfgAvatarEngine').value = c.avatar?.engine || 'none';
-  document.getElementById('cfgAvatarImage').value = c.avatar?.image || '';
   document.getElementById('cfgAvatarPosition').value = c.avatar?.position || 'bottom-right';
   document.getElementById('cfgBackupDir').value = c.output?.backup_dir || '';
-  document.getElementById('cfgInScript').value = c.inputs?.script || '';
-  document.getElementById('cfgInPptx').value = c.inputs?.pptx || '';
-  document.getElementById('cfgInPoster').value = c.inputs?.poster || '';
-  document.getElementById('cfgInScenes').value = c.inputs?.scenes || '';
+  if (typeof populateInputFileSelects === 'function') populateInputFileSelects(d, c);
   document.getElementById('scriptEditor').value = d.script || '';
   if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
   document.getElementById('briefEditor').value = d.brief || '';
@@ -208,20 +222,22 @@ async function loadJobDetail(name) {
     document.getElementById('newTitle').value = d.title || '';
     document.getElementById('newBrief').value = d.brief || '';
   }
+  if (typeof filterVoicesByLanguage === 'function') filterVoicesByLanguage();
+  if (typeof prewarmVoiceSamples === 'function') prewarmVoiceSamples();
   syncConfigVisibility();
   loadBilingualPreview(name);
   updateMediaPreview(name, d.latest_version, d.latest_files);
   const narrEl = document.getElementById('narrateLog');
   if (narrEl) {
     narrEl.textContent = d.latest_version && d.latest_files.includes('narration.wav')
-      ? `✅ 已產出最新配音與字幕 (${d.latest_version})：\n${d.latest_files.join(', ')}`
+      ? `已產出最新配音與字幕 (${d.latest_version})：\n${d.latest_files.join(', ')}`
       : '尚未執行';
   }
   const rendEl = document.getElementById('renderLog');
   if (rendEl) {
     const hasVid = d.latest_files.includes('video_subtitled.mp4') || d.latest_files.includes('video.mp4');
     rendEl.textContent = d.latest_version && hasVid
-      ? `✅ 已產出最新影片 (${d.latest_version})：\n${d.latest_files.join(', ')}`
+      ? `已產出最新影片 (${d.latest_version})：\n${d.latest_files.join(', ')}`
       : '尚未渲染';
   }
   if (typeof resumeActivePlanIfAny === 'function') {
@@ -242,16 +258,29 @@ async function loadJobDetail(name) {
 function updateMediaPreview(name, v, files) {
   const player = document.getElementById('videoPlayer');
   const sheet = document.getElementById('contactSheetImg');
+  let nextPath = '';
   if (v && files.includes('video_subtitled.mp4')) {
-    player.src = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video_subtitled.mp4?t=${Date.now()}`;
+    nextPath = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video_subtitled.mp4`;
   } else if (v && files.includes('video.mp4')) {
-    player.src = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video.mp4?t=${Date.now()}`;
+    nextPath = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video.mp4`;
+  }
+  if (nextPath) {
+    if (player.dataset.baseSrc !== nextPath) {
+      player.dataset.baseSrc = nextPath;
+      player.src = `${nextPath}?t=${Date.now()}`;
+    }
   } else {
+    player.dataset.baseSrc = '';
     player.removeAttribute('src');
   }
   if (v && files.includes('video_contact_sheet.jpg')) {
-    sheet.src = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video_contact_sheet.jpg?t=${Date.now()}`;
+    const sheetPath = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video_contact_sheet.jpg`;
+    if (sheet.dataset.baseSrc !== sheetPath) {
+      sheet.dataset.baseSrc = sheetPath;
+      sheet.src = `${sheetPath}?t=${Date.now()}`;
+    }
   } else {
+    sheet.dataset.baseSrc = '';
     sheet.removeAttribute('src');
   }
 }
@@ -264,7 +293,9 @@ function updateMediaPreview(name, v, files) {
 function toggleDrawer(open) {
   const drawer = document.getElementById('qaDrawer');
   drawer.classList.toggle('open', open);
+  document.body.classList.toggle('qa-open', open);
   drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+  if (typeof fitReviewPreviewFrame === 'function') setTimeout(fitReviewPreviewFrame, 260);
 }
 
 /**
@@ -298,15 +329,19 @@ async function runAntigravityPlan(instruction) {
   if (!state.currentJob || state.busyPlan) return;
   state.busyPlan = true;
   toggleDrawer(true);
-  appendChatMsg('user', instruction || '請依 brief.md 與時間軸規劃本工作分鏡。');
+  const userText = instruction || '請依 brief.md 與時間軸規劃本工作分鏡。';
+  appendChatMsg('user', userText);
   const typingEl = appendChatMsg('ai', '', true);
   try {
     const mode = document.getElementById('planModeSelect').value;
     const model = document.getElementById('planModelSelect')?.value || '';
     const follow_poster_design = document.getElementById('planFollowPoster')?.value !== 'false';
+    const thread_mode = state.qaThreadMode || 'continue';
+    const history = (state.qaHistory || []).slice(-6);
+    state.qaHistory = [...(state.qaHistory || []), { role: 'user', text: userText }];
     const startRes = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/plan`, {
       method: 'POST',
-      body: JSON.stringify({ instruction, mode, model, follow_poster_design }),
+      body: JSON.stringify({ instruction, mode, model, follow_poster_design, thread_mode, history }),
     });
     state.lastPrompt = startRes.prompt || '';
     if (!startRes.available) {
@@ -339,7 +374,9 @@ async function pollPlanLoop(runId, typingEl) {
     }
     if (st.status !== 'running') {
       typingEl.classList.remove('qa-typing');
-      typingEl.textContent = st.output || st.error || '規劃完成（無文字輸出）';
+      const finalOut = st.output || st.error || '規劃完成（無文字輸出）';
+      typingEl.textContent = finalOut;
+      state.qaHistory = [...(state.qaHistory || []), { role: 'ai', text: finalOut }];
       await loadJobDetail(state.currentJob);
       break;
     }
@@ -490,12 +527,16 @@ function bindSettingsEvents() {
     const defaults = { zh: 'zh-TW-HsiaoChenNeural', en: 'en-US-AriaNeural', ja: 'ja-JP-NanamiNeural', ko: 'ko-KR-SunHiNeural' };
     if (defaults[e.target.value]) document.getElementById('cfgEdgeVoice').value = defaults[e.target.value];
     if (e.target.value === 'en') document.getElementById('cfgBilingualSubtitles').value = 'true';
-    syncConfigVisibility();
+    if (typeof filterVoicesByLanguage === 'function') filterVoicesByLanguage();
+  if (typeof prewarmVoiceSamples === 'function') prewarmVoiceSamples();
+  syncConfigVisibility();
   });
   document.getElementById('cfgVoiceEngine')?.addEventListener('change', syncConfigVisibility);
   document.getElementById('cfgAvatarEngine')?.addEventListener('change', syncConfigVisibility);
   document.getElementById('cfgBilingualSubtitles')?.addEventListener('change', syncConfigVisibility);
   document.getElementById('cfgProsodyPreset')?.addEventListener('change', () => handleSaveJobConfig());
+  if (typeof filterVoicesByLanguage === 'function') filterVoicesByLanguage();
+  if (typeof prewarmVoiceSamples === 'function') prewarmVoiceSamples();
   syncConfigVisibility();
   document.getElementById('draftScriptBtn')?.addEventListener('click', handleDraftScript);
   document.getElementById('loadReviewScriptBtn')?.addEventListener('click', handleLoadReviewScript);
@@ -574,43 +615,6 @@ async function saveScript(autoFormat) {
     if (typeof renderProsodyHighlights === 'function') renderProsodyHighlights();
   }
   showToast(res.output || '已儲存講稿', 'success');
-}
-
-/**
- * 新增或更新詞彙表項目。
- * @returns {Promise<void>}
- */
-async function handleSaveVocab() {
-  const res = await api('/api/vocab', {
-    method: 'POST',
-    body: JSON.stringify({
-      key: document.getElementById('vocKey').value.trim(),
-      subtitle: document.getElementById('vocSub').value.trim(),
-      tts: document.getElementById('vocTts').value.trim(),
-    }),
-  });
-  document.getElementById('vocabListLog').textContent = (await api('/api/vocab')).output;
-  showToast(res.output || '已更新詞彙表', 'success');
-}
-
-/**
- * 儲存全域 .env 設定。
- * @returns {Promise<void>}
- */
-async function handleSaveEnv() {
-  const res = await api('/api/settings/env', {
-    method: 'PUT',
-    body: JSON.stringify({
-      values: {
-        VOICEBOX_URL: document.getElementById('envVoicebox').value.trim(),
-        OLLAMA_BASE_URL: document.getElementById('envOllama').value.trim(),
-        OLLAMA_MODEL: document.getElementById('envOllamaModel').value.trim(),
-        SADTALKER_DIR: document.getElementById('envSadtalkerDir').value.trim(),
-        LOG_LEVEL: document.getElementById('envLogLevel').value,
-      },
-    }),
-  });
-  showToast(res.output || '已儲存全域設定', 'success');
 }
 
 /**

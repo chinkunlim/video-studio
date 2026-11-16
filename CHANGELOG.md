@@ -32,6 +32,7 @@ All notable changes to **video-studio** are documented here
 - feat(planner): enforce mirrored left/right poster framing and side-margin hand-drawn callouts (by `@antigravity`)
 - feat(subtitles): 1-to-1 bilingual clause splitting, anti-flicker gap snap, strict 2-line fit, and dedicated bottom subtitle bar (by `@antigravity`)
 - feat(planner): inform agy of burn_in subtitle mode and bottom safe band (by `@antigravity`)
+- feat(ui): overhaul studio shell, push drawer, voice sample pre-caching, role uploaders, and emoji-free SVG icons (by `@antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

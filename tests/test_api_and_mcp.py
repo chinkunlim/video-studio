@@ -48,7 +48,7 @@ class TestAPIAndMCP(unittest.TestCase):
 
         ui = self.client.get("/")
         self.assertEqual(ui.status_code, 200)
-        self.assertIn("📖 OpenAPI 文件", ui.text)
+        self.assertIn("OpenAPI 文件", ui.text)
 
         docs = self.client.get("/docs")
         self.assertEqual(docs.status_code, 200)

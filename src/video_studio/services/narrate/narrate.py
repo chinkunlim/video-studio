@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -212,6 +213,102 @@ def preview_prosody_10s(job: J.Job, sample_text: str = "") -> dict[str, str]:
         fname = f"prosody_{preset}.wav"
         prosody.apply_prosody_to_wav(base_wav, job.review / fname, timed, preset=preset)
         out[preset] = fname
+    return out
+
+
+VOICE_SAMPLE_TEXTS: dict[str, str] = {
+    "en": ("Welcome to today's presentation. Let's walk through the key findings and practical insights."),
+    "zh": "大家好，歡迎來到今天的簡報分享。接下來我們將一起了解核心重點與實務應用。",
+    "ja": "皆さん、こんにちは。本日のプレゼンテーションへようこそ。重要なポイントをご紹介します。",
+    "ko": "안녕하세요. 오늘 발표에 오신 것을 환영합니다. 핵심 내용을 함께 살펴보겠습니다.",
+}
+
+
+def voice_sample_cache_dir() -> Path:
+    """Return the DATA_DIR directory storing pre-cached 10s voice/prosody samples.
+
+    Returns:
+        Path to DATA_DIR/cache/voice_samples.
+    """
+    return load_app_config().data_dir / "cache" / "voice_samples"
+
+
+def _safe_voice_key(voice_key: str) -> str:
+    """Sanitize a voice/profile identifier for safe filesystem caching.
+
+    Args:
+        voice_key: Raw voice or profile name.
+
+    Returns:
+        Filesystem-safe token string.
+    """
+    return re.sub(r"[^A-Za-z0-9._-]+", "_", voice_key.strip() or "default")
+
+
+def get_cached_voice_samples(voice_key: str) -> dict[str, str]:
+    """Return cached 10s sample filenames for a voice key if all 3 presets exist.
+
+    Args:
+        voice_key: Edge-TTS voice ID or Voicebox profile name.
+
+    Returns:
+        Mapping of preset ('normal', 'energetic', 'calm') to filename, or empty dict if incomplete.
+    """
+    cdir = voice_sample_cache_dir()
+    safe = _safe_voice_key(voice_key)
+    out: dict[str, str] = {}
+    for preset in ("normal", "energetic", "calm"):
+        fname = f"{safe}_{preset}.wav"
+        if not (cdir / fname).is_file():
+            return {}
+        out[preset] = fname
+    return out
+
+
+def ensure_voice_samples(
+    voice_key: str,
+    language: str = "zh",
+    engine: str = "edge-tts",
+    rate: str = "+0%",
+) -> dict[str, str]:
+    """Ensure 10s normal/energetic/calm cached preview WAVs exist for a specific voice.
+
+    Args:
+        voice_key: Edge-TTS voice ID or Voicebox profile name.
+        language: Language code ('en', 'zh', 'ja', 'ko').
+        engine: TTS engine ('edge-tts' or 'voicebox').
+        rate: Edge-TTS rate string (e.g. '+0%', '-10%').
+
+    Returns:
+        Mapping of preset name to cached filename inside DATA_DIR/cache/voice_samples.
+    """
+    cached = get_cached_voice_samples(voice_key)
+    if cached:
+        return cached
+    cdir = voice_sample_cache_dir()
+    cdir.mkdir(parents=True, exist_ok=True)
+    safe = _safe_voice_key(voice_key)
+    lang_code = language.split("-")[0].lower()
+    text = VOICE_SAMPLE_TEXTS.get(lang_code, VOICE_SAMPLE_TEXTS["zh"])
+    cfg: dict[str, Any] = {
+        "voicebox": {"url": load_app_config().voicebox_url, "profile": voice_key, "language": lang_code},
+        "tts": {"engine": engine, "edge_voice": voice_key or DEFAULT_EDGE_VOICE, "edge_rate": rate},
+    }
+    client = _build_tts_client(cfg)
+    client.check_ready()
+    raw_bytes = client.generate(text, lang_code)
+    raw_tmp = cdir / f"_{safe}_raw.wav"
+    base_wav = cdir / f"_{safe}_base10s.wav"
+    raw_tmp.write_bytes(raw_bytes)
+    audio.cut(raw_tmp, base_wav, audio.CutOptions(start=0.0, end=10.0, rate=24000))
+    out: dict[str, str] = {}
+    for preset in ("normal", "energetic", "calm"):
+        fname = f"{safe}_{preset}.wav"
+        prosody.apply_prosody_to_wav(base_wav, cdir / fname, [], preset=preset)
+        out[preset] = fname
+    raw_tmp.unlink(missing_ok=True)
+    base_wav.unlink(missing_ok=True)
+    logger.info("已預先快取聲線試聽範本：%s (%s)", voice_key, lang_code)
     return out
 
 

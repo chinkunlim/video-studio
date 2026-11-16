@@ -76,11 +76,36 @@ def _poster_and_lang_rules(job: J.Job, follow_poster_design: bool) -> list[str]:
     return rules
 
 
+def _format_history_block(thread_mode: str, history: list[dict[str, str]] | None) -> list[str]:
+    """Build prompt section for continuing or starting a fresh planning thread.
+
+    Args:
+        thread_mode: 'continue' or 'new'.
+        history: Optional prior chat turns.
+
+    Returns:
+        List of prompt lines for the thread context section.
+    """
+    if thread_mode == "continue" and history:
+        turns = [
+            f"- {t.get('role', 'user')}: {str(t.get('text', '')).strip()[:320]}"
+            for t in history[-6:]
+            if str(t.get("text", "")).strip()
+        ]
+        if turns:
+            return ["", "【前幾輪對話紀錄（延續修改）】", *turns]
+    elif thread_mode == "new":
+        return ["", "【對話模式】已開啟新對話串：請保留並延續磁碟上現有的草稿檔案進行修正。"]
+    return []
+
+
 def build_plan_prompt(
     job_name: str,
     user_instruction: str = "",
     mode: str = "html",
     follow_poster_design: bool = True,
+    thread_mode: str = "continue",
+    history: list[dict[str, str]] | None = None,
 ) -> str:
     """Assemble a complete planning prompt from the job's brief, script, and timing.
 
@@ -89,6 +114,8 @@ def build_plan_prompt(
         user_instruction: Additional instruction from the web UI chat box.
         mode: Target planning mode ('html' or 'poster').
         follow_poster_design: Whether to preserve uploaded poster/PPTX design.
+        thread_mode: 'continue' to include recent turns or 'new' for fresh context keeping disk draft.
+        history: Optional list of {'role': ..., 'text': ...} prior chat turns.
 
     Returns:
         Self-contained prompt string for Antigravity / agy CLI.
@@ -115,6 +142,7 @@ def build_plan_prompt(
         if burn_in
         else "字幕模式：無字幕（可使用 100% 滿版高度進行版面設計）"
     )
+    history_block = _format_history_block(thread_mode, history)
     return "\n".join(
         [
             f"請為 video-studio 工作 `{job.type}/{job.name}`（標題：{job.title}）規劃分鏡草稿。",
@@ -131,6 +159,7 @@ def build_plan_prompt(
             "",
             "【海報設計與語言對齊規則】",
             *poster_rules,
+            *history_block,
             "",
             "【本次補充要求】",
             user_instruction.strip() or "請依講稿與先聲後影時間軸規劃清晰、可重現的分鏡與動畫。",
@@ -366,6 +395,8 @@ def start_agy_plan(
     mode: str = "html",
     model: str = "",
     follow_poster_design: bool = True,
+    thread_mode: str = "continue",
+    history: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Start a background agy CLI planning run for a job.
 
@@ -375,11 +406,15 @@ def start_agy_plan(
         mode: Target output mode ('html' or 'poster').
         model: Optional agy model ID.
         follow_poster_design: Whether to preserve uploaded poster/PPTX design.
+        thread_mode: 'continue' or 'new'.
+        history: Optional prior chat turns.
 
     Returns:
         Dictionary containing run_id, status, available flag, and prompt.
     """
-    prompt = build_plan_prompt(job_name, user_instruction, mode, follow_poster_design)
+    prompt = build_plan_prompt(
+        job_name, user_instruction, mode, follow_poster_design, thread_mode=thread_mode, history=history
+    )
     review_history.create_snapshot(job_name, note=f"agy {mode} 規劃前自動備份")
     agy_bin = _resolve_agy_bin()
     run_id = uuid.uuid4().hex[:12]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -70,6 +71,17 @@ class PlanRequest(BaseModel):
     mode: str = Field(default="html", description="html | poster")
     model: str = Field(default="", description="Optional agy CLI model ID")
     follow_poster_design: bool = Field(default=True, description="Preserve uploaded poster design")
+    thread_mode: str = Field(default="continue", description="continue | new")
+    history: list[dict[str, str]] = Field(default_factory=list, description="Recent chat turns")
+
+
+class VoiceSamplePrewarmRequest(BaseModel):
+    """Request payload for pre-generating 10s voice/prosody sample previews."""
+
+    voice: str = Field(description="Edge-TTS voice ID or Voicebox profile")
+    language: str = Field(default="zh", description="Language code (en, zh, ja, ko)")
+    engine: str = Field(default="edge-tts", description="edge-tts | voicebox")
+    rate: str = Field(default="+0%", description="Edge-TTS rate string")
 
 
 class EnvUpdateRequest(BaseModel):
@@ -326,7 +338,87 @@ def start_plan(job_name: str, req: PlanRequest) -> dict[str, Any]:
     Returns:
         Run handle with run_id and initial status.
     """
-    return planner.start_agy_plan(job_name, req.instruction, req.mode, req.model, req.follow_poster_design)
+    return planner.start_agy_plan(
+        job_name,
+        req.instruction,
+        req.mode,
+        req.model,
+        req.follow_poster_design,
+        thread_mode=req.thread_mode,
+        history=req.history,
+    )
+
+
+_SAMPLE_INFLIGHT: set[str] = set()
+_SAMPLE_LOCK = threading.Lock()
+
+
+@router.get("/api/voice/samples")
+def get_voice_samples(voice: str) -> dict[str, Any]:
+    """Check whether pre-cached 10s normal/energetic/calm samples exist for a voice.
+
+    Args:
+        voice: Edge-TTS voice ID or Voicebox profile name.
+
+    Returns:
+        Dictionary with ready flag and URLs per prosody preset.
+    """
+    files = narrate_svc.get_cached_voice_samples(voice)
+    urls = {k: f"/api/voice/samples/file/{v}" for k, v in files.items()}
+    return {"ready": bool(files), "voice": voice, "files": urls}
+
+
+@router.post("/api/voice/samples/prewarm")
+def prewarm_voice_samples(req: VoiceSamplePrewarmRequest) -> dict[str, Any]:
+    """Start background pre-caching of 10s normal/energetic/calm samples for a voice.
+
+    Args:
+        req: Voice, language, engine, and rate settings.
+
+    Returns:
+        Status dictionary with ready flag and cached URLs if already available.
+    """
+    files = narrate_svc.get_cached_voice_samples(req.voice)
+    if files:
+        return {
+            "ready": True,
+            "voice": req.voice,
+            "files": {k: f"/api/voice/samples/file/{v}" for k, v in files.items()},
+        }
+    with _SAMPLE_LOCK:
+        if req.voice not in _SAMPLE_INFLIGHT:
+            _SAMPLE_INFLIGHT.add(req.voice)
+
+            def _worker() -> None:
+                """Synthesize cached 10s voice samples in a background thread."""
+                try:
+                    narrate_svc.ensure_voice_samples(req.voice, req.language, req.engine, req.rate)
+                except Exception as exc:
+                    logger.warning("Prewarm voice sample failed (%s): %s", req.voice, exc)
+                finally:
+                    with _SAMPLE_LOCK:
+                        _SAMPLE_INFLIGHT.discard(req.voice)
+
+            threading.Thread(target=_worker, daemon=True).start()
+    return {"ready": False, "voice": req.voice, "files": {}}
+
+
+@router.get("/api/voice/samples/file/{filename}")
+def get_voice_sample_file(filename: str) -> FileResponse:
+    """Serve a cached 10s voice sample WAV from DATA_DIR/cache/voice_samples.
+
+    Args:
+        filename: Sample WAV filename.
+
+    Returns:
+        FileResponse for in-browser audio playback.
+    """
+    if not SAFE_NAME_RE.fullmatch(filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    path = narrate_svc.voice_sample_cache_dir() / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return FileResponse(path)
 
 
 @router.get("/api/agy/models")

@@ -44,7 +44,7 @@ class TestStudioUIAndPlanner(unittest.TestCase):
         self.assertIn("cfgVoiceLanguage", html.text)
         self.assertIn('id="assetFileInput" multiple', html.text)
         self.assertIn("btnLayoutGuides", html.text)
-        self.assertIn("📖 OpenAPI 文件", html.text)
+        self.assertIn("OpenAPI 文件", html.text)
 
         css = self.client.get("/studio.css")
         self.assertEqual(css.status_code, 200)

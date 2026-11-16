@@ -87,7 +87,15 @@ class TestAvatarScriptBilingual(unittest.TestCase):
                 "/api/jobs/einstein-demo/plan",
                 json={"instruction": "test", "mode": "html", "model": "gemini-4-argon-high"},
             )
-            mock_plan.assert_called_once_with("einstein-demo", "test", "html", "gemini-4-argon-high", True)
+            mock_plan.assert_called_once_with(
+                "einstein-demo",
+                "test",
+                "html",
+                "gemini-4-argon-high",
+                True,
+                thread_mode="continue",
+                history=[],
+            )
 
         # Verify build_plan_prompt preserves poster design and adds English translation rule when voice=en
         from video_studio.services.planner import build_plan_prompt
@@ -365,3 +373,22 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         )
         self.assertGreaterEqual(tl[0]["start"], 1.95)
         self.assertGreaterEqual(audio.duration(out_wav), 2.8)
+
+    def test_voice_samples_endpoint_and_plan_thread_modes(self) -> None:
+        """Verify /api/voice/samples and planner thread_mode ('continue' vs 'new')."""
+        from video_studio.services import planner
+
+        res = self.client.get("/api/voice/samples?voice=en-US-GuyNeural")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("ready", res.json())
+
+        hist = [{"role": "user", "text": "keep header clean"}]
+        cont_prompt = planner.build_plan_prompt(
+            "einstein-demo", "next edit", thread_mode="continue", history=hist
+        )
+        self.assertIn("前幾輪對話紀錄", cont_prompt)
+        self.assertIn("keep header clean", cont_prompt)
+
+        new_prompt = planner.build_plan_prompt("einstein-demo", "fresh edit", thread_mode="new", history=hist)
+        self.assertNotIn("keep header clean", new_prompt)
+        self.assertIn("已開啟新對話串", new_prompt)
