@@ -37,6 +37,7 @@ class JobConfigUpdate(BaseModel):
     edge_voice: str = Field(default="zh-TW-HsiaoChenNeural", description="edge-tts voice name")
     edge_rate: str = Field(default="+0%", description="edge-tts speaking rate")
     prosody_preset: str = Field(default="normal", description="normal | energetic | calm")
+    lead_in_sec: float = Field(default=2.0, ge=0.0, le=10.0, description="Silence before speaking in seconds")
     whisper_model: str = Field(default="small", description="Whisper model (tiny, base, small, medium)")
     opencc_mode: str = Field(default="s2tw", description="OpenCC conversion (s2tw, s2t, none)")
     subtitles_formats: list[str] = Field(default_factory=lambda: ["youtube", "powerpoint", "vlc"])
@@ -154,6 +155,7 @@ def _serialize_job_toml(job_type: str, req: JobConfigUpdate) -> str:
         f"edge_voice = {_toml_str(req.edge_voice)}",
         f"edge_rate = {_toml_str(req.edge_rate)}",
         f"prosody_preset = {_toml_str(req.prosody_preset)}",
+        f"lead_in_sec = {req.lead_in_sec}",
         "",
         "[whisper]",
         f"model = {_toml_str(req.whisper_model)}",

@@ -177,6 +177,8 @@ async function loadJobDetail(name) {
   document.getElementById('cfgEdgeVoice').value = c.voice?.edge_voice || 'zh-TW-HsiaoChenNeural';
   document.getElementById('cfgEdgeRate').value = c.voice?.edge_rate || '+0%';
   document.getElementById('cfgProsodyPreset').value = c.voice?.prosody_preset || 'normal';
+  const leadEl = document.getElementById('cfgLeadInSec');
+  if (leadEl) leadEl.value = c.voice?.lead_in_sec ?? 2.0;
   document.getElementById('cfgWhisperModel').value = c.whisper?.model || 'small';
   document.getElementById('cfgOpenccMode').value = c.whisper?.opencc_mode || 's2tw';
   document.getElementById('cfgWidth').value = c.output?.width ?? 1920;
@@ -532,6 +534,7 @@ async function handleSaveJobConfig() {
     edge_voice: document.getElementById('cfgEdgeVoice').value,
     edge_rate: document.getElementById('cfgEdgeRate').value,
     prosody_preset: document.getElementById('cfgProsodyPreset').value,
+    lead_in_sec: Number(document.getElementById('cfgLeadInSec')?.value ?? 2.0),
     whisper_model: document.getElementById('cfgWhisperModel').value,
     opencc_mode: document.getElementById('cfgOpenccMode').value,
     width: Number(document.getElementById('cfgWidth')?.value || 1920),

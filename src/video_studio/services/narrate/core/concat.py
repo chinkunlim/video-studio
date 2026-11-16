@@ -29,6 +29,7 @@ class ConcatOptions:
     tmp: Path = Path("tmp")
     loudness: float = -16.0
     sample_rate: int = 48000
+    lead_in: float = 0.0
 
 
 def _ensure_gap_wav(tmp: Path, gap_sec: float) -> Path:
@@ -73,6 +74,10 @@ def _collect_segments(
     listing: list[Path] = []
     timeline: list[dict[str, Any]] = []
     t = 0.0
+    if options.lead_in > 0:
+        lead_gap = _ensure_gap_wav(options.tmp, options.lead_in)
+        listing.append(lead_gap)
+        t += audio.duration(lead_gap)
     for k, it in enumerate(items):
         clip_path = Path(it["clip"])
         s, e = audio.speech_bounds(clip_path)

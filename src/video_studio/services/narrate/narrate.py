@@ -420,11 +420,13 @@ def build_narration(job: J.Job) -> str:
     items = _prepare_concat_items(job, lines, takes)
     out = job.next_output()
     out.mkdir(parents=True, exist_ok=True)
+    lead_in = float(job.cfg.get("voice", {}).get("lead_in_sec", 2.0))
     concat_opts = concat.ConcatOptions(
         pause=cfg["pause"],
         tmp=out / "tmp",
         loudness=cfg["audio"]["loudness"],
         sample_rate=cfg["audio"]["sample_rate"],
+        lead_in=max(0.0, lead_in),
     )
     timeline = concat.build(items, out / "narration.wav", concat_opts)
     if (out / "tmp").exists():

@@ -314,3 +314,31 @@ class TestAvatarScriptBilingual(unittest.TestCase):
             self.assertEqual(res.status_code, 409)
         finally:
             lock.release()
+
+    def test_bilingual_overlay_line_break_and_lead_in_pause(self) -> None:
+        """Verify bilingual overlay keeps EN/ZH on separate lines and lead_in shifts start."""
+        from PIL import Image, ImageDraw
+
+        from video_studio.services.narrate.core import audio, concat
+        from video_studio.services.video.engine import overlay
+
+        img = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        fnt = overlay.font("/System/Library/Fonts/STHeiti Light.ttc", 1, 28)
+        lines = overlay._fit_lines(draw, "Hello world\n你好世界", fnt, 1720)
+        self.assertEqual(lines, ["Hello world", "你好世界"])
+
+        tone = self.data_dir / "tone.wav"
+        subprocess.run(
+            ["ffmpeg", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", str(tone)],
+            check=True,
+            capture_output=True,
+        )
+        out_wav = self.data_dir / "lead_in_out.wav"
+        tl = concat.build(
+            [{"no": 1, "slide": 1, "clip": tone, "brk": "period"}],
+            out_wav,
+            concat.ConcatOptions(pause={"period": 0.5}, tmp=self.data_dir / "tmp_concat", lead_in=2.0),
+        )
+        self.assertGreaterEqual(tl[0]["start"], 1.95)
+        self.assertGreaterEqual(audio.duration(out_wav), 2.8)

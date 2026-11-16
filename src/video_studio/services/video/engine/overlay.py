@@ -49,8 +49,37 @@ def font(path: str, index: int, size: int) -> Any:
         return ImageFont.load_default()
 
 
+def _fit_single_line(
+    draw: ImageDraw.ImageDraw, seg: str, fnt: ImageFont.FreeTypeFont, max_w: float
+) -> list[str]:
+    """Wrap a single logical subtitle line into at most two balanced lines if wider than max_w.
+
+    Args:
+        draw: Pillow drawing context.
+        seg: Single logical line (no embedded newlines).
+        fnt: Font used for width measurement.
+        max_w: Maximum allowed line width in pixels.
+
+    Returns:
+        One or two wrapped line strings.
+    """
+    if draw.textlength(seg, font=fnt) <= max_w:
+        return [seg]
+    best: tuple[float, str, str] | None = None
+    for k in range(1, len(seg)):
+        a, b = seg[:k].rstrip(), seg[k:].lstrip()
+        if not a or not b:
+            continue
+        # Prefer breaking at spaces for Latin/English text so words stay intact.
+        penalty = 0.0 if (" " not in seg or seg[k - 1] == " " or seg[k] == " ") else 1000.0
+        w = max(draw.textlength(a, font=fnt), draw.textlength(b, font=fnt)) + penalty
+        if best is None or w < best[0]:
+            best = (w, a, b)
+    return [best[1], best[2]] if best else [seg]
+
+
 def _fit_lines(draw: ImageDraw.ImageDraw, text: str, fnt: ImageFont.FreeTypeFont, max_w: float) -> list[str]:
-    """太宽就从中间断成两行（中文没有空格，逐字找断点）。
+    """保留顯式換行（如英文一行、中文一行），過寬段落再各自平衡斷行。
 
     Args:
         draw: Pillow 绘图物件。
@@ -61,15 +90,12 @@ def _fit_lines(draw: ImageDraw.ImageDraw, text: str, fnt: ImageFont.FreeTypeFont
     Returns:
         断行后的文字列表。
     """
-    if draw.textlength(text, font=fnt) <= max_w:
-        return [text]
-    best: tuple[float, str, str] | None = None
-    for k in range(1, len(text)):
-        a, b = text[:k], text[k:]
-        w = max(draw.textlength(a, font=fnt), draw.textlength(b, font=fnt))
-        if best is None or w < best[0]:
-            best = (w, a, b)
-    return [best[1], best[2]] if best else [text]
+    out: list[str] = []
+    for raw_line in text.splitlines():
+        seg = raw_line.strip()
+        if seg:
+            out.extend(_fit_single_line(draw, seg, fnt, max_w))
+    return out or [text]
 
 
 def to_traditional(text: str, fixes_path: Path | str | None = None) -> str:
