@@ -173,6 +173,21 @@ iframe.preview-frame { width: 100%; height: 340px; border: 1px solid var(--line)
   background: var(--surface); border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(0, 0, 0, .2);
 }
 
+/* Dropzone & File Chips */
+.dropzone {
+  border: 1.5px dashed var(--line); border-radius: var(--radius-m); padding: 12px;
+  background: var(--surface-2); display: flex; flex-direction: column; gap: 10px;
+  transition: border-color var(--dur-hover) var(--ease), background var(--dur-hover) var(--ease);
+}
+.dropzone.over { border-color: var(--accent); background: var(--accent-soft); }
+.file-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); font-size: 12.5px; font-weight: 500;
+}
+.file-chip.staged { background: var(--accent-soft); border-color: var(--accent); color: var(--primary); }
+.file-chip button { font-size: 13px; color: var(--muted); padding: 0 2px; line-height: 1; }
+
 /* Prosody Highlight Editor */
 .prosody-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 0; }
 .prosody-highlight-view {

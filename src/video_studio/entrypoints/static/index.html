@@ -96,15 +96,23 @@
           <div class="card" id="cardAssets">
             <h2>上傳素材與工作檢查</h2>
             <p class="muted">將講稿、PPTX、海報 PDF/PNG 或影片上傳到目前工作的 <code>input/</code>。</p>
-            <div class="row">
-              <input type="file" id="assetFileInput" multiple />
-              <button class="btn btn-soft" id="uploadAssetBtn" type="button">上傳至 input/</button>
+            <div class="dropzone" id="assetDropzone">
+              <div class="row" style="justify-content:space-between;">
+                <span class="muted">拖曳多個檔案到此處，或分次選取加入待上傳清單</span>
+                <input type="file" id="assetFileInput" multiple style="width:auto;" />
+              </div>
+              <div class="file-chips" id="stagedFilesList"></div>
+              <div class="row">
+                <button class="btn btn-soft" id="uploadAssetBtn" type="button">上傳全部至 input/</button>
+                <button class="btn btn-ghost btn-sm" id="clearStagedBtn" type="button">清空待上傳</button>
+              </div>
             </div>
             <div class="row">
               <button class="btn" id="checkJobBtn" type="button">執行 job check</button>
               <button class="btn btn-ghost" id="refreshAllBtn" type="button">重新整理工作區</button>
             </div>
             <div class="muted" id="fileSummary">input/: — ｜ review/: — ｜ output/: —</div>
+            <div class="file-chips" id="inputFilesList"></div>
             <pre class="logbox" id="jobCheckLog">尚未檢查</pre>
           </div>
         </div>

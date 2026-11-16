@@ -16,6 +16,7 @@ All notable changes to **video-studio** are documented here
 - feat(ui): expose OLLAMA_MODEL and SADTALKER_DIR in Web UI env settings (by `@Antigravity`)
 - feat(ai): make agy-cli primary brain for script drafting and bilingual translation with Ollama fallback (by `@Antigravity`)
 - feat(ui): support batch multi-file upload to job input/ (by `@Antigravity`)
+- feat(ui): add drag-drop multi-file upload queue and prominent input file chips (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

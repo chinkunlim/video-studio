@@ -5,6 +5,7 @@ const state = {
   currentJob: '',
   lastPrompt: '',
   busyPlan: false,
+  stagedFiles: [],
 };
 
 /**
@@ -159,7 +160,13 @@ async function loadJobDetail(name) {
   if (!name) return;
   const d = await api(`/api/jobs/${encodeURIComponent(name)}/detail`);
   document.getElementById('fileSummary').textContent =
-    `input/: ${d.input_files.join(', ') || '無'} ｜ review/: ${d.review_files.join(', ') || '無'} ｜ 最新成品: ${d.latest_version || '無'}`;
+    `input/: ${d.input_files.length} 個檔案 ｜ review/: ${d.review_files.join(', ') || '無'} ｜ 最新成品: ${d.latest_version || '無'}`;
+  const listEl = document.getElementById('inputFilesList');
+  if (listEl) {
+    listEl.innerHTML = d.input_files.length
+      ? d.input_files.map(f => `<span class="file-chip">📄 ${esc(f)}</span>`).join('')
+      : '<span class="muted">（input/ 目前無檔案）</span>';
+  }
   const c = d.config || {};
   document.getElementById('cfgTitle').value = c.job?.title || '';
   document.getElementById('cfgVisualMode').value = c.visual?.mode || 'auto';
@@ -317,6 +324,19 @@ function bindOverviewEvents() {
   document.getElementById('copyPromptBtn').addEventListener('click', () => navigator.clipboard.writeText(state.lastPrompt || ''));
   document.getElementById('createJobBtn').addEventListener('click', handleCreateJob);
   document.getElementById('uploadAssetBtn').addEventListener('click', handleUploadAsset);
+  document.getElementById('clearStagedBtn')?.addEventListener('click', () => { state.stagedFiles = []; renderStagedFiles(); });
+  document.getElementById('assetFileInput')?.addEventListener('change', e => {
+    addStagedFiles(e.target.files);
+    e.target.value = '';
+  });
+  const dz = document.getElementById('assetDropzone');
+  dz?.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz?.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz?.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('over');
+    addStagedFiles(e.dataTransfer?.files);
+  });
   document.getElementById('checkJobBtn').addEventListener('click', async () => {
     if (!state.currentJob) return;
     const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/check`);
@@ -341,14 +361,50 @@ async function handleCreateJob() {
 }
 
 /**
- * 批次上傳一或多個素材檔案至目前工作的 input/ 目錄。
+ * 將選取或拖曳的檔案累積加入待上傳清單（支援跨資料夾分次選取）。
+ * @param {FileList|File[]|null|undefined} fileList 檔案清單。
+ * @returns {void}
+ */
+function addStagedFiles(fileList) {
+  for (const f of [...(fileList || [])]) {
+    if (!state.stagedFiles.some(x => x.name === f.name && x.size === f.size)) {
+      state.stagedFiles.push(f);
+    }
+  }
+  renderStagedFiles();
+}
+
+/**
+ * 渲染待上傳檔案清單標籤。
+ * @returns {void}
+ */
+function renderStagedFiles() {
+  const box = document.getElementById('stagedFilesList');
+  if (!box) return;
+  if (!state.stagedFiles.length) { box.innerHTML = ''; return; }
+  box.innerHTML = state.stagedFiles.map((f, idx) =>
+    `<span class="file-chip staged">➕ ${esc(f.name)} <button type="button" onclick="removeStagedFile(${idx})" aria-label="移除">×</button></span>`
+  ).join('');
+}
+
+/**
+ * 從待上傳清單移除指定索引的檔案。
+ * @param {number} idx 清單索引。
+ * @returns {void}
+ */
+function removeStagedFile(idx) {
+  state.stagedFiles.splice(idx, 1);
+  renderStagedFiles();
+}
+
+/**
+ * 批次上傳待上傳清單內的所有檔案至目前工作的 input/ 目錄。
  * @returns {Promise<void>}
  */
 async function handleUploadAsset() {
-  const input = document.getElementById('assetFileInput');
-  const files = [...(input?.files || [])];
   if (!state.currentJob) { showToast('請先建立或選擇一個工作', 'warning'); return; }
-  if (!files.length) { showToast('請先選擇要上傳的檔案（可多選）', 'warning'); return; }
+  if (!state.stagedFiles.length) { showToast('請先選取或拖曳檔案加入清單', 'warning'); return; }
+  const files = [...state.stagedFiles];
   const logs = [];
   for (const f of files) {
     const fd = new FormData();
@@ -357,9 +413,10 @@ async function handleUploadAsset() {
     const data = await res.json().catch(() => ({}));
     logs.push(data.output || data.detail || `${f.name}: HTTP ${res.status}`);
   }
+  state.stagedFiles = [];
+  renderStagedFiles();
   document.getElementById('jobCheckLog').textContent = logs.join('\n');
-  input.value = '';
-  showToast(`已上傳 ${files.length} 個檔案至 input/`, 'success');
+  showToast(`已批次上傳 ${files.length} 個檔案至 input/`, 'success');
   await loadJobDetail(state.currentJob);
 }
 
