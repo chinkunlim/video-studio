@@ -18,7 +18,7 @@ _INLINE_TAG_RE = re.compile(
 
 PRESET_SETTINGS: dict[str, tuple[float, float]] = {
     "normal": (1.0, 1.0),
-    "energetic": (1.12, 1.15),
+    "energetic": (1.00, 1.15),
     "calm": (0.90, 0.90),
 }
 

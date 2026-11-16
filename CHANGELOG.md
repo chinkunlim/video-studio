@@ -50,6 +50,7 @@ All notable changes to **video-studio** are documented here
 - fix(ui): hydrate narrateLog and renderLog from persisted output/vN files on refresh (by `@Antigravity`)
 - fix(render): prevent duplicate concurrent video renders and stream HyperFrames logs (by `@antigravity`)
 - fix(subtitles,narrate): preserve bilingual line breaks in overlay, add configurable lead_in_sec pause, and add edge_rate presets (by `@antigravity`)
+- fix(prosody): keep energetic preset punchy volume without rushing tempo (by `@antigravity`)
 
 ### Documentation
 - docs: migrate design specs and update project architecture documentation (TASK-003) (`TASK-003`, by `@antigravity`)
