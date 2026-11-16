@@ -405,3 +405,27 @@ def get_plan_status(run_id: str) -> dict[str, Any]:
             "error": run.error,
             "returncode": run.returncode,
         }
+
+
+def get_active_plan(job_name: str) -> dict[str, Any]:
+    """Return the most recent active (running) agy planning run for a job, if any.
+
+    Args:
+        job_name: Target job name.
+
+    Returns:
+        Dictionary with ``active=True`` and run details when running, or ``active=False``.
+    """
+    with _LOCK:
+        for run in reversed(list(_RUNS.values())):
+            if run.job_name == job_name and run.status == "running":
+                return {
+                    "active": True,
+                    "run_id": run.run_id,
+                    "job_name": run.job_name,
+                    "status": run.status,
+                    "output": "\n".join(run.lines),
+                    "error": run.error,
+                    "returncode": run.returncode,
+                }
+    return {"active": False, "job_name": job_name}

@@ -343,6 +343,19 @@ def get_original_script(job_name: str) -> dict[str, Any]:
     return {"exists": True, "content": orig.read_text(encoding="utf-8")}
 
 
+@router.get("/api/jobs/{job_name}/plan/active")
+def get_active_plan_route(job_name: str) -> dict[str, Any]:
+    """Return the active background agy CLI planning run for a job, if any.
+
+    Args:
+        job_name: Target job name.
+
+    Returns:
+        Dictionary with active flag and run status details.
+    """
+    return planner.get_active_plan(job_name)
+
+
 @router.get("/api/plan/{run_id}")
 def poll_plan(run_id: str) -> dict[str, Any]:
     """Poll status and streamed output of a background agy CLI planning run.

@@ -228,3 +228,34 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         )
         prosody.apply_prosody_to_wav(src_wav, dst_wav, timed, preset="energetic")
         self.assertTrue(dst_wav.is_file() and dst_wav.stat().st_size > 0)
+
+    def test_active_plan_reconnect_endpoint(self) -> None:
+        """Verify GET /api/jobs/{name}/plan/active returns active running agy plans for reconnect."""
+        from video_studio.services import planner
+
+        idle = self.client.get("/api/jobs/einstein-demo/plan/active")
+        self.assertEqual(idle.status_code, 200)
+        self.assertFalse(idle.json()["active"])
+
+        run = planner.PlanRun(
+            run_id="run-reconnect-1",
+            job_name="einstein-demo",
+            prompt="test prompt",
+            model="gemini-3-flash",
+            job_dir=self.data_dir,
+            status="running",
+            lines=["正在讀取簡報與時間軸…"],
+        )
+        with planner._LOCK:
+            planner._RUNS[run.run_id] = run
+        try:
+            active = self.client.get("/api/jobs/einstein-demo/plan/active")
+            self.assertEqual(active.status_code, 200)
+            body = active.json()
+            self.assertTrue(body["active"])
+            self.assertEqual(body["run_id"], "run-reconnect-1")
+            self.assertEqual(body["status"], "running")
+            self.assertIn("正在讀取簡報與時間軸", body["output"])
+        finally:
+            with planner._LOCK:
+                planner._RUNS.pop(run.run_id, None)

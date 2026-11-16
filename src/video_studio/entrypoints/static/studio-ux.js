@@ -141,3 +141,40 @@ document.addEventListener('DOMContentLoaded', () => {
   initDraftAutosave();
   initLiveTerminal();
 });
+
+let _resumedRunId = null;
+
+/**
+ * 重新載入或切換工作時，自動偵測並續接背景執行中的 Antigravity (agy CLI) 規劃任務。
+ * @param {string} jobName 工作名稱。
+ * @returns {Promise<void>}
+ */
+async function resumeActivePlanIfAny(jobName) {
+  if (!jobName || (typeof state !== 'undefined' && state.busyPlan)) return;
+  try {
+    const res = await api(`/api/jobs/${encodeURIComponent(jobName)}/plan/active`);
+    if (!res?.active || res.status !== 'running' || !res.run_id || res.run_id === _resumedRunId) {
+      return;
+    }
+    _resumedRunId = res.run_id;
+    state.busyPlan = true;
+    toggleDrawer(true);
+    const typingEl = appendChatMsg('ai', '', true);
+    if (res.output) {
+      typingEl.classList.remove('qa-typing');
+      typingEl.textContent = `${res.output}\n\n▌ 已重新連線背景規劃中…`;
+    } else {
+      const span = typingEl.querySelector('span:last-child');
+      if (span) span.textContent = '🔄 已重新連線背景執行中的 Antigravity 規劃…';
+    }
+    try {
+      await pollPlanLoop(res.run_id, typingEl);
+    } finally {
+      state.busyPlan = false;
+      _resumedRunId = null;
+    }
+  } catch {
+    // ignore transient reconnect errors
+  }
+}
+
