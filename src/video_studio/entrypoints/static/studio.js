@@ -115,13 +115,20 @@ function initTheme() {
  * @returns {Promise<void>}
  */
 async function refreshJobs() {
-  const [health, jobsRes, vocRes, envRes] = await Promise.all([
+  const [health, jobsRes, vocRes, envRes, avRes] = await Promise.all([
     api('/health'),
     api('/api/jobs'),
     api('/api/vocab'),
     api('/api/settings/env'),
+    api('/api/avatar/status').catch(() => null),
   ]);
   document.getElementById('healthBadge').textContent = `連線正常 · ${health.app_env}`;
+  if (avRes) {
+    const sad = avRes.sadtalker?.ready ? 'SadTalker 就緒' : 'SadTalker 尚未備齊權重';
+    const lw = avRes.lightweight?.ready ? 'FFmpeg 輕量頭像就緒' : 'FFmpeg 不可用';
+    const badge = document.getElementById('avatarStatusBadge');
+    if (badge) badge.textContent = `Avatar 狀態：路線 B（${lw}）｜路線 A（${sad}）`;
+  }
   document.getElementById('jobsListLog').textContent = jobsRes.output || '尚無工作';
   document.getElementById('vocabListLog').textContent = vocRes.output || '（詞彙表空白）';
   document.getElementById('envVoicebox').value = envRes.VOICEBOX_URL || '';
@@ -160,7 +167,12 @@ async function loadJobDetail(name) {
   document.getElementById('cfgLoudness').value = c.output?.loudness ?? -16;
   document.getElementById('cfgFps').value = c.output?.fps ?? 30;
   document.getElementById('cfgBurnIn').value = String(c.subtitles?.burn_in ?? true);
+  document.getElementById('cfgBilingualSubtitles').value = String(c.subtitles?.bilingual ?? false);
+  document.getElementById('cfgSubtitleSecondaryLang').value = c.subtitles?.secondary_lang || 'zh-TW';
   document.getElementById('cfgSubtitleFontSize').value = c.subtitles?.font_size ?? 22;
+  document.getElementById('cfgAvatarEngine').value = c.avatar?.engine || 'none';
+  document.getElementById('cfgAvatarImage').value = c.avatar?.image || '';
+  document.getElementById('cfgAvatarPosition').value = c.avatar?.position || 'bottom-right';
   document.getElementById('cfgBackupDir').value = c.output?.backup_dir || '';
   document.getElementById('cfgInScript').value = c.inputs?.script || '';
   document.getElementById('cfgInPptx').value = c.inputs?.pptx || '';
@@ -351,7 +363,12 @@ function bindSettingsEvents() {
   document.getElementById('cfgVoiceLanguage')?.addEventListener('change', e => {
     const defaults = { zh: 'zh-TW-HsiaoChenNeural', en: 'en-US-AriaNeural', ja: 'ja-JP-NanamiNeural', ko: 'ko-KR-SunHiNeural' };
     if (defaults[e.target.value]) document.getElementById('cfgEdgeVoice').value = defaults[e.target.value];
+    if (e.target.value === 'en') document.getElementById('cfgBilingualSubtitles').value = 'true';
   });
+  document.getElementById('draftScriptBtn')?.addEventListener('click', handleDraftScript);
+  document.getElementById('loadReviewScriptBtn')?.addEventListener('click', handleLoadReviewScript);
+  document.getElementById('approveScriptBtn')?.addEventListener('click', () => approveReviewFile('script.md'));
+  document.getElementById('translateBilingualBtn')?.addEventListener('click', handleTranslateBilingual);
   document.getElementById('saveVocabBtn').addEventListener('click', handleSaveVocab);
   document.getElementById('saveEnvBtn').addEventListener('click', handleSaveEnv);
 }
@@ -375,7 +392,12 @@ async function handleSaveJobConfig() {
     loudness: Number(document.getElementById('cfgLoudness').value || -16),
     fps: Number(document.getElementById('cfgFps').value || 30),
     burn_in: document.getElementById('cfgBurnIn').value === 'true',
+    bilingual_subtitles: document.getElementById('cfgBilingualSubtitles').value === 'true',
+    subtitle_secondary_lang: document.getElementById('cfgSubtitleSecondaryLang').value,
     subtitle_font_size: Number(document.getElementById('cfgSubtitleFontSize').value || 22),
+    avatar_engine: document.getElementById('cfgAvatarEngine').value,
+    avatar_image: document.getElementById('cfgAvatarImage').value.trim(),
+    avatar_position: document.getElementById('cfgAvatarPosition').value,
     backup_dir: document.getElementById('cfgBackupDir').value,
     inputs: {
       script: document.getElementById('cfgInScript').value,
@@ -467,6 +489,7 @@ function bindWorkflowEvents() {
   document.getElementById('approveScenesBtn').addEventListener('click', () => approveReviewFile('scenes.toml'));
   document.getElementById('renderHtmlBtn').addEventListener('click', () => runRenderEndpoint('html'));
   document.getElementById('renderPosterBtn').addEventListener('click', () => runRenderEndpoint('poster'));
+  document.getElementById('applyAvatarBtn')?.addEventListener('click', handleApplyAvatar);
   document.getElementById('checkVideoBtn').addEventListener('click', async () => {
     const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/check`);
     document.getElementById('renderLog').textContent = res.output;
@@ -496,6 +519,73 @@ async function runRenderEndpoint(mode) {
     method: 'POST', body: JSON.stringify({}),
   });
   document.getElementById('renderLog').textContent = res.output;
+  await loadJobDetail(state.currentJob);
+}
+
+/**
+ * 依使用者指令呼叫 AI 起草講稿並寫入 review/script.md。
+ * @returns {Promise<void>}
+ */
+async function handleDraftScript() {
+  if (!state.currentJob) return;
+  showToast('正在用本機 Ollama 生成講稿草稿…', 'info', 3000);
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/script/draft`, {
+    method: 'POST',
+    body: JSON.stringify({
+      instruction: document.getElementById('scriptDraftInstruction').value,
+      language: document.getElementById('cfgVoiceLanguage').value,
+      duration_sec: Number(document.getElementById('scriptDraftDuration').value || 90),
+    }),
+  });
+  document.getElementById('scriptEditor').value = res.content || '';
+  showToast(res.output || '已生成講稿草稿至 review/script.md，可修改後核可', 'success', 3200);
+}
+
+/**
+ * 載入 review/script.md 到講稿編輯區供修改。
+ * @returns {Promise<void>}
+ */
+async function handleLoadReviewScript() {
+  if (!state.currentJob) return;
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/review-script`);
+  if (!res.exists) { showToast('尚無 review/script.md 草稿', 'warning'); return; }
+  document.getElementById('scriptEditor').value = res.content;
+  showToast('已載入 review/script.md，修改後可儲存或核可', 'info');
+}
+
+/**
+ * 將目前講稿翻譯為雙語字幕對照表（work/script_bilingual.tsv）。
+ * @returns {Promise<void>}
+ */
+async function handleTranslateBilingual() {
+  if (!state.currentJob) return;
+  showToast('正在生成雙語字幕翻譯…', 'info', 3000);
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/subtitles/bilingual`, {
+    method: 'POST',
+    body: JSON.stringify({ target_lang: document.getElementById('cfgSubtitleSecondaryLang').value }),
+  });
+  showToast(res.output || '已完成雙語翻譯', 'success');
+}
+
+/**
+ * 依設定的 Avatar 引擎（路線 A SadTalker 或路線 B FFmpeg）合成講者頭像至最新影片。
+ * @returns {Promise<void>}
+ */
+async function handleApplyAvatar() {
+  if (!state.currentJob) return;
+  const engine = document.getElementById('cfgAvatarEngine').value;
+  if (engine === 'none') { showToast('請先於「2. 完整設定」選擇路線 A 或路線 B Avatar 模式', 'warning'); return; }
+  showToast(`正在合成 ${engine} Avatar 講者頭像…`, 'info', 4000);
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/avatar`, {
+    method: 'POST',
+    body: JSON.stringify({
+      engine,
+      position: document.getElementById('cfgAvatarPosition').value,
+      image_name: document.getElementById('cfgAvatarImage').value.trim(),
+    }),
+  });
+  document.getElementById('renderLog').textContent = res.output;
+  showToast('Avatar 合成完成！', 'success');
   await loadJobDetail(state.currentJob);
 }
 

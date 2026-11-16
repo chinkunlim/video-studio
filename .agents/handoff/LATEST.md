@@ -5,20 +5,32 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 03:48 UTC`
+- **最後更新時間**: `2026-11-16 03:56 UTC`
 - **最近操作 Agent**: `Antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `3df33dc feat(web): add notebooklm-batch-studio style Web UI, full settings, and agy chat planner (TASK-010) [agent:antigravity]`
+- **最新 Git Commit**: `fbf729c feat(ui): add voice language settings, toast stack, collapsible dock, and WYSIWYG layout guides [agent:Antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
 | 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
 |---|---|---|---|---|---|---|
-| **TASK-011**<br/>Upgrade Web UI with full voice/language settings, notebooklm-batch-studio layout polish, toast notifications, and WYSIWYG layout tune guides | 🟢 `in_progress` | `Antigravity` | `-` | - | - | - |
+| **TASK-012**<br/>Implement AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B) | 🟢 `in_progress` | `Antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-16 03:56 UTC] 認領任務 `TASK-012` (Implement AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B)) (by `Antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `Antigravity`
+
+### [2026-11-16 03:56 UTC] 建立任務 `TASK-012`: Implement AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B) (by `Antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
+
+### [2026-11-16 03:53 UTC] 完成任務 `TASK-011` — Upgrade Web UI with full voice/language settings, notebooklm-batch-studio layout polish, toast notifications, and WYSIWYG layout tune guides (by `Antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: (無)
 
 ### [2026-11-16 03:48 UTC] 認領任務 `TASK-011` (Upgrade Web UI with full voice/language settings, notebooklm-batch-studio layout polish, toast notifications, and WYSIWYG layout tune guides) (by `Antigravity`)
 - **相關範圍**: `-`
@@ -91,19 +103,3 @@
 ### [2026-10-21 18:14 UTC] 認領任務 `TASK-006` (更新所有 Markdown 文件與架構決策紀錄) (by `antigravity`)
 - **相關範圍**: `-`
 - **接棒自**: `antigravity`
-
-### [2026-10-21 18:14 UTC] 建立任務 `TASK-006`: 更新所有 Markdown 文件與架構決策紀錄 (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
-
-### [2026-10-21 18:05 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
-- **檢查結果**: 測試與 Code Review Guard 通過
-- **目標**: 完成 legacy 全模組遷移與所有工作流程（extract, narrate, video, job/sv, openwebui）的自動化測試，並推送到遠端儲存庫
-- **錯誤與根因**: media.check 原缺少產生 video_contact_sheet.jpg 的抽格邏輯，已依原始 legacy 邏輯回補並通過測試
-- **下一步**: 專案遷移與工作流程已全數驗證完畢並推送至 GitHub (chinkunlim/video-studio)，可開始進行新功能開發或交付使用
-- **交接備註**: 全系統 34 項測試全綠，程式碼品質檢查與 GitHub 遠端同步完成
-- **本機對話紀錄**: `.agents/conversations/2026-10-22-0205-antigravity-summary.md`（只在這台電腦）
-
-### [2026-10-21 17:58 UTC] 完成任務 `TASK-005` — 完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Completed comprehensive workflow tests for extract_audio, narrate, video, job/sv and openwebui adapter with full passing test suite.

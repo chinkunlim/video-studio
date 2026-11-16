@@ -51,3 +51,19 @@
 ### [2026-10-21 17:49 UTC] 建立任務 `TASK-005`: 完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-10-21 17:58 UTC] 完成任務 `TASK-005` — 完整測試所有工作流程（extract, narrate, video, job/sv, openwebui） (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Completed comprehensive workflow tests for extract_audio, narrate, video, job/sv and openwebui adapter with full passing test suite.
+
+### [2026-10-21 18:05 UTC] Session Closeout (結束對話收尾) (by `antigravity`)
+- **檢查結果**: 測試與 Code Review Guard 通過
+- **目標**: 完成 legacy 全模組遷移與所有工作流程（extract, narrate, video, job/sv, openwebui）的自動化測試，並推送到遠端儲存庫
+- **錯誤與根因**: media.check 原缺少產生 video_contact_sheet.jpg 的抽格邏輯，已依原始 legacy 邏輯回補並通過測試
+- **下一步**: 專案遷移與工作流程已全數驗證完畢並推送至 GitHub (chinkunlim/video-studio)，可開始進行新功能開發或交付使用
+- **交接備註**: 全系統 34 項測試全綠，程式碼品質檢查與 GitHub 遠端同步完成
+- **本機對話紀錄**: `.agents/conversations/2026-10-22-0205-antigravity-summary.md`（只在這台電腦）
+
+### [2026-10-21 18:14 UTC] 建立任務 `TASK-006`: 更新所有 Markdown 文件與架構決策紀錄 (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

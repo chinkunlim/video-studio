@@ -1,0 +1,27 @@
+{
+  "id": "TASK-012",
+  "title": "Implement AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B)",
+  "status": "in_progress",
+  "agent": "Antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-16 03:56 UTC",
+  "updated_at": "2026-11-16 03:56 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-16 03:56 UTC",
+      "action": "created_and_claimed",
+      "agent": "Antigravity"
+    },
+    {
+      "timestamp": "2026-11-16 03:56 UTC",
+      "action": "claimed",
+      "agent": "Antigravity",
+      "previous_agent": "Antigravity"
+    }
+  ]
+}

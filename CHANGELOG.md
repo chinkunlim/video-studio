@@ -10,6 +10,7 @@ All notable changes to **video-studio** are documented here
 - feat(render): integrate edge-tts dual TTS and pnpm HyperFrames HTML rendering (TASK-009) (`TASK-009`, by `@antigravity`)
 - feat(web): add notebooklm-batch-studio style Web UI, full settings, and agy chat planner (TASK-010) (`TASK-010`, by `@antigravity`)
 - feat(ui): add voice language settings, toast stack, collapsible dock, and WYSIWYG layout guides (by `@Antigravity`)
+- feat(studio): add AI script drafting, bilingual subtitles, and dual-engine Avatar presenter (Route A & B) (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

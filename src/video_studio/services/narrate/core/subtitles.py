@@ -205,7 +205,7 @@ def to_traditional(
     from opencc import OpenCC
 
     opencc_mode = cfg.get("subtitle", {}).get("opencc", "s2tw")
-    cc = OpenCC(opencc_mode)
+    cc = OpenCC(opencc_mode) if opencc_mode and opencc_mode != "none" else None
     fixes: list[tuple[str, str]] = []
     f_path = Path(fixes_path)
     if f_path.exists():
@@ -213,7 +213,7 @@ def to_traditional(
             fixes = [(r["wrong"], r["right"]) for r in csv.DictReader(f, delimiter="\t") if r.get("wrong")]
     out: list[tuple[float, float, str]] = []
     for s, e, t in cues:
-        converted = cc.convert(str(t))
+        converted = cc.convert(str(t)) if cc else str(t)
         for wrong, right in fixes:
             converted = converted.replace(wrong, right)
         out.append((float(s), float(e), re.sub(r"[。，；：、]$", "", converted)))
@@ -282,7 +282,35 @@ def _build_ass(cues: list[tuple[float, float, str]], cfg: dict[str, Any], title:
         f"[V4+ Styles]\n{ass_format_line}{ass_style_line}"
         "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
-    return header + "".join(f"Dialogue: 0,{_ass_t(s)},{_ass_t(e)},Default,,0,0,0,,{t}\n" for s, e, t in cues)
+    nl = "\\N"
+    return header + "".join(
+        f"Dialogue: 0,{_ass_t(s)},{_ass_t(e)},Default,,0,0,0,,{t.replace(chr(10), nl)}\n" for s, e, t in cues
+    )
+
+
+def attach_bilingual(
+    cues: list[tuple[float, float, str]],
+    bilingual_map: dict[str, str],
+) -> list[tuple[float, float, str]]:
+    """Attach translated secondary lines to subtitle cues for bilingual SRT/VTT/ASS output.
+
+    Args:
+        cues: Primary subtitle cues [(start, end, text), ...].
+        bilingual_map: Mapping from primary sentence text to secondary translation.
+
+    Returns:
+        Updated cues with secondary translation appended after a newline.
+    """
+    if not bilingual_map:
+        return cues
+    out: list[tuple[float, float, str]] = []
+    for s, e, text in cues:
+        clean = text.strip()
+        sec = bilingual_map.get(clean)
+        if not sec:
+            sec = next((v for k, v in bilingual_map.items() if clean and clean in k), "")
+        out.append((s, e, f"{text}\n{sec}" if sec else text))
+    return out
 
 
 def write_all(

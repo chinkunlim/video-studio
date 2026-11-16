@@ -19,6 +19,7 @@ from video_studio.config.settings import load_config as load_app_config
 from video_studio.services.common import job as J
 from video_studio.services.narrate.core import (
     audio,
+    bilingual,
     concat,
     generate,
     numbers,
@@ -96,7 +97,9 @@ def load_narrate_config(job: J.Job | None = None) -> dict[str, Any]:
     if whisper_cfg.get("model"):
         cfg["whisper"]["model"] = str(whisper_cfg["model"]).strip()
     if whisper_cfg.get("opencc_mode"):
-        cfg["whisper"]["opencc_mode"] = str(whisper_cfg["opencc_mode"]).strip()
+        mode = str(whisper_cfg["opencc_mode"]).strip()
+        cfg["whisper"]["opencc_mode"] = mode
+        cfg["subtitle"]["opencc"] = mode
     if "loudness" in job.cfg.get("output", {}):
         cfg["audio"]["loudness"] = job.cfg["output"]["loudness"]
     return cfg
@@ -301,6 +304,18 @@ def _export_subtitles_and_meta(ctx: _ExportCtx) -> list[str]:
         sub_lines.append({"text": sub_val, "words": t["words"], **tl})
     fixes_path = Path(__file__).resolve().parent / "traditional_fixes.tsv"
     cues = subtitles.to_traditional(subtitles.build_cues(sub_lines, ctx.cfg), ctx.cfg, fixes_path)
+    sub_cfg = ctx.job.cfg.get("subtitles", {})
+    want_bilingual = bool(sub_cfg.get("bilingual")) or str(ctx.cfg["voicebox"]["language"]).lower() == "en"
+    if want_bilingual:
+        bilingual_tsv = ctx.job.work / "script_bilingual.tsv"
+        if not bilingual_tsv.is_file():
+            try:
+                bilingual.translate_job_script_bilingual(
+                    ctx.job.name, str(sub_cfg.get("secondary_lang", "zh-TW"))
+                )
+            except RuntimeError as exc:
+                logger.warning("Bilingual auto-translation skipped: %s", exc)
+        cues = subtitles.attach_bilingual(cues, bilingual.load_bilingual_map(bilingual_tsv))
     files = subtitles.write_all(cues, ctx.out, ctx.cfg, ctx.job.title)
     _write_tts_vs_subtitle_tsv(ctx, takes)
     (ctx.out / "timeline.json").write_text(

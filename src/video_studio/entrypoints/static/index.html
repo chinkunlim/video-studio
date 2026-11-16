@@ -185,7 +185,29 @@
             <label class="field">燒錄字幕 (burn_in)
               <select id="cfgBurnIn"><option value="true">是 (輸出 video_subtitled.mp4)</option><option value="false">否</option></select>
             </label>
+            <label class="field">雙語字幕 (英文配音建議開啟)
+              <select id="cfgBilingualSubtitles"><option value="false">否 (單語字幕)</option><option value="true">是 (主語言 + 副語言雙行)</option></select>
+            </label>
+            <label class="field">雙語副字幕語言
+              <select id="cfgSubtitleSecondaryLang"><option value="zh-TW">繁體中文 (zh-TW)</option><option value="en">English</option><option value="ja">日本語</option></select>
+            </label>
             <label class="field">字幕字級 (px)<input type="number" id="cfgSubtitleFontSize" value="22" min="12" max="64" /></label>
+            <label class="field">Avatar 講者模式
+              <select id="cfgAvatarEngine">
+                <option value="none">不疊加 Avatar</option>
+                <option value="lightweight">路線 B：輕量動態頭像框 (FFmpeg)</option>
+                <option value="sadtalker">路線 A：SadTalker AI 對嘴模型</option>
+              </select>
+            </label>
+            <label class="field">Avatar 頭像檔名 (input/)<input type="text" id="cfgAvatarImage" placeholder="例如 einstein.png" /></label>
+            <label class="field">Avatar 視窗位置
+              <select id="cfgAvatarPosition">
+                <option value="bottom-right">右下角</option>
+                <option value="bottom-left">左下角</option>
+                <option value="top-right">右上角</option>
+                <option value="top-left">左上角</option>
+              </select>
+            </label>
             <label class="field">備份輸出目錄 (選填)<input type="text" id="cfgBackupDir" placeholder="/Volumes/..." /></label>
           </div>
           <div class="field-grid">
@@ -201,11 +223,23 @@
 
         <div class="grid-2">
           <div class="card" id="cardScript">
-            <h2>講稿編輯 (input/script.md)</h2>
+            <h2>講稿生成與編輯 (script.md)</h2>
+            <div class="field-grid">
+              <label class="field">AI 生成講稿指令（會存到 review/script.md）
+                <input type="text" id="scriptDraftInstruction" placeholder="例如：用愛因斯坦口吻介紹相對論，淺顯生動" />
+              </label>
+              <label class="field">目標秒數<input type="number" id="scriptDraftDuration" value="90" min="20" max="600" /></label>
+            </div>
+            <div class="row">
+              <button class="btn btn-soft" id="draftScriptBtn" type="button">✨ AI 生成講稿草稿</button>
+              <button class="btn btn-ghost btn-sm" id="loadReviewScriptBtn" type="button">載入 review/script.md</button>
+              <button class="btn btn-ghost btn-sm" id="approveScriptBtn" type="button">核可 review/script.md → input/</button>
+            </div>
             <textarea id="scriptEditor" style="min-height:200px;"></textarea>
             <div class="row">
-              <button class="btn" id="saveScriptBtn" type="button">儲存講稿</button>
+              <button class="btn" id="saveScriptBtn" type="button">儲存講稿 (input/script.md)</button>
               <button class="btn btn-soft" id="formatScriptBtn" type="button">自動斷句並儲存</button>
+              <button class="btn btn-ghost" id="translateBilingualBtn" type="button">🌐 翻譯雙語字幕對照</button>
             </div>
           </div>
           <div class="card" id="cardBrief">
@@ -293,8 +327,10 @@
           <div class="row">
             <button class="btn" id="renderHtmlBtn" type="button">渲染 HTML 影片 (HyperFrames)</button>
             <button class="btn btn-soft" id="renderPosterBtn" type="button">渲染海報影片 (Poster)</button>
+            <button class="btn btn-soft" id="applyAvatarBtn" type="button">🧑‍🏫 合成 Avatar 講者頭像</button>
             <button class="btn btn-ghost" id="checkVideoBtn" type="button">執行影片驗收 (video check)</button>
           </div>
+          <div class="muted" id="avatarStatusBadge">Avatar 引擎檢查中…</div>
           <pre class="logbox" id="renderLog">尚未渲染</pre>
         </div>
 

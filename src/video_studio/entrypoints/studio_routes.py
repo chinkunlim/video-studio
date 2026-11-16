@@ -12,15 +12,17 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from video_studio.config.settings import PROJECT_ROOT, load_config
-from video_studio.services import planner
+from video_studio.services import planner, script_drafter
 from video_studio.services.common import job as J
+from video_studio.services.narrate.core import bilingual
 from video_studio.services.narrate.core import script as script_mod
+from video_studio.services.video import avatar_overlay
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["studio"])
 
 SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
-ALLOWED_ENV_KEYS = ("VOICEBOX_URL", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "LOG_LEVEL")
+ALLOWED_ENV_KEYS = ("VOICEBOX_URL", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "SADTALKER_DIR", "LOG_LEVEL")
 
 
 class JobConfigUpdate(BaseModel):
@@ -37,7 +39,12 @@ class JobConfigUpdate(BaseModel):
     opencc_mode: str = Field(default="s2tw", description="OpenCC conversion (s2tw, s2t, none)")
     subtitles_formats: list[str] = Field(default_factory=lambda: ["youtube", "powerpoint", "vlc"])
     burn_in: bool = Field(default=True, description="Burn subtitles into video_subtitled.mp4")
+    bilingual_subtitles: bool = Field(default=False, description="Enable dual-language subtitles")
+    subtitle_secondary_lang: str = Field(default="zh-TW", description="Secondary subtitle language")
     subtitle_font_size: int = Field(default=22, description="Burn-in subtitle font size")
+    avatar_engine: str = Field(default="none", description="none | lightweight | sadtalker")
+    avatar_image: str = Field(default="", description="Portrait image filename inside input/")
+    avatar_position: str = Field(default="bottom-right", description="Avatar PiP corner position")
     fps: int = Field(default=30, description="Output video FPS")
     loudness: float = Field(default=-16.0, description="Target LUFS (-30 to -8)")
     backup_dir: str = Field(default="", description="Optional backup output directory")
@@ -62,6 +69,28 @@ class EnvUpdateRequest(BaseModel):
     """Editable non-secret environment settings."""
 
     values: dict[str, str] = Field(description="Allowed .env key/value pairs")
+
+
+class ScriptDraftRequest(BaseModel):
+    """Request payload for AI script generation into review/script.md."""
+
+    instruction: str = Field(default="", description="Topic or prompt for the script")
+    language: str = Field(default="zh", description="Spoken language code")
+    duration_sec: int = Field(default=90, description="Target duration in seconds")
+
+
+class BilingualRequest(BaseModel):
+    """Request payload for translating script.md into bilingual subtitles."""
+
+    target_lang: str = Field(default="zh-TW", description="Target secondary subtitle language")
+
+
+class AvatarApplyRequest(BaseModel):
+    """Request payload for compositing an avatar presenter onto the rendered video."""
+
+    engine: str = Field(default="lightweight", description="lightweight | sadtalker")
+    position: str = Field(default="bottom-right", description="Corner placement")
+    image_name: str = Field(default="", description="Optional portrait image filename inside input/")
 
 
 def _toml_str(val: str) -> str:
@@ -112,7 +141,14 @@ def _serialize_job_toml(job_type: str, req: JobConfigUpdate) -> str:
         "[subtitles]",
         f"formats = [{fmts}]",
         f"burn_in = {'true' if req.burn_in else 'false'}",
+        f"bilingual = {'true' if req.bilingual_subtitles else 'false'}",
+        f"secondary_lang = {_toml_str(req.subtitle_secondary_lang)}",
         f"font_size = {req.subtitle_font_size}",
+        "",
+        "[avatar]",
+        f"engine = {_toml_str(req.avatar_engine)}",
+        f"image = {_toml_str(req.avatar_image)}",
+        f"position = {_toml_str(req.avatar_position)}",
         "",
         "[output]",
         f"fps = {req.fps}",
@@ -315,7 +351,8 @@ def get_env_settings() -> dict[str, str]:
     return {
         "VOICEBOX_URL": cfg.voicebox_url,
         "OLLAMA_BASE_URL": cfg.ollama_base_url,
-        "OLLAMA_MODEL": "qwen2.5",
+        "OLLAMA_MODEL": cfg.ollama_model,
+        "SADTALKER_DIR": str(cfg.sadtalker_dir or ""),
         "LOG_LEVEL": cfg.log_level,
     }
 
@@ -347,3 +384,99 @@ def update_env_settings(req: EnvUpdateRequest) -> dict[str, Any]:
             new_lines.append(f"{k}={v}")
     env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
     return {"ok": True, "output": "已更新 .env 全域設定"}
+
+
+@router.post("/api/jobs/{job_name}/script/draft")
+def draft_script_route(job_name: str, req: ScriptDraftRequest) -> dict[str, Any]:
+    """Generate a structured script.md draft into review/script.md via local Ollama.
+
+    Args:
+        job_name: Target job name.
+        req: ScriptDraftRequest payload.
+
+    Returns:
+        Path and generated script content.
+    """
+    try:
+        path, content = script_drafter.draft_script_to_review(
+            job_name=job_name,
+            instruction=req.instruction,
+            language=req.language,
+            duration_sec=req.duration_sec,
+        )
+        return {"ok": True, "path": str(path), "content": content, "output": f"已生成講稿草稿至 {path.name}"}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/api/jobs/{job_name}/review-script")
+def get_review_script(job_name: str) -> dict[str, Any]:
+    """Return review/script.md content if present for editing/approval.
+
+    Args:
+        job_name: Target job name.
+
+    Returns:
+        Dictionary with exists flag and content string.
+    """
+    path = J.find(job_name).review / "script.md"
+    if not path.is_file():
+        return {"exists": False, "content": ""}
+    return {"exists": True, "content": path.read_text(encoding="utf-8")}
+
+
+@router.post("/api/jobs/{job_name}/subtitles/bilingual")
+def generate_bilingual_route(job_name: str, req: BilingualRequest) -> dict[str, Any]:
+    """Translate input/script.md into work/script_bilingual.tsv for dual-language subtitles.
+
+    Args:
+        job_name: Target job name.
+        req: BilingualRequest specifying target secondary language.
+
+    Returns:
+        Summary dictionary with TSV path and line count.
+    """
+    try:
+        tsv_path, count = bilingual.translate_job_script_bilingual(job_name, req.target_lang)
+        return {"ok": True, "path": str(tsv_path), "count": count, "output": f"已完成 {count} 句雙語字幕翻譯"}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/api/avatar/status")
+def get_avatar_status_route() -> dict[str, Any]:
+    """Return availability status of Route B (lightweight) and Route A (SadTalker).
+
+    Returns:
+        Engine readiness dictionary.
+    """
+    return avatar_overlay.get_avatar_status()
+
+
+@router.post("/api/jobs/{job_name}/video/avatar")
+def apply_avatar_route(job_name: str, req: AvatarApplyRequest) -> dict[str, Any]:
+    """Generate and overlay an Avatar presenter onto the latest rendered job video.
+
+    Args:
+        job_name: Target job name.
+        req: AvatarApplyRequest specifying engine, corner position, and image name.
+
+    Returns:
+        Result dictionary with generated clip and composited video paths.
+    """
+    try:
+        res = avatar_overlay.apply_avatar_to_job(
+            job_name=job_name,
+            engine=req.engine,
+            position=req.position,
+            image_name=req.image_name,
+        )
+        return {
+            "ok": True,
+            "engine": res.engine,
+            "avatar_video": str(res.avatar_video),
+            "composited_video": str(res.composited_video or ""),
+            "output": f"已完成 {res.engine} Avatar 合成：{res.composited_video}",
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

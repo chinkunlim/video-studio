@@ -75,7 +75,8 @@ video-studio/
 │   │   ├── TASK-008-add-fastapi-http-api-mcp-server-.json
 │   │   ├── TASK-009-add-edge-tts-dual-tts-engine-and.json
 │   │   ├── TASK-010-build-notebooklm-batch-studio-st.json
-│   │   └── TASK-011-upgrade-web-ui-with-full-voice-l.json
+│   │   ├── TASK-011-upgrade-web-ui-with-full-voice-l.json
+│   │   └── TASK-012-implement-ai-script-drafting-bil.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -101,6 +102,7 @@ video-studio/
 │   │   ├── 002-workspace-isolation-and-review.md
 │   │   ├── 003-dual-video-rendering-engines.md
 │   │   ├── 004-dual-tts-and-html-render.md
+│   │   ├── 005-dual-avatar-script-bilingual.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -185,7 +187,8 @@ video-studio/
 │       │   │   ├── check.py
 │       │   │   ├── check_media.py
 │       │   │   ├── job.py
-│       │   │   └── material.py
+│       │   │   ├── material.py
+│       │   │   └── ollama_client.py
 │       │   ├── extract_audio/
 │       │   │   ├── __init__.py
 │       │   │   └── extract.py
@@ -193,6 +196,7 @@ video-studio/
 │       │   │   ├── core/
 │       │   │   │   ├── __init__.py
 │       │   │   │   ├── audio.py
+│       │   │   │   ├── bilingual.py
 │       │   │   │   ├── concat.py
 │       │   │   │   ├── edge_tts_client.py
 │       │   │   │   ├── generate.py
@@ -211,6 +215,7 @@ video-studio/
 │       │   │   ├── engine/
 │       │   │   │   ├── __init__.py
 │       │   │   │   ├── align.py
+│       │   │   │   ├── avatar_engine.py
 │       │   │   │   ├── html_render.py
 │       │   │   │   ├── media.py
 │       │   │   │   ├── overlay.py
@@ -219,10 +224,12 @@ video-studio/
 │       │   │   │   ├── storyboard.py
 │       │   │   │   └── timing.py
 │       │   │   ├── __init__.py
+│       │   │   ├── avatar_overlay.py
 │       │   │   ├── config.toml
 │       │   │   └── video.py
 │       │   ├── __init__.py
 │       │   ├── planner.py
+│       │   ├── script_drafter.py
 │       │   └── sv.py
 │       └── __init__.py
 ├── templates/
@@ -245,6 +252,7 @@ video-studio/
 ├── tests/                                  # 【測試層】單元與整合測試
 │   ├── __init__.py
 │   ├── test_api_and_mcp.py
+│   ├── test_avatar_script_bilingual.py
 │   ├── test_cli.py
 │   ├── test_dual_tts_and_html.py
 │   ├── test_openwebui_tool.py

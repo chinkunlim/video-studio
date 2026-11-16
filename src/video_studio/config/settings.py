@@ -77,7 +77,9 @@ class AppConfig:
     log_to_file: bool = True
     timeout_seconds: int = 15
     ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "qwen2.5:latest"
     voicebox_url: str = "http://127.0.0.1:17493"
+    sadtalker_dir: Path | None = None
     http_host: str = "127.0.0.1"
     http_port: int = 8772
     http_allowed_origins: tuple[str, ...] = ("http://127.0.0.1:8772", "http://127.0.0.1:8080")
@@ -178,13 +180,17 @@ def load_config() -> AppConfig:
     data_dir = resolve_data_dir(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR))
     ws_env = os.environ.get("SPLIT_VOICE_WORKSPACE", "").strip()
     workspace_dir = Path(ws_env).expanduser() if ws_env else None
+    sad_env = os.environ.get("SADTALKER_DIR", "").strip()
+    sadtalker_dir = Path(sad_env).expanduser() if sad_env else (data_dir / "models" / "SadTalker")
     return AppConfig(
         app_env=os.environ.get("APP_ENV", "development").strip(),
         log_level=os.environ.get("LOG_LEVEL", "INFO").strip().upper(),
         log_to_file=_flag(os.environ.get("LOG_TO_FILE", "true")),
         timeout_seconds=int(os.environ.get("API_TIMEOUT_SECONDS", "15")),
         ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434").strip().rstrip("/"),
+        ollama_model=os.environ.get("OLLAMA_MODEL", "qwen2.5:latest").strip(),
         voicebox_url=os.environ.get("VOICEBOX_URL", "http://127.0.0.1:17493").strip().rstrip("/"),
+        sadtalker_dir=sadtalker_dir,
         http_host=os.environ.get("HTTP_HOST", "127.0.0.1").strip(),
         http_port=int(os.environ.get("HTTP_PORT", "8772")),
         http_allowed_origins=_csv(
