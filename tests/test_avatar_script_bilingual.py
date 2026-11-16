@@ -102,6 +102,16 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         self.assertIn("沿用海報設計", prompt)
         self.assertIn("跨語系海報翻譯", prompt)
 
+        from video_studio.services.planner import parse_agy_stream_line
+
+        init_ev = parse_agy_stream_line('{"event":"init","init":{"model":"gemini-4-argon-high"}}')
+        self.assertEqual(init_ev, {"kind": "init", "model": "gemini-4-argon-high"})
+        res_ev = parse_agy_stream_line(
+            '{"event":"result","result":{"status":"SUCCESS","response":"Done","duration_seconds":3.5}}'
+        )
+        self.assertEqual(res_ev["kind"], "result")
+        self.assertEqual(res_ev["response"], "Done")
+
         js = self.client.get("/studio-prosody.js")
         self.assertEqual(js.status_code, 200)
         self.assertIn("wrapScriptProsody", js.text)

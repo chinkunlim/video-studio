@@ -72,11 +72,14 @@ function updateTerminalProgress(lines) {
     const cur = Number(matches[matches.length - 1][1]);
     pct = Math.min(98, Math.round((cur / totalLines) * 100));
     status = `配音/對齊第 ${cur}/${totalLines} 句`;
-  } else if (typeof state !== 'undefined' && state.busyPlan) {
-    pct = 55;
-    status = 'agy-cli 規劃分鏡中';
+  } else if (/\[agy\] 步驟/.test(tailText)) {
+    pct = 65;
+    status = 'agy-cli 執行工具與撰寫中';
+  } else if (/\[agy\] (開始|啟動模型|執行單次)/.test(tailText) || (typeof state !== 'undefined' && state.busyPlan)) {
+    pct = 30;
+    status = 'agy-cli 啟動規劃中';
   }
-  if (/完成：|Drafted review script|Applied .* avatar overlay|已儲存/.test(lines.slice(-4).join('\n'))) {
+  if (/完成：|\[agy\] 完成|Drafted review script|Applied .* avatar overlay|已儲存/.test(lines.slice(-4).join('\n'))) {
     pct = 100;
     status = '已完成';
   }

@@ -690,7 +690,7 @@ async function handleDraftScript() {
       instruction: document.getElementById('scriptDraftInstruction').value,
       language: document.getElementById('cfgVoiceLanguage').value,
       duration_sec: Number(document.getElementById('scriptDraftDuration').value || 90),
-      model: document.getElementById('planModelSelect')?.value || '',
+      model: document.getElementById('scriptModelSelect')?.value || '',
     }),
   });
   document.getElementById('scriptEditor').value = res.content || '';

@@ -122,20 +122,57 @@ async function restoreOriginalScript() {
 }
 
 /**
- * 載入本機 agy CLI 可用模型清單至選擇器。
+ * 依推薦順序（1、2、3 標註）建立模型下拉選單 HTML。
+ * @param {Array<{id: string, label: string}>} models 可用模型清單。
+ * @param {string[]} recs 推薦排序的模型 ID 陣列。
+ * @param {Record<string, string>} notes 推薦說明標籤。
+ * @returns {string} HTML option 字串。
+ */
+function _buildRankedModelOptions(models, recs, notes) {
+  const byId = new Map((models || []).map(m => [m.id, m.label]));
+  const seen = new Set();
+  const opts = [];
+  recs.forEach((id, i) => {
+    seen.add(id);
+    const lbl = byId.get(id) || id;
+    opts.push(`<option value="${esc(id)}">${i + 1}. ${esc(lbl)}（${esc(notes[id] || '推薦')}）</option>`);
+  });
+  for (const m of models || []) {
+    if (!seen.has(m.id)) opts.push(`<option value="${esc(m.id)}">${esc(m.label)} (${esc(m.id)})</option>`);
+  }
+  opts.push('<option value="">交由 agy CLI 預設決定</option>');
+  return opts.join('');
+}
+
+/**
+ * 載入本機 agy CLI 可用模型清單至各階段選擇器（含 1、2、3 建議排序）。
  * @returns {Promise<void>}
  */
 async function loadAgyModels() {
+  const selScript = document.getElementById('scriptModelSelect');
   const selMain = document.getElementById('planModelSelect');
   const selDrawer = document.getElementById('qaModelSelect');
-  if (!selMain && !selDrawer) return;
   const res = await api('/api/agy/models').catch(() => ({ models: [] }));
-  const opts = ['<option value="">預設 (agy 預設模型)</option>'].concat(
-    (res.models || []).map(m => `<option value="${esc(m.id)}">${esc(m.label)} (${esc(m.id)})</option>`)
-  );
-  const html = opts.join('');
-  if (selMain) selMain.innerHTML = html;
-  if (selDrawer) selDrawer.innerHTML = html;
+  const models = res.models || [];
+  const scriptRecs = ['gemini-4-argon-medium', 'gemini-3.8-flash-high', 'gemini-4-hydrogen-medium'];
+  const scriptNotes = {
+    'gemini-4-argon-medium': '★ 推薦主力：快又準',
+    'gemini-3.8-flash-high': '極速草稿與翻譯',
+    'gemini-4-hydrogen-medium': '深度邏輯潤飾',
+  };
+  const planRecs = ['gemini-4-argon-high', 'gemini-4-hydrogen-high', 'claude-sonnet-5-5-high'];
+  const planNotes = {
+    'gemini-4-argon-high': '★ 推薦平衡：速度與畫質兼顧',
+    'gemini-4-hydrogen-high': '最高畫質：複雜海報與 GSAP 首選',
+    'claude-sonnet-5-5-high': '前端動畫精修備選',
+  };
+  if (selScript) {
+    selScript.innerHTML = _buildRankedModelOptions(models, scriptRecs, scriptNotes);
+    selScript.value = scriptRecs[0];
+  }
+  const planHtml = _buildRankedModelOptions(models, planRecs, planNotes);
+  if (selMain) { selMain.innerHTML = planHtml; selMain.value = planRecs[0]; }
+  if (selDrawer) { selDrawer.innerHTML = planHtml; selDrawer.value = planRecs[0]; }
 }
 
 /**
@@ -168,7 +205,7 @@ async function handleTranslateBilingual() {
     method: 'POST',
     body: JSON.stringify({
       target_lang: document.getElementById('cfgSubtitleSecondaryLang').value,
-      model: document.getElementById('planModelSelect')?.value || '',
+      model: document.getElementById('scriptModelSelect')?.value || '',
     }),
   });
   showToast(res.output || '已完成雙語翻譯', 'success');

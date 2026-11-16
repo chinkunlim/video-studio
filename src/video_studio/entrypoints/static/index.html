@@ -267,6 +267,11 @@
                 <input type="text" id="scriptDraftInstruction" placeholder="例如：用愛因斯坦口吻介紹相對論，淺顯生動" />
               </label>
               <label class="field">目標秒數<input type="number" id="scriptDraftDuration" value="90" min="20" max="600" /></label>
+              <label class="field">講稿／翻譯模型 (agy CLI)
+                <select id="scriptModelSelect">
+                  <option value="gemini-4-argon-medium">1. Gemini 4 Argon (Medium) ★推薦</option>
+                </select>
+              </label>
             </div>
             <div class="row">
               <button class="btn btn-soft" id="draftScriptBtn" type="button">✨ AI 生成講稿草稿</button>

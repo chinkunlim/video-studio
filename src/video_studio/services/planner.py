@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import shutil
 import subprocess
@@ -129,19 +130,97 @@ def build_plan_prompt(
     )
 
 
+def parse_agy_stream_line(raw: str) -> dict[str, Any]:
+    """Parse one NDJSON line emitted by `agy -p --output-format stream-json`.
+
+    Args:
+        raw: Single line from agy stdout.
+
+    Returns:
+        Normalized event dictionary with 'kind' ('init', 'delta', 'step', 'result', or 'text').
+    """
+    text = raw.strip()
+    if not text:
+        return {"kind": "empty"}
+    try:
+        ev = json.loads(text)
+    except ValueError:
+        return {"kind": "text", "text": text}
+    etype = ev.get("event")
+    if etype == "init":
+        return {"kind": "init", "model": str(ev.get("init", {}).get("model", ""))}
+    if etype == "step_update":
+        su = ev.get("step_update", {})
+        return {
+            "kind": "step",
+            "step_type": str(su.get("step_type", "")),
+            "state": str(su.get("state", "")),
+            "delta": str(su.get("text_delta", "")),
+        }
+    if etype == "result":
+        res = ev.get("result", {})
+        return {
+            "kind": "result",
+            "status": str(res.get("status", "")),
+            "response": str(res.get("response", "")).strip(),
+            "duration": float(res.get("duration_seconds", 0.0) or 0.0),
+        }
+    return {"kind": "empty"}
+
+
+def _handle_stream_event(ev: dict[str, Any], run: PlanRun, buf: list[str]) -> None:
+    """Update PlanRun state and app.log from a parsed stream-json event.
+
+    Args:
+        ev: Parsed event from parse_agy_stream_line.
+        run: Active PlanRun instance.
+        buf: Accumulator for streamed text_delta chunks.
+    """
+    kind = ev.get("kind")
+    if kind == "init":
+        logger.info("[agy] 啟動模型：%s (job=%s)", ev.get("model") or "default", run.job_name)
+    elif kind == "step":
+        delta = ev.get("delta", "")
+        if delta:
+            buf.append(delta)
+            with _LOCK:
+                run.lines = "".join(buf).splitlines()
+        elif ev.get("step_type") not in ("", "user_input"):
+            logger.info("[agy] 步驟 %s (%s)", ev.get("step_type"), ev.get("state"))
+    elif kind == "result":
+        logger.info("[agy] 完成狀態：%s（耗時 %.1fs）", ev.get("status"), ev.get("duration", 0.0))
+        resp = ev.get("response", "")
+        if resp:
+            with _LOCK:
+                run.lines = resp.splitlines()
+    elif kind == "text":
+        with _LOCK:
+            run.lines.append(str(ev.get("text", "")))
+
+
 def _run_agy_worker(run: PlanRun, agy_bin: str) -> None:
-    """Execute agy -p in a background thread and stream output lines.
+    """Execute agy -p --output-format stream-json in a background thread and log progress.
 
     Args:
         run: PlanRun state object to update.
         agy_bin: Resolved path to agy executable.
     """
     try:
-        cmd = [agy_bin, "-p", run.prompt, "--mode", "accept-edits", "--dangerously-skip-permissions"]
+        cmd = [
+            agy_bin,
+            "-p",
+            run.prompt,
+            "--mode",
+            "accept-edits",
+            "--output-format",
+            "stream-json",
+            "--dangerously-skip-permissions",
+        ]
         if run.job_dir:
             cmd.extend(["--add-dir", str(run.job_dir)])
         if run.model.strip():
             cmd.extend(["--model", run.model.strip()])
+        logger.info("[agy] 開始分鏡規劃 (model=%s, job=%s)", run.model or "default", run.job_name)
         proc = subprocess.Popen(
             cmd,
             cwd=PROJECT_ROOT,
@@ -151,10 +230,10 @@ def _run_agy_worker(run: PlanRun, agy_bin: str) -> None:
             encoding="utf-8",
             errors="replace",
         )
+        buf: list[str] = []
         if proc.stdout:
             for line in proc.stdout:
-                with _LOCK:
-                    run.lines.append(line.rstrip("\n"))
+                _handle_stream_event(parse_agy_stream_line(line), run, buf)
         rc = proc.wait()
         with _LOCK:
             run.returncode = rc
@@ -210,7 +289,7 @@ def run_agy_prompt(
     timeout: int = 180,
     add_dir: Path | None = None,
 ) -> str | None:
-    """Run a synchronous one-shot `agy -p` prompt as the primary AI brain.
+    """Run a synchronous one-shot `agy -p --output-format stream-json` prompt and log progress.
 
     Args:
         prompt: Prompt text for agy CLI.
@@ -224,22 +303,45 @@ def run_agy_prompt(
     agy_bin = _resolve_agy_bin()
     if not agy_bin:
         return None
-    cmd = [agy_bin, "-p", prompt, "--dangerously-skip-permissions"]
+    cmd = [agy_bin, "-p", prompt, "--output-format", "stream-json", "--dangerously-skip-permissions"]
     if add_dir:
         cmd.extend(["--add-dir", str(add_dir)])
     if model.strip():
         cmd.extend(["--model", model.strip()])
+    logger.info("[agy] 執行單次任務 (model=%s)", model or "default")
     try:
-        proc = subprocess.run(
-            cmd, cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=timeout, check=False
+        proc = subprocess.Popen(
+            cmd,
+            cwd=PROJECT_ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            errors="replace",
         )
+        final_resp = ""
+        deltas: list[str] = []
+        if proc.stdout:
+            for raw in proc.stdout:
+                ev = parse_agy_stream_line(raw)
+                if ev.get("kind") == "init":
+                    logger.info("[agy] 確認模型：%s", ev.get("model") or "default")
+                elif ev.get("kind") == "step":
+                    if ev.get("delta"):
+                        deltas.append(str(ev["delta"]))
+                    elif ev.get("step_type") not in ("", "user_input"):
+                        logger.info("[agy] 步驟 %s (%s)", ev.get("step_type"), ev.get("state"))
+                elif ev.get("kind") == "result":
+                    logger.info("[agy] 完成 (%s, %.1fs)", ev.get("status"), ev.get("duration", 0.0))
+                    final_resp = str(ev.get("response", "")).strip()
+        rc = proc.wait(timeout=timeout)
     except Exception as exc:
         logger.warning("agy -p failed, will allow Ollama fallback: %s", exc)
         return None
-    if proc.returncode != 0 or not proc.stdout.strip():
-        logger.warning("agy -p exited %s: %s", proc.returncode, proc.stderr.strip())
+    out_text = final_resp or "".join(deltas).strip()
+    if rc != 0 or not out_text:
+        logger.warning("agy -p exited %s (empty output)", rc)
         return None
-    return proc.stdout.strip()
+    return out_text
 
 
 def start_agy_plan(
