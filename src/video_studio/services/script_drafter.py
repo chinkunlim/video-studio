@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 import logging
+import re
+import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
+
+from pypdf import PdfReader
 
 from video_studio.config.settings import load_config as load_app_config
 from video_studio.services.common import job as J
@@ -65,6 +70,73 @@ def build_script_draft_prompt(
     )
 
 
+def _extract_pdf_text(pdf_path: Path, max_chars: int = 12000) -> str:
+    """Extract readable text from a PDF document up to max_chars.
+
+    Args:
+        pdf_path: Path to PDF file.
+        max_chars: Maximum characters to include in prompt context.
+
+    Returns:
+        Extracted text summary.
+    """
+    try:
+        reader = PdfReader(str(pdf_path))
+        chunks = [page.extract_text() or "" for page in reader.pages]
+        return "\n".join(chunks).strip()[:max_chars]
+    except Exception as exc:
+        logger.warning("Failed reading PDF %s: %s", pdf_path, exc)
+        return ""
+
+
+def _extract_pptx_text(pptx_path: Path, max_chars: int = 6000) -> str:
+    """Extract slide-by-slide text from a PPTX archive using standard zipfile/XML.
+
+    Args:
+        pptx_path: Path to PPTX file.
+        max_chars: Maximum characters to include in prompt context.
+
+    Returns:
+        Slide-annotated text content.
+    """
+    try:
+        slides_out: list[str] = []
+        with zipfile.ZipFile(pptx_path) as zf:
+            names = sorted(n for n in zf.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", n))
+            for idx, name in enumerate(names, 1):
+                root = ET.fromstring(zf.read(name))
+                texts = [el.text.strip() for el in root.iter() if el.tag.endswith("}t") and el.text]
+                if texts:
+                    slides_out.append(f"[投影片 {idx}] " + " / ".join(texts))
+        return "\n".join(slides_out)[:max_chars]
+    except Exception as exc:
+        logger.warning("Failed reading PPTX %s: %s", pptx_path, exc)
+        return ""
+
+
+def _collect_input_context(job: J.Job) -> str:
+    """Collect file listing plus extracted PDF and PPTX text from job.input/.
+
+    Args:
+        job: Loaded Job instance.
+
+    Returns:
+        Structured text block summarizing uploaded materials.
+    """
+    in_files = sorted(p.name for p in job.input.iterdir() if p.is_file()) if job.input.is_dir() else []
+    parts = [f"目錄：{job.input}", f"檔案：{', '.join(in_files) if in_files else '無'}"]
+    for p in sorted(job.input.iterdir()) if job.input.is_dir() else []:
+        if p.suffix.lower() == ".pdf":
+            txt = _extract_pdf_text(p)
+            if txt:
+                parts.append(f"\n--- {p.name} 內文摘錄 ---\n{txt}")
+        elif p.suffix.lower() == ".pptx":
+            txt = _extract_pptx_text(p)
+            if txt:
+                parts.append(f"\n--- {p.name} 投影片文字 ---\n{txt}")
+    return "\n".join(parts)
+
+
 def draft_script_to_review(
     job_name: str,
     instruction: str,
@@ -91,13 +163,11 @@ def draft_script_to_review(
     job = J.find(job_name)
     brief_path = job.input / "brief.md"
     brief_text = brief_path.read_text(encoding="utf-8") if brief_path.exists() else ""
-    in_files = sorted(p.name for p in job.input.iterdir() if p.is_file()) if job.input.is_dir() else []
-    files_str = ", ".join(in_files) if in_files else "無"
-    input_ctx = f"目錄：{job.input}\n檔案：{files_str}（若有 PDF/PPTX 請優先讀取內容再撰稿）"
+    input_ctx = _collect_input_context(job)
     prompt = build_script_draft_prompt(
         job.title, brief_text, instruction, language, duration_sec, input_context=input_ctx
     )
-    raw = run_agy_prompt(prompt, model=model or "")
+    raw = run_agy_prompt(prompt, model=model or "", add_dir=job.dir)
     if raw is None:
         if not is_ollama_reachable(app_cfg.ollama_base_url):
             raise RuntimeError(
@@ -108,6 +178,7 @@ def draft_script_to_review(
             base_url=app_cfg.ollama_base_url,
             model=app_cfg.ollama_model,
         )
+    raw = re.sub(r"^(#+ .+)$", r"\1\n", raw, flags=re.MULTILINE)
     formatted = split_sentences(raw)
     job.review.mkdir(parents=True, exist_ok=True)
     out_path = job.review / "script.md"

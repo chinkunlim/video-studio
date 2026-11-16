@@ -25,6 +25,7 @@ class PlanRun:
     job_name: str
     prompt: str
     model: str = ""
+    job_dir: Path | None = None
     status: str = "running"
     lines: list[str] = field(default_factory=list)
     error: str | None = None
@@ -129,7 +130,9 @@ def _run_agy_worker(run: PlanRun, agy_bin: str) -> None:
         agy_bin: Resolved path to agy executable.
     """
     try:
-        cmd = [agy_bin, "-p", run.prompt, "--mode", "accept-edits"]
+        cmd = [agy_bin, "-p", run.prompt, "--mode", "accept-edits", "--dangerously-skip-permissions"]
+        if run.job_dir:
+            cmd.extend(["--add-dir", str(run.job_dir)])
         if run.model.strip():
             cmd.extend(["--model", run.model.strip()])
         proc = subprocess.Popen(
@@ -194,13 +197,19 @@ def list_agy_models() -> list[dict[str, str]]:
     return models
 
 
-def run_agy_prompt(prompt: str, model: str = "", timeout: int = 180) -> str | None:
+def run_agy_prompt(
+    prompt: str,
+    model: str = "",
+    timeout: int = 180,
+    add_dir: Path | None = None,
+) -> str | None:
     """Run a synchronous one-shot `agy -p` prompt as the primary AI brain.
 
     Args:
         prompt: Prompt text for agy CLI.
         model: Optional agy model ID.
         timeout: Subprocess timeout in seconds.
+        add_dir: Optional external directory to grant agy read/write access.
 
     Returns:
         Response text if agy succeeded, or None if agy is unavailable or failed.
@@ -208,7 +217,9 @@ def run_agy_prompt(prompt: str, model: str = "", timeout: int = 180) -> str | No
     agy_bin = _resolve_agy_bin()
     if not agy_bin:
         return None
-    cmd = [agy_bin, "-p", prompt]
+    cmd = [agy_bin, "-p", prompt, "--dangerously-skip-permissions"]
+    if add_dir:
+        cmd.extend(["--add-dir", str(add_dir)])
     if model.strip():
         cmd.extend(["--model", model.strip()])
     try:
@@ -254,7 +265,7 @@ def start_agy_plan(
             "prompt": prompt,
             "error": "找不到 agy CLI，請複製提示詞到 Antigravity App 執行。",
         }
-    run = PlanRun(run_id=run_id, job_name=job_name, prompt=prompt, model=model)
+    run = PlanRun(run_id=run_id, job_name=job_name, prompt=prompt, model=model, job_dir=J.find(job_name).dir)
     with _LOCK:
         _RUNS[run_id] = run
     threading.Thread(target=_run_agy_worker, args=(run, agy_bin), daemon=True).start()
