@@ -14,3 +14,4 @@
 | [`002-video-engine.md`](002-video-engine.md) | Implemented | 影片合成與渲染引擎（PowerPoint 與海報分鏡模式） |
 | [`003-templates-and-inputs.md`](003-templates-and-inputs.md) | Implemented | 工作範本與輸入規格（job.toml、script.md、scenes.toml） |
 | [`004-fastapi-mcp-server.md`](004-fastapi-mcp-server.md) | Implemented | FastAPI HTTP API、MCP Server 與輕量管理網頁（127.0.0.1:8772） |
+| [`005-dual-tts-and-html-render.md`](005-dual-tts-and-html-render.md) | Implemented | 雙 TTS（Voicebox + edge-tts）與 HTML/GSAP/HyperFrames 渲染模式 |

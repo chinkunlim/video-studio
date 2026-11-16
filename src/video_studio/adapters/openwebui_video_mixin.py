@@ -103,6 +103,26 @@ class OpenWebUIVideoMixin:
             lambda: self._runner.run_command(cmd, __event_emitter__, "PowerPoint 影片"),
         )
 
+    async def video_from_html(
+        self,
+        job: str,
+        __event_emitter__: EventEmitter | None = None,
+    ) -> str:
+        """HTML/GSAP 影片：使用專案內 HyperFrames 將 input/index.html 渲染成影片、合成配音、燒字幕、驗收。
+
+        Args:
+            job: 工作名称。
+            __event_emitter__: Open WebUI 状态回报函式。
+
+        Returns:
+            HTML 影片合成結果。
+        """
+        cmd = ["video", "html", self._job(job)]
+        return await self._runner.guard(
+            __event_emitter__,
+            lambda: self._runner.run_command(cmd, __event_emitter__, "HyperFrames HTML 影片"),
+        )
+
     async def video_mux(
         self,
         job: str,

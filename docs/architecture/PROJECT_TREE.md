@@ -72,7 +72,8 @@ video-studio/
 │   │   ├── TASK-005-extract-narrate-video-job-sv-ope.json
 │   │   ├── TASK-006-markdown.json
 │   │   ├── TASK-007-refactor-oversized-functions-and.json
-│   │   └── TASK-008-add-fastapi-http-api-mcp-server-.json
+│   │   ├── TASK-008-add-fastapi-http-api-mcp-server-.json
+│   │   └── TASK-009-add-edge-tts-dual-tts-engine-and.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -97,6 +98,7 @@ video-studio/
 │   │   ├── 001-openwebui-adapter-architecture.md
 │   │   ├── 002-workspace-isolation-and-review.md
 │   │   ├── 003-dual-video-rendering-engines.md
+│   │   ├── 004-dual-tts-and-html-render.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -114,6 +116,7 @@ video-studio/
 │   │   ├── 002-video-engine.md
 │   │   ├── 003-templates-and-inputs.md
 │   │   ├── 004-fastapi-mcp-server.md
+│   │   ├── 005-dual-tts-and-html-render.md
 │   │   ├── _TEMPLATE.md                    # 規格範本
 │   │   └── SPECS.md                        # 規格清單
 │   ├── standards/                          # [工程規範] 依任務載入 (Progressive Disclosure)
@@ -184,6 +187,7 @@ video-studio/
 │       │   │   │   ├── __init__.py
 │       │   │   │   ├── audio.py
 │       │   │   │   ├── concat.py
+│       │   │   │   ├── edge_tts_client.py
 │       │   │   │   ├── generate.py
 │       │   │   │   ├── numbers.py
 │       │   │   │   ├── script.py
@@ -200,6 +204,7 @@ video-studio/
 │       │   │   ├── engine/
 │       │   │   │   ├── __init__.py
 │       │   │   │   ├── align.py
+│       │   │   │   ├── html_render.py
 │       │   │   │   ├── media.py
 │       │   │   │   ├── overlay.py
 │       │   │   │   ├── poster.py
@@ -233,6 +238,7 @@ video-studio/
 │   ├── __init__.py
 │   ├── test_api_and_mcp.py
 │   ├── test_cli.py
+│   ├── test_dual_tts_and_html.py
 │   ├── test_openwebui_tool.py
 │   ├── test_services_core.py
 │   ├── test_workflow_extract.py
@@ -251,6 +257,8 @@ video-studio/
 ├── CLAUDE.md                               # [Agent 轉接檔] Claude Code 入口，匯入 AGENTS.md (自動產生)
 ├── GEMINI.md                               # [Agent 轉接檔] Gemini CLI 入口，指向 AGENTS.md (自動產生)
 ├── opencode.json                           # [AI 工具] OpenCode 的專案設定（MCP）
+├── package.json                            # [Node 設定] 版本、scripts、packageManager (pnpm 版本)
+├── pnpm-workspace.yaml
 ├── pyproject.toml                          # [PEP 621 單一真相來源] Python 中繼資料、依賴分組、pytest 與 ruff 設定
 └── README.md                               # [唯一 README] 專案入口、快速開始與文件索引
 ```

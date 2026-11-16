@@ -21,7 +21,9 @@ mode = "auto"                     # auto | pptx-export | pptx-storyboard | poste
                                   # none：只要配音和字幕，不做影片
 
 [voice]
+engine = "voicebox"               # voicebox（本機聲音複製）| edge-tts（免啟動 Voicebox，台灣腔）
 profile = "My Voice"              # Voicebox 里复制声音的名称
+edge_voice = "zh-TW-HsiaoChenNeural"  # engine = "edge-tts" 時使用的聲線
 
 [subtitles]
 formats = ["youtube", "powerpoint", "vlc"]   # 要哪几种，可删

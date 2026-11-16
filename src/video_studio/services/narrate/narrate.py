@@ -27,6 +27,7 @@ from video_studio.services.narrate.core import (
     vocab,
     whisper,
 )
+from video_studio.services.narrate.core.edge_tts_client import DEFAULT_EDGE_VOICE, EdgeTTSClient
 from video_studio.services.narrate.core.takes import TakeEntry, Takes
 from video_studio.services.narrate.core.takes import key as take_key
 from video_studio.services.narrate.core.voicebox import Voicebox
@@ -51,6 +52,7 @@ def _default_narrate_config(voicebox_url: str) -> dict[str, Any]:
             "cleanup": True,
             "timeout": 180,
         },
+        "tts": {"engine": "voicebox", "edge_voice": DEFAULT_EDGE_VOICE, "edge_rate": "+0%"},
         "audio": {"sample_rate": 48000, "loudness": -16.0},
         "pause": {"paragraph": 0.85, "sentence": 0.5, "semicolon": 0.4, "comma": 0.25, "slide": 0.85},
         "whisper": {"model": "small"},
@@ -79,12 +81,33 @@ def load_narrate_config(job: J.Job | None = None) -> dict[str, Any]:
     cfg = _default_narrate_config(load_app_config().voicebox_url)
     if not job:
         return cfg
-    voice_profile = job.cfg.get("voice", {}).get("profile")
-    if voice_profile:
-        cfg["voicebox"]["profile"] = voice_profile
+    voice_cfg = job.cfg.get("voice", {})
+    if voice_cfg.get("profile"):
+        cfg["voicebox"]["profile"] = voice_cfg["profile"]
+    if voice_cfg.get("engine"):
+        cfg["tts"]["engine"] = str(voice_cfg["engine"]).strip().lower()
+    if voice_cfg.get("edge_voice"):
+        cfg["tts"]["edge_voice"] = str(voice_cfg["edge_voice"]).strip()
+    if voice_cfg.get("edge_rate"):
+        cfg["tts"]["edge_rate"] = str(voice_cfg["edge_rate"]).strip()
     if "loudness" in job.cfg.get("output", {}):
         cfg["audio"]["loudness"] = job.cfg["output"]["loudness"]
     return cfg
+
+
+def _build_tts_client(cfg: dict[str, Any]) -> Voicebox | EdgeTTSClient:
+    """依設定建立 Voicebox 或 edge-tts 語音生成客戶端。
+
+    Args:
+        cfg: narrate 設定字典。
+
+    Returns:
+        已初始化的 TTS 客戶端。
+    """
+    engine = cfg.get("tts", {}).get("engine", "voicebox")
+    if engine == "edge-tts":
+        return EdgeTTSClient(cfg.get("tts", {}))
+    return Voicebox(cfg["voicebox"])
 
 
 def load_lines(job: J.Job) -> tuple[list[script.Line], dict[str, dict[str, str]]]:
@@ -189,7 +212,7 @@ def _generate_missing_takes(job: J.Job, missing: list[script.Line], cfg: dict[st
         missing: 缺少的讲稿行列表。
         cfg: 设定字典。
     """
-    vb = Voicebox(cfg["voicebox"])
+    vb = _build_tts_client(cfg)
     vb.check_ready()
     takes = takes_of(job)
     for ln in missing:
@@ -402,7 +425,7 @@ def audition_line(job: J.Job, line_no: int, takes_count: int = 4) -> str:
     if not 1 <= line_no <= len(lines):
         raise RuntimeError(f"没有第 {line_no} 行（讲稿共 {len(lines)} 行）")
     ln = lines[line_no - 1]
-    vb = Voicebox(cfg["voicebox"])
+    vb = _build_tts_client(cfg)
     vb.check_ready()
     tts_val = getattr(ln, "tts", "")
     res = generate.take(

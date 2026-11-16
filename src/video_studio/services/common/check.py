@@ -133,8 +133,11 @@ def _check_job_voice_and_output(t: str, c: dict[str, Any], r: Report) -> None:
     if t not in ("generate", "dub"):
         return
     f = "job.toml"
-    if not c.get("voice", {}).get("profile"):
-        r.err(f, '[voice] profile 要填 Voicebox 里复制声音的名称，例如 "My Voice"')
+    voice = c.get("voice", {})
+    if voice.get("engine", "voicebox") != "edge-tts" and not voice.get("profile"):
+        r.err(
+            f, '[voice] profile 要填 Voicebox 里复制声音的名称，例如 "My Voice"（或改用 engine = "edge-tts"）'
+        )
     for fmt in c.get("subtitles", {}).get("formats", []):
         if fmt not in SUB_FORMATS:
             r.err(f, f"[subtitles] formats 里的「{fmt}」不认识，只能用 {', '.join(SUB_FORMATS)}")

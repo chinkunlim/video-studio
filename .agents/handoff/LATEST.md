@@ -5,18 +5,28 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 02:46 UTC`
+- **最後更新時間**: `2026-11-16 03:24 UTC`
 - **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `8de331a feat(api): add FastAPI HTTP API, MCP server, Web UI, and tool configs (TASK-008) [agent:antigravity]`
+- **最新 Git Commit**: `2993b9a chore(task): close TASK-008 handoff records [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
+| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
+|---|---|---|---|---|---|---|
+| **TASK-009**<br/>Add edge-tts dual TTS engine and HTML/GSAP/HyperFrames rendering mode | 🟢 `in_progress` | `antigravity` | `-` | - | - | - |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-16 03:24 UTC] 認領任務 `TASK-009` (Add edge-tts dual TTS engine and HTML/GSAP/HyperFrames rendering mode) (by `antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `antigravity`
+
+### [2026-11-16 03:24 UTC] 建立任務 `TASK-009`: Add edge-tts dual TTS engine and HTML/GSAP/HyperFrames rendering mode (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-16 02:46 UTC] 完成任務 `TASK-008` — Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -95,10 +105,3 @@
 ### [2026-10-21 17:27 UTC] 完成任務 `TASK-002` — 遷移批次 2：services 層（業務流程） (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Migrated and refactored 27 services files into src/video_studio/services/, unified entrypoints CLI, added unit tests, passed mypy strict and review guard
-
-### [2026-10-21 17:07 UTC] 認領任務 `TASK-002` (遷移批次 2：services 層（業務流程）) (by `antigravity`)
-- **相關範圍**: `src/video_studio/services/, legacy`
-
-### [2026-10-21 17:07 UTC] 完成任務 `TASK-001` — 遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O） (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: 完成批次 1：遷移並重構 openwebui_tool adapter 與 runner，補齊完整型別與測試

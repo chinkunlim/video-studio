@@ -157,6 +157,12 @@ def _handle_video(args: argparse.Namespace) -> int:
     if cmd == "poster":
         print(video_mod.render_poster_video(args.job, args.version))
         return 0
+    if cmd == "html-draft":
+        print(video_mod.draft_html_scene(args.job, args.version, force=args.force))
+        return 0
+    if cmd == "html":
+        print(video_mod.render_html_video(args.job, args.version))
+        return 0
     if cmd == "mux":
         print(video_mod.mux_external_video(args.job, args.video, args.version, args.reserve_bottom))
         return 0
@@ -240,10 +246,14 @@ def _add_video_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) 
     """
     p_vid = sub.add_parser("video", help="影片合成")
     vid_sub = p_vid.add_subparsers(dest="video_cmd", required=True)
-    for name in ("timing", "poster", "check"):
+    for name in ("timing", "poster", "html", "check"):
         sp = vid_sub.add_parser(name)
         sp.add_argument("job")
         sp.add_argument("--version")
+    sp_hd = vid_sub.add_parser("html-draft")
+    sp_hd.add_argument("job")
+    sp_hd.add_argument("--version")
+    sp_hd.add_argument("--force", action="store_true")
     sp_sc = vid_sub.add_parser("scenes")
     sp_sc.add_argument("job")
     sp_sc.add_argument("--source", default="auto")

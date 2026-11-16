@@ -7,6 +7,7 @@ All notable changes to **video-studio** are documented here
 
 ### Added
 - feat(api): add FastAPI HTTP API, MCP server, Web UI, and tool configs (TASK-008) (`TASK-008`, by `@antigravity`)
+- feat(render): integrate edge-tts dual TTS and pnpm HyperFrames HTML rendering (TASK-009) (`TASK-009`, by `@antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

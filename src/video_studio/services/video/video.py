@@ -25,7 +25,7 @@ from typing import Any
 from video_studio.config.settings import load_config as load_app_config
 from video_studio.services.common import job as J
 from video_studio.services.narrate.core import script, vocab
-from video_studio.services.video.engine import media, poster, storyboard, timing
+from video_studio.services.video.engine import html_render, media, poster, storyboard, timing
 
 logger = logging.getLogger(__name__)
 
@@ -391,3 +391,49 @@ def check_video(job_name: str, version: str | None = None) -> str:
     report_text = f"驗收影片：{video_path}\n" + "\n".join(report)
     (v / "video_check.txt").write_text(report_text, encoding="utf-8")
     return report_text
+
+
+def draft_html_scene(job_name: str, version: str | None = None, force: bool = False) -> str:
+    """依配音時間軸與講稿起草 HTML/GSAP 分鏡至 review/index.html。
+
+    Args:
+        job_name: 工作名稱。
+        version: 指定版本。
+        force: 是否覆寫既有 review/index.html。
+
+    Returns:
+        起草結果說明文字。
+    """
+    _, job, _, _, slides = video_context(job_name, version)
+    dst = job.review / "index.html"
+    if dst.exists() and not force:
+        raise RuntimeError(f"{dst} 已經存在，不會覆蓋（要重做請加 force=True）")
+    html_render.draft_html(slides, script_slides_text(job), dst, title=job.title)
+    return f"已起草 HTML 分鏡：{dst}\n審閱後請執行 job approve {job.name} index.html 移入 input/"
+
+
+def render_html_video(job_name: str, version: str | None = None) -> str:
+    """使用 HyperFrames 將 input/index.html 渲染成畫面，再合成配音、燒字幕並驗收。
+
+    Args:
+        job_name: 工作名稱。
+        version: 指定版本。
+
+    Returns:
+        合成與驗收結果說明文字。
+    """
+    cfg, job, v, _, slides = video_context(job_name, version)
+    src_html = job.input / "index.html"
+    if not src_html.exists():
+        raise FileNotFoundError(
+            f"找不到 {src_html}：請先執行 video html-draft 或自行將 index.html 放入 input/"
+        )
+    work_html = job.work / "video" / "html"
+    if work_html.exists():
+        shutil.rmtree(work_html)
+    shutil.copytree(job.input, work_html)
+    picture = job.work / "video" / "picture.mp4"
+    html_render.render(work_html / "index.html", picture, cfg)
+    ok, report = finish_video(FinishContext(cfg, job, v, slides), picture)
+    status_str = "完成" if ok else "完成（但驗收有項目未通過）"
+    return f"{status_str}：{v}/\n" + "\n".join(report)

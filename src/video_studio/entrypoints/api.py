@@ -321,6 +321,19 @@ def _register_video_routes(app: FastAPI) -> None:
         """
         return TextOutputResponse(output=video_mod.render_poster_video(job_name, req.version))
 
+    @app.post("/api/jobs/{job_name}/video/html", response_model=TextOutputResponse, tags=["video"])
+    def api_render_html(job_name: str, req: VersionRequest) -> TextOutputResponse:
+        """Render HTML/GSAP/HyperFrames video, mux narration, and burn subtitles.
+
+        Args:
+            job_name: Target job name.
+            req: Optional version selector.
+
+        Returns:
+            Render summary text.
+        """
+        return TextOutputResponse(output=video_mod.render_html_video(job_name, req.version))
+
     @app.post("/api/jobs/{job_name}/video/mux", response_model=TextOutputResponse, tags=["video"])
     def api_mux_video(job_name: str, req: MuxVideoRequest) -> TextOutputResponse:
         """Mux an external video with narration and burn subtitles.

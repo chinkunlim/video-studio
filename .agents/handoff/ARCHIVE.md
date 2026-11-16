@@ -22,3 +22,10 @@
 
 ### [2026-10-21 17:00 UTC] 認領任務 `TASK-001` (遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O）) (by `antigravity`)
 - **相關範圍**: `src/video_studio/adapters/, legacy`
+
+### [2026-10-21 17:07 UTC] 完成任務 `TASK-001` — 遷移批次 1：adapters 層（外部 API、資料庫、檔案 I/O） (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: 完成批次 1：遷移並重構 openwebui_tool adapter 與 runner，補齊完整型別與測試
+
+### [2026-10-21 17:07 UTC] 認領任務 `TASK-002` (遷移批次 2：services 層（業務流程）) (by `antigravity`)
+- **相關範圍**: `src/video_studio/services/, legacy`

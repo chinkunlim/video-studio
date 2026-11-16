@@ -5,6 +5,7 @@ description = "AI-assisted software project with standard structure and agent ha
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "edge-tts>=7.3.1",
     "fastapi>=0.163.1",
     "faster-whisper>=1.2.1",
     "lxml>=6.1.3",

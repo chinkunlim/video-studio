@@ -249,6 +249,21 @@ def _register_video_write_tools(mcp: MCPServer) -> None:
         return denied or video_mod.render_poster_video(job_name, version)
 
     @mcp.tool()
+    def mcp_render_html_video(job_name: str, version: str | None = None, confirm: bool = False) -> str:
+        """Render HTML/GSAP/HyperFrames video, mux narration, and burn subtitles (requires confirm=True).
+
+        Args:
+            job_name: Job name.
+            version: Optional version name.
+            confirm: Must be True to render HTML video files.
+
+        Returns:
+            Render summary or confirmation prompt.
+        """
+        denied = _require_confirm(confirm, f"使用 HyperFrames 渲染 {job_name} HTML 影片")
+        return denied or video_mod.render_html_video(job_name, version)
+
+    @mcp.tool()
     def mcp_extract_audio(video: str, out: str | None = None, confirm: bool = False) -> str:
         """Extract 48kHz mono WAV from a video file (requires confirm=True).
 
