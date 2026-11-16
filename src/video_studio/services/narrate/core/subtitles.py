@@ -288,28 +288,82 @@ def _build_ass(cues: list[tuple[float, float, str]], cfg: dict[str, Any], title:
     )
 
 
+def _split_zh_clauses(sec: str, n: int) -> list[str]:
+    """Split a Chinese translation into n proportional, punctuation-aware clauses.
+
+    Args:
+        sec: Full Chinese sentence translation.
+        n: Target number of clauses matching English sub-cues.
+
+    Returns:
+        List of n non-empty Chinese clause strings.
+    """
+    if n <= 1 or len(sec) <= 4:
+        return [sec] * n
+    parts = [p.strip("，；、： ") for p in re.split(r"(?<=[，；、：—])", sec) if p.strip("，；、： ")]
+    if len(parts) == n:
+        return parts
+    # Proportional character split snapping near punctuation when possible.
+    total = len(sec)
+    out: list[str] = []
+    pos = 0
+    for i in range(n):
+        if i == n - 1:
+            out.append(sec[pos:].strip("，；、： "))
+            break
+        target = int(round(total * (i + 1) / n))
+        best = target
+        for offset in range(-4, 5):
+            cand = target + offset
+            if pos < cand < total and sec[cand - 1] in "，；、：— ":
+                best = cand
+                break
+        best = max(pos + 1, min(best, total - (n - 1 - i)))
+        out.append(sec[pos:best].strip("，；、： "))
+        pos = best
+    return [c or sec for c in out]
+
+
 def attach_bilingual(
     cues: list[tuple[float, float, str]],
     bilingual_map: dict[str, str],
 ) -> list[tuple[float, float, str]]:
-    """Attach translated secondary lines to subtitle cues for bilingual SRT/VTT/ASS output.
+    """Attach 1-to-1 translated secondary lines to subtitle cues without flicker.
 
     Args:
         cues: Primary subtitle cues [(start, end, text), ...].
         bilingual_map: Mapping from primary sentence text to secondary translation.
 
     Returns:
-        Updated cues with secondary translation appended after a newline.
+        Updated cues with matched secondary line appended after a newline.
     """
     if not bilingual_map:
         return cues
-    out: list[tuple[float, float, str]] = []
+    matched: list[tuple[float, float, str, str, str]] = []
     for s, e, text in cues:
         clean = text.strip()
-        sec = bilingual_map.get(clean)
-        if not sec:
-            sec = next((v for k, v in bilingual_map.items() if clean and clean in k), "")
-        out.append((s, e, f"{text}\n{sec}" if sec else text))
+        key = (
+            clean if clean in bilingual_map else next((k for k in bilingual_map if clean and clean in k), "")
+        )
+        sec = bilingual_map.get(key, "") if key else ""
+        matched.append((s, e, text, key, sec))
+
+    out: list[tuple[float, float, str]] = []
+    i = 0
+    while i < len(matched):
+        s, e, text, key, sec = matched[i]
+        j = i + 1
+        while key and j < len(matched) and matched[j][3] == key:
+            j += 1
+        group = matched[i:j]
+        zh_parts = _split_zh_clauses(sec, len(group)) if sec else [""] * len(group)
+        for idx, (gs, ge, gtext, _, _) in enumerate(group):
+            # Snap tiny <80ms gaps inside the same sentence so subtitles never flicker.
+            if idx + 1 < len(group) and group[idx + 1][0] - ge <= 0.08:
+                ge = group[idx + 1][0]
+            zh = zh_parts[idx]
+            out.append((gs, ge, f"{gtext}\n{zh}" if zh else gtext))
+        i = j
     return out
 
 

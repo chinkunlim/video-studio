@@ -333,6 +333,24 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         lines = overlay._fit_lines(draw, parsed[0][2], fnt, 1720)
         self.assertEqual(lines, ["Hello world", "你好世界"])
 
+        from video_studio.services.narrate.core import subtitles
+
+        bmap = {
+            "Here is the catch you never know how much money is inside.": (
+                "陷阱在這裡，你永遠不知道裡面有多少錢"
+            )
+        }
+        bilingual_cues = subtitles.attach_bilingual(
+            [
+                (2.0, 4.0, "Here is the catch"),
+                (4.02, 6.5, "you never know how much money is inside."),
+            ],
+            bmap,
+        )
+        self.assertEqual(len(bilingual_cues), 2)
+        self.assertEqual(bilingual_cues[0][1], 4.02)  # <80ms gap snapped to avoid flicker
+        self.assertNotEqual(bilingual_cues[0][2].split("\n")[1], bilingual_cues[1][2].split("\n")[1])
+
         tone = self.data_dir / "tone.wav"
         subprocess.run(
             ["ffmpeg", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", str(tone)],

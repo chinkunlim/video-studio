@@ -377,10 +377,25 @@ def subtitle(
     img = Image.new("RGBA", size, (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     fs = int(s.get("font_size", 34))
-    fnt = font(str(f.get("path", "/System/Library/Fonts/STHeiti Light.ttc")), int(f.get("index", 1)), fs)
-    lines = _fit_lines(d, text, fnt, width - 200)
-    lh = fs * 1.3
-    y = height - bottom_reserved - int(s.get("margin_bottom", 40)) - lh * len(lines)
+    font_path = str(f.get("path", "/System/Library/Fonts/STHeiti Light.ttc"))
+    font_idx = int(f.get("index", 1))
+    max_w = width - 120
+    explicit_lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if len(explicit_lines) >= 2:
+        # Bilingual mode: strictly 1 line primary + 1 line secondary; shrink font to fit if needed.
+        lines = explicit_lines[:2]
+        while fs > 18:
+            fnt = font(font_path, font_idx, fs)
+            if all(d.textlength(ln, font=fnt) <= max_w for ln in lines):
+                break
+            fs -= 2
+        fnt = font(font_path, font_idx, fs)
+    else:
+        fnt = font(font_path, font_idx, fs)
+        lines = _fit_lines(d, text, fnt, width - 200)
+    lh = fs * 1.28
+    margin_b = 14 if bottom_reserved == 0 else int(s.get("margin_bottom", 40))
+    y = height - bottom_reserved - margin_b - lh * len(lines)
     fill = hex_rgb(str(s.get("color", "#FFFFFF"))) + (255,)
     stroke_fill = hex_rgb(str(s.get("stroke_color", "#000000"))) + (255,)
     stroke_w = int(s.get("stroke_width", 3))

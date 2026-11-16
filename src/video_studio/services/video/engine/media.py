@@ -207,12 +207,15 @@ def _render_subtitle_track(
     entries: list[tuple[Path, float]] = []
     t = 0.0
     for k, (a, b, text) in enumerate(read_srt(srt)):
-        if a > t + 0.001:
+        if a > t + 0.08:
             entries.append((blank, a - t))
+            t = a
+        elif a > t:
+            a = t
         png = work_p / f"sub_{k:04d}.png"
         overlay.subtitle(opts.cfg, text, size, opts.bottom_reserved).save(png)
-        entries.append((png, b - a))
-        t = b
+        entries.append((png, max(0.05, b - a)))
+        t = max(t, b)
     if total > t:
         entries.append((blank, total - t))
     if not entries:
@@ -249,13 +252,24 @@ def burn_subtitles(
     size = (int(vs["width"]), int(vs["height"]))
     track = _render_subtitle_track(srt, size, float(info["format"]["duration"]), options)
     crf = str(options.cfg.get("output", {}).get("crf", "18"))
+    w, h = size
+    # Reserve a dedicated 96px bottom subtitle bar when the video has no pre-reserved band.
+    if options.bottom_reserved == 0 and h >= 480:
+        bar_h = 96
+        vf = (
+            f"[0:v]scale={w}:{h - bar_h}:force_original_aspect_ratio=decrease,"
+            f"pad={w}:{h}:(ow-iw)/2:0:color=#0b1623[bg];"
+            "[bg][1:v]overlay=0:0:shortest=1[v]"
+        )
+    else:
+        vf = "[0:v][1:v]overlay=0:0:shortest=1[v]"
     cmd = [
         "-i",
         str(video),
         "-i",
         str(track),
         "-filter_complex",
-        "[0:v][1:v]overlay=0:0:shortest=1[v]",
+        vf,
         "-map",
         "[v]",
         "-map",
