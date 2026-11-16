@@ -1,0 +1,443 @@
+/* video-studio 工作室前端邏輯：全設定編輯、媒體預覽與 Antigravity agy CLI 對話串流顯示。 */
+
+const state = {
+  jobs: [],
+  currentJob: '',
+  lastPrompt: '',
+  busyPlan: false,
+};
+
+/**
+ * 跳脫 HTML 特殊字元以防止 XSS。
+ * @param {string} str 原始字串。
+ * @returns {string} 跳脫後的安全字串。
+ */
+function esc(str) {
+  return String(str || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+}
+
+/**
+ * 呼叫後端 JSON API 並統一處理錯誤。
+ * @param {string} url 端點網址。
+ * @param {RequestInit} [opts] Fetch 選項。
+ * @returns {Promise<any>} 解析後的 JSON 物件。
+ */
+async function api(url, opts = {}) {
+  const res = await fetch(url, { headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }, ...opts });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || res.statusText);
+  return data;
+}
+
+/**
+ * 切換主要工作分頁。
+ * @param {string} name 分頁名稱（overview/settings/narrate/render）。
+ * @returns {void}
+ */
+function switchView(name) {
+  document.querySelectorAll('.dock-btn, .step-chip').forEach(el => el.classList.toggle('on', el.dataset.view === name));
+  document.querySelectorAll('.view').forEach(el => el.classList.toggle('on', el.id === `view-${name}`));
+}
+
+/**
+ * 初始化並記憶色盤與亮暗主題。
+ * @returns {void}
+ */
+function initTheme() {
+  const root = document.documentElement;
+  const pal = localStorage.getItem('vs.palette') || 'forest';
+  const mode = localStorage.getItem('vs.mode') || 'light';
+  root.dataset.palette = pal;
+  root.dataset.mode = mode;
+  document.getElementById('paletteSelect').value = pal;
+  document.getElementById('paletteSelect').addEventListener('change', e => {
+    root.dataset.palette = e.target.value;
+    localStorage.setItem('vs.palette', e.target.value);
+  });
+  document.getElementById('modeToggle').addEventListener('click', () => {
+    const next = root.dataset.mode === 'dark' ? 'light' : 'dark';
+    root.dataset.mode = next;
+    localStorage.setItem('vs.mode', next);
+  });
+}
+
+/**
+ * 重新載入工作清單、詞彙表與全域環境設定。
+ * @returns {Promise<void>}
+ */
+async function refreshJobs() {
+  const [health, jobsRes, vocRes, envRes] = await Promise.all([
+    api('/health'),
+    api('/api/jobs'),
+    api('/api/vocab'),
+    api('/api/settings/env'),
+  ]);
+  document.getElementById('healthBadge').textContent = `連線正常 · ${health.app_env}`;
+  document.getElementById('jobsListLog').textContent = jobsRes.output || '尚無工作';
+  document.getElementById('vocabListLog').textContent = vocRes.output || '（詞彙表空白）';
+  document.getElementById('envVoicebox').value = envRes.VOICEBOX_URL || '';
+  document.getElementById('envOllama').value = envRes.OLLAMA_BASE_URL || '';
+  document.getElementById('envLogLevel').value = envRes.LOG_LEVEL || 'INFO';
+
+  const names = (jobsRes.output || '').split('\n').map(l => l.trim().split(/\s+/)[1]).filter(Boolean);
+  const sel = document.getElementById('jobSelect');
+  const prev = state.currentJob || sel.value;
+  sel.innerHTML = names.length ? names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') : '<option value="">尚無工作</option>';
+  if (names.includes(prev)) sel.value = prev;
+  state.currentJob = sel.value;
+  if (state.currentJob) await loadJobDetail(state.currentJob);
+}
+
+/**
+ * 載入指定工作的 job.toml、講稿、規劃說明與成品預覽。
+ * @param {string} name 工作名稱。
+ * @returns {Promise<void>}
+ */
+async function loadJobDetail(name) {
+  if (!name) return;
+  const d = await api(`/api/jobs/${encodeURIComponent(name)}/detail`);
+  document.getElementById('fileSummary').textContent =
+    `input/: ${d.input_files.join(', ') || '無'} ｜ review/: ${d.review_files.join(', ') || '無'} ｜ 最新成品: ${d.latest_version || '無'}`;
+  const c = d.config || {};
+  document.getElementById('cfgTitle').value = c.job?.title || '';
+  document.getElementById('cfgVisualMode').value = c.visual?.mode || 'auto';
+  document.getElementById('cfgVoiceEngine').value = c.voice?.engine || 'voicebox';
+  document.getElementById('cfgVoiceProfile').value = c.voice?.profile || 'My Voice';
+  document.getElementById('cfgEdgeVoice').value = c.voice?.edge_voice || 'zh-TW-HsiaoChenNeural';
+  document.getElementById('cfgEdgeRate').value = c.voice?.edge_rate || '+0%';
+  document.getElementById('cfgLoudness').value = c.output?.loudness ?? -16;
+  document.getElementById('cfgBurnIn').value = String(c.subtitles?.burn_in ?? true);
+  document.getElementById('cfgBackupDir').value = c.output?.backup_dir || '';
+  document.getElementById('cfgInScript').value = c.inputs?.script || '';
+  document.getElementById('cfgInPptx').value = c.inputs?.pptx || '';
+  document.getElementById('cfgInPoster').value = c.inputs?.poster || '';
+  document.getElementById('cfgInScenes').value = c.inputs?.scenes || '';
+  document.getElementById('scriptEditor').value = d.script || '';
+  document.getElementById('briefEditor').value = d.brief || '';
+  updateMediaPreview(name, d.latest_version, d.latest_files);
+}
+
+/**
+ * 更新成品影片播放器與抽格總覽圖片。
+ * @param {string} name 工作名稱。
+ * @param {string|null} v 最新版本資料夾名稱。
+ * @param {string[]} files 最新版本檔案清單。
+ * @returns {void}
+ */
+function updateMediaPreview(name, v, files) {
+  const player = document.getElementById('videoPlayer');
+  const sheet = document.getElementById('contactSheetImg');
+  if (v && files.includes('video_subtitled.mp4')) {
+    player.src = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video_subtitled.mp4?t=${Date.now()}`;
+  } else if (v && files.includes('video.mp4')) {
+    player.src = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video.mp4?t=${Date.now()}`;
+  } else {
+    player.removeAttribute('src');
+  }
+  if (v && files.includes('video_contact_sheet.jpg')) {
+    sheet.src = `/api/jobs/${encodeURIComponent(name)}/output/${v}/video_contact_sheet.jpg?t=${Date.now()}`;
+  } else {
+    sheet.removeAttribute('src');
+  }
+}
+
+/**
+ * 開關右側 Antigravity 對話抽屜。
+ * @param {boolean} open 是否開啟。
+ * @returns {void}
+ */
+function toggleDrawer(open) {
+  const drawer = document.getElementById('qaDrawer');
+  drawer.classList.toggle('open', open);
+  drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+}
+
+/**
+ * 新增一則對話泡泡或輸入中動畫至抽屜。
+ * @param {string} role 角色（user 或 ai）。
+ * @param {string} text 訊息文字。
+ * @param {boolean} [isTyping=false] 是否顯示輸入中跳動圓點。
+ * @returns {HTMLDivElement} 建立的訊息元素。
+ */
+function appendChatMsg(role, text, isTyping = false) {
+  const box = document.getElementById('qaMsgs');
+  const div = document.createElement('div');
+  div.className = `qa-msg ${role}`;
+  if (isTyping) {
+    div.classList.add('qa-typing');
+    div.innerHTML = '<span class="qa-typing-dots"><i></i><i></i><i></i></span><span>Antigravity (agy CLI) 正在規劃分鏡…</span>';
+  } else {
+    div.textContent = text;
+  }
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+/**
+ * 啟動 agy CLI 背景規劃並輪詢顯示串流回覆。
+ * @param {string} instruction 使用者規劃指示。
+ * @returns {Promise<void>}
+ */
+async function runAntigravityPlan(instruction) {
+  if (!state.currentJob || state.busyPlan) return;
+  state.busyPlan = true;
+  toggleDrawer(true);
+  appendChatMsg('user', instruction || '請依 brief.md 與時間軸規劃本工作分鏡。');
+  const typingEl = appendChatMsg('ai', '', true);
+  try {
+    const mode = document.getElementById('planModeSelect').value;
+    const startRes = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/plan`, {
+      method: 'POST',
+      body: JSON.stringify({ instruction, mode }),
+    });
+    state.lastPrompt = startRes.prompt || '';
+    if (!startRes.available) {
+      typingEl.classList.remove('qa-typing');
+      typingEl.textContent = `${startRes.error}\n\n可點右上「複製提示詞」貼到 Antigravity App。`;
+      return;
+    }
+    await pollPlanLoop(startRes.run_id, typingEl);
+  } catch (err) {
+    typingEl.classList.remove('qa-typing');
+    typingEl.textContent = `規劃失敗：${err.message}`;
+  } finally {
+    state.busyPlan = false;
+  }
+}
+
+/**
+ * 輪詢 agy CLI 執行狀態直到完成。
+ * @param {string} runId 任務 ID。
+ * @param {HTMLDivElement} typingEl 回覆訊息泡泡元素。
+ * @returns {Promise<void>}
+ */
+async function pollPlanLoop(runId, typingEl) {
+  while (true) {
+    await new Promise(r => setTimeout(r, 1500));
+    const st = await api(`/api/plan/${runId}`);
+    if (st.output) {
+      typingEl.classList.remove('qa-typing');
+      typingEl.textContent = st.output + (st.status === 'running' ? '\n\n▌ 規劃中…' : '');
+    }
+    if (st.status !== 'running') {
+      typingEl.classList.remove('qa-typing');
+      typingEl.textContent = st.output || st.error || '規劃完成（無文字輸出）';
+      await loadJobDetail(state.currentJob);
+      break;
+    }
+  }
+}
+
+/**
+ * 綁定導覽、工作建立與素材上傳事件。
+ * @returns {void}
+ */
+function bindOverviewEvents() {
+  document.querySelectorAll('.dock-btn, .step-chip').forEach(el => el.addEventListener('click', () => switchView(el.dataset.view)));
+  document.getElementById('jobSelect').addEventListener('change', e => { state.currentJob = e.target.value; loadJobDetail(state.currentJob); });
+  document.getElementById('refreshAllBtn').addEventListener('click', refreshJobs);
+  document.getElementById('qaToggleBtn').addEventListener('click', () => toggleDrawer(true));
+  document.getElementById('qaCloseBtn').addEventListener('click', () => toggleDrawer(false));
+  document.getElementById('copyPromptBtn').addEventListener('click', () => navigator.clipboard.writeText(state.lastPrompt || ''));
+  document.getElementById('createJobBtn').addEventListener('click', handleCreateJob);
+  document.getElementById('uploadAssetBtn').addEventListener('click', handleUploadAsset);
+  document.getElementById('checkJobBtn').addEventListener('click', async () => {
+    if (!state.currentJob) return;
+    const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/check`);
+    document.getElementById('jobCheckLog').textContent = res.output;
+  });
+}
+
+/**
+ * 建立新工作並儲存規劃說明。
+ * @returns {Promise<void>}
+ */
+async function handleCreateJob() {
+  const job_type = document.getElementById('newType').value;
+  const name = document.getElementById('newName').value.trim();
+  const title = document.getElementById('newTitle').value.trim();
+  const brief = document.getElementById('newBrief').value;
+  const res = await api('/api/jobs', { method: 'POST', body: JSON.stringify({ job_type, name, title }) });
+  if (brief.trim()) await api(`/api/jobs/${encodeURIComponent(name)}/brief`, { method: 'PUT', body: JSON.stringify({ content: brief }) });
+  document.getElementById('createJobLog').textContent = res.output;
+  state.currentJob = name;
+  await refreshJobs();
+}
+
+/**
+ * 上傳素材檔案至目前工作的 input/ 目錄。
+ * @returns {Promise<void>}
+ */
+async function handleUploadAsset() {
+  const f = document.getElementById('assetFileInput').files[0];
+  if (!f || !state.currentJob) return;
+  const fd = new FormData();
+  fd.append('file', f);
+  const res = await fetch(`/api/jobs/${encodeURIComponent(state.currentJob)}/upload`, { method: 'POST', body: fd });
+  const data = await res.json();
+  document.getElementById('jobCheckLog').textContent = data.output || data.detail;
+  await loadJobDetail(state.currentJob);
+}
+
+/**
+ * 綁定設定分頁表單儲存事件。
+ * @returns {void}
+ */
+function bindSettingsEvents() {
+  document.getElementById('saveJobConfigBtn').addEventListener('click', handleSaveJobConfig);
+  document.getElementById('saveScriptBtn').addEventListener('click', () => saveScript(false));
+  document.getElementById('formatScriptBtn').addEventListener('click', () => saveScript(true));
+  document.getElementById('saveBriefBtn').addEventListener('click', async () => {
+    const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/brief`, {
+      method: 'PUT', body: JSON.stringify({ content: document.getElementById('briefEditor').value }),
+    });
+    alert(res.output);
+  });
+  document.getElementById('saveVocabBtn').addEventListener('click', handleSaveVocab);
+  document.getElementById('saveEnvBtn').addEventListener('click', handleSaveEnv);
+}
+
+/**
+ * 儲存 job.toml 設定。
+ * @returns {Promise<void>}
+ */
+async function handleSaveJobConfig() {
+  if (!state.currentJob) return;
+  const payload = {
+    title: document.getElementById('cfgTitle').value,
+    visual_mode: document.getElementById('cfgVisualMode').value,
+    voice_engine: document.getElementById('cfgVoiceEngine').value,
+    voice_profile: document.getElementById('cfgVoiceProfile').value,
+    edge_voice: document.getElementById('cfgEdgeVoice').value,
+    edge_rate: document.getElementById('cfgEdgeRate').value,
+    loudness: Number(document.getElementById('cfgLoudness').value || -16),
+    burn_in: document.getElementById('cfgBurnIn').value === 'true',
+    backup_dir: document.getElementById('cfgBackupDir').value,
+    inputs: {
+      script: document.getElementById('cfgInScript').value,
+      pptx: document.getElementById('cfgInPptx').value,
+      poster: document.getElementById('cfgInPoster').value,
+      scenes: document.getElementById('cfgInScenes').value,
+    },
+  };
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/config`, { method: 'PUT', body: JSON.stringify(payload) });
+  alert(res.output);
+}
+
+/**
+ * 儲存講稿並選擇是否自動斷句。
+ * @param {boolean} autoFormat 是否自動斷句。
+ * @returns {Promise<void>}
+ */
+async function saveScript(autoFormat) {
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/script`, {
+    method: 'PUT', body: JSON.stringify({ content: document.getElementById('scriptEditor').value, auto_format: autoFormat }),
+  });
+  if (autoFormat) document.getElementById('scriptEditor').value = res.content;
+  alert(res.output);
+}
+
+/**
+ * 新增或更新詞彙表項目。
+ * @returns {Promise<void>}
+ */
+async function handleSaveVocab() {
+  const res = await api('/api/vocab', {
+    method: 'POST',
+    body: JSON.stringify({
+      key: document.getElementById('vocKey').value.trim(),
+      subtitle: document.getElementById('vocSub').value.trim(),
+      tts: document.getElementById('vocTts').value.trim(),
+    }),
+  });
+  document.getElementById('vocabListLog').textContent = (await api('/api/vocab')).output;
+  alert(res.output);
+}
+
+/**
+ * 儲存全域 .env 設定。
+ * @returns {Promise<void>}
+ */
+async function handleSaveEnv() {
+  const res = await api('/api/settings/env', {
+    method: 'PUT',
+    body: JSON.stringify({
+      values: {
+        VOICEBOX_URL: document.getElementById('envVoicebox').value.trim(),
+        OLLAMA_BASE_URL: document.getElementById('envOllama').value.trim(),
+        LOG_LEVEL: document.getElementById('envLogLevel').value,
+      },
+    }),
+  });
+  alert(res.output);
+}
+
+/**
+ * 綁定配音、AI 規劃、審核與渲染按鈕事件。
+ * @returns {void}
+ */
+function bindWorkflowEvents() {
+  document.getElementById('buildNarrationBtn').addEventListener('click', async () => {
+    const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/narrate/build`, { method: 'POST' });
+    document.getElementById('narrateLog').textContent = res.output;
+  });
+  document.getElementById('calcTimingBtn').addEventListener('click', async () => {
+    const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/timing`);
+    document.getElementById('narrateLog').textContent = res.output;
+  });
+  document.getElementById('runAgyPlanBtn').addEventListener('click', () => runAntigravityPlan(document.getElementById('planInstruction').value));
+  document.getElementById('qaSendBtn').addEventListener('click', () => {
+    const input = document.getElementById('qaInput');
+    const txt = input.value.trim();
+    if (!txt) return;
+    input.value = '';
+    runAntigravityPlan(txt);
+  });
+  document.getElementById('qaInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('qaSendBtn').click(); }
+  });
+  document.getElementById('previewReviewHtmlBtn').addEventListener('click', () => {
+    if (state.currentJob) document.getElementById('reviewPreviewFrame').src = `/api/jobs/${encodeURIComponent(state.currentJob)}/review/index.html?t=${Date.now()}`;
+  });
+  document.getElementById('approveHtmlBtn').addEventListener('click', () => approveReviewFile('index.html'));
+  document.getElementById('approveScenesBtn').addEventListener('click', () => approveReviewFile('scenes.toml'));
+  document.getElementById('renderHtmlBtn').addEventListener('click', () => runRenderEndpoint('html'));
+  document.getElementById('renderPosterBtn').addEventListener('click', () => runRenderEndpoint('poster'));
+  document.getElementById('checkVideoBtn').addEventListener('click', async () => {
+    const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/check`);
+    document.getElementById('renderLog').textContent = res.output;
+  });
+}
+
+/**
+ * 核可 review/ 草稿並移入 input/。
+ * @param {string} filename 檔案名稱。
+ * @returns {Promise<void>}
+ */
+async function approveReviewFile(filename) {
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/approve`, {
+    method: 'POST', body: JSON.stringify({ filename }),
+  });
+  alert(res.output);
+  await loadJobDetail(state.currentJob);
+}
+
+/**
+ * 觸發影片渲染並重新載入成品預覽。
+ * @param {string} mode 渲染模式（html 或 poster）。
+ * @returns {Promise<void>}
+ */
+async function runRenderEndpoint(mode) {
+  const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/video/${mode}`, {
+    method: 'POST', body: JSON.stringify({}),
+  });
+  document.getElementById('renderLog').textContent = res.output;
+  await loadJobDetail(state.currentJob);
+}
+
+initTheme();
+bindOverviewEvents();
+bindSettingsEvents();
+bindWorkflowEvents();
+refreshJobs().catch(err => { document.getElementById('healthBadge').textContent = `錯誤：${err.message}`; });

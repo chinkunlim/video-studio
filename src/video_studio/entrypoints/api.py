@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from video_studio.config.logging_setup import setup_logging
 from video_studio.config.settings import AppConfig, load_config
+from video_studio.entrypoints import studio_routes
 from video_studio.entrypoints.mcp_server import build_mcp_server
 from video_studio.entrypoints.schemas import (
     ApproveFileRequest,
@@ -401,6 +402,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     _register_job_write_routes(app)
     _register_narrate_routes(app)
     _register_video_routes(app)
+    app.include_router(studio_routes.router)
     app.mount("/mcp", mcp_app)
     if STATIC_DIR.is_dir():
         app.mount("/", NoCacheStaticFiles(directory=str(STATIC_DIR), html=True), name="static")

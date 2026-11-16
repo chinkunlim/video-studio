@@ -73,7 +73,8 @@ video-studio/
 │   │   ├── TASK-006-markdown.json
 │   │   ├── TASK-007-refactor-oversized-functions-and.json
 │   │   ├── TASK-008-add-fastapi-http-api-mcp-server-.json
-│   │   └── TASK-009-add-edge-tts-dual-tts-engine-and.json
+│   │   ├── TASK-009-add-edge-tts-dual-tts-engine-and.json
+│   │   └── TASK-010-build-notebooklm-batch-studio-st.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -166,12 +167,16 @@ video-studio/
 │       │   └── models.py
 │       ├── entrypoints/
 │       │   ├── static/
-│       │   │   └── index.html
+│       │   │   ├── index.html
+│       │   │   ├── studio-theme.css
+│       │   │   ├── studio.css
+│       │   │   └── studio.js
 │       │   ├── __init__.py
 │       │   ├── api.py
 │       │   ├── cli.py
 │       │   ├── mcp_server.py
-│       │   └── schemas.py
+│       │   ├── schemas.py
+│       │   └── studio_routes.py
 │       ├── services/
 │       │   ├── common/
 │       │   │   ├── __init__.py
@@ -215,6 +220,7 @@ video-studio/
 │       │   │   ├── config.toml
 │       │   │   └── video.py
 │       │   ├── __init__.py
+│       │   ├── planner.py
 │       │   └── sv.py
 │       └── __init__.py
 ├── templates/
@@ -241,6 +247,7 @@ video-studio/
 │   ├── test_dual_tts_and_html.py
 │   ├── test_openwebui_tool.py
 │   ├── test_services_core.py
+│   ├── test_studio_ui_and_planner.py
 │   ├── test_workflow_extract.py
 │   ├── test_workflow_job.py
 │   ├── test_workflow_narrate.py

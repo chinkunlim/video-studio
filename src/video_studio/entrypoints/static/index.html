@@ -1,116 +1,291 @@
-<!-- video-studio 本機管理控制台頁面，提供健康檢查、工作清單與 /docs OpenAPI 入口。 -->
-<!DOCTYPE html>
-<html lang="zh-Hant">
+<!-- 用途：video-studio 影音工作室完整本機網頁介面（對齊 notebooklm-batch-studio 設計風格，含全設定管理、Antigravity agy CLI 即時對話抽屜與成品驗收）。 -->
+<!doctype html>
+<html lang="zh-Hant" data-palette="forest" data-mode="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>video-studio 工作室控制台</title>
-  <style>
-    :root {
-      --bg: #f6f4ef;
-      --card: #ffffff;
-      --ink: #1e2421;
-      --muted: #5c6660;
-      --accent: #c85a27;
-      --border: #e1ddd4;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      line-height: 1.6;
-    }
-    header {
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-    }
-    header h1 { margin: 0; font-size: 1.2rem; }
-    nav a {
-      text-decoration: none;
-      color: var(--accent);
-      font-weight: 600;
-      margin-left: 16px;
-    }
-    main {
-      max-width: 960px;
-      margin: 28px auto;
-      padding: 0 20px;
-      display: grid;
-      gap: 20px;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-    }
-    .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
-    .meta { color: var(--muted); font-size: 0.92rem; }
-    pre {
-      background: #f2efe8;
-      padding: 14px;
-      border-radius: 8px;
-      overflow-x: auto;
-      margin: 0;
-      font-size: 0.9rem;
-    }
-    button {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-    button:hover { opacity: 0.9; }
-    .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>video-studio 影音工作站</title>
+  <link rel="stylesheet" href="/studio-theme.css" />
+  <link rel="stylesheet" href="/studio.css" />
 </head>
 <body>
-  <header>
-    <h1>video-studio 本機工作站</h1>
-    <nav>
-      <a href="/docs" target="_blank" rel="noopener">📖 OpenAPI 文件</a>
-      <a href="/health" target="_blank" rel="noopener">🩺 健康狀態</a>
-    </nav>
-  </header>
-  <main>
-    <section class="card">
-      <div class="row">
-        <h2>環境與入口端點</h2>
-        <button id="refreshBtn" type="button">重新整理</button>
+<div class="shell">
+  <aside class="dock" aria-label="主導覽">
+    <div class="dock-head">
+      <div class="avatar">VS</div>
+      <div>
+        <div class="dock-title">video-studio</div>
+        <div class="dock-sub">AI 影音工作站</div>
       </div>
-      <p class="meta" id="healthText">載入中…</p>
-      <p class="meta">MCP Streamable HTTP：<code>http://127.0.0.1:8772/mcp</code> ｜ OpenAPI Swagger：<code>/docs</code></p>
-    </section>
-    <section class="card">
-      <h2>工作清單 (DATA_DIR/workspace)</h2>
-      <pre id="jobsText">載入中…</pre>
-    </section>
+    </div>
+    <nav class="dock-track">
+      <button class="dock-btn on" data-view="overview">1. 工作與素材</button>
+      <button class="dock-btn" data-view="settings">2. 完整設定</button>
+      <button class="dock-btn" data-view="narrate">3. 配音與 AI 規劃</button>
+      <button class="dock-btn" data-view="render">4. 渲染與驗收</button>
+    </nav>
+    <div class="dock-tools">
+      <select class="dock-select" id="paletteSelect" aria-label="配色主題">
+        <option value="forest">Forest 森林</option>
+        <option value="sage">Sage 鼠尾草</option>
+        <option value="espresso">Espresso 濃縮</option>
+      </select>
+      <button class="dock-select" id="modeToggle" type="button">切換深色 / 淺色</button>
+      <a class="dock-link" href="/docs" target="_blank" rel="noopener">📖 OpenAPI 文件</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>video-studio 控制台</h1>
+        <select id="jobSelect" style="width:auto;min-width:220px;" aria-label="選擇目前工作"></select>
+        <span class="pill" id="healthBadge">檢查中…</span>
+      </div>
+      <div class="topbar-right">
+        <button class="qa-toggle-btn" id="qaToggleBtn" type="button">✨ Antigravity 規劃對話</button>
+      </div>
+    </header>
+
+    <div class="stepper">
+      <button class="step-chip on" data-view="overview">Step 1 建立工作與素材</button>
+      <button class="step-chip" data-view="settings">Step 2 調整設定 / 講稿 / 詞彙</button>
+      <button class="step-chip" data-view="narrate">Step 3 先聲後影 → Antigravity 規劃</button>
+      <button class="step-chip" data-view="render">Step 4 核可並渲染驗收</button>
+    </div>
+
+    <div class="content">
+      <!-- View 1: Overview -->
+      <section class="view on" id="view-overview">
+        <div class="grid-2">
+          <div class="card">
+            <h2>建立新工作（含規劃說明）</h2>
+            <div class="field-grid">
+              <label class="field">工作類型
+                <select id="newType">
+                  <option value="generate">generate（完整生成）</option>
+                  <option value="dub">dub（原片重新配音）</option>
+                  <option value="extract">extract（提取音訊樣本）</option>
+                </select>
+              </label>
+              <label class="field">英文代號 (slug)
+                <input type="text" id="newName" placeholder="例如 my-lecture" />
+              </label>
+            </div>
+            <label class="field">中文標題
+              <input type="text" id="newTitle" placeholder="例如：期末專題介紹" />
+            </label>
+            <label class="field">給 Antigravity 的影片規劃說明 (儲存至 input/brief.md)
+              <textarea id="newBrief" placeholder="說明這支影片的受眾、風格、希望 HTML/GSAP 怎麼呈現每一幕、重點要強調什麼…"></textarea>
+            </label>
+            <div class="row">
+              <button class="btn" id="createJobBtn" type="button">建立工作並儲存說明</button>
+            </div>
+            <pre class="logbox" id="createJobLog">尚未執行</pre>
+          </div>
+
+          <div class="card">
+            <h2>上傳素材與工作檢查</h2>
+            <p class="muted">將講稿、PPTX、海報 PDF/PNG 或影片上傳到目前工作的 <code>input/</code>。</p>
+            <div class="row">
+              <input type="file" id="assetFileInput" />
+              <button class="btn btn-soft" id="uploadAssetBtn" type="button">上傳至 input/</button>
+            </div>
+            <div class="row">
+              <button class="btn" id="checkJobBtn" type="button">執行 job check</button>
+              <button class="btn btn-ghost" id="refreshAllBtn" type="button">重新整理工作區</button>
+            </div>
+            <div class="muted" id="fileSummary">input/: — ｜ review/: — ｜ output/: —</div>
+            <pre class="logbox" id="jobCheckLog">尚未檢查</pre>
+          </div>
+        </div>
+        <div class="card">
+          <h2>所有工作清單 (DATA_DIR/workspace)</h2>
+          <pre class="logbox" id="jobsListLog">載入中…</pre>
+        </div>
+      </section>
+
+      <!-- View 2: Settings -->
+      <section class="view" id="view-settings">
+        <div class="card">
+          <h2>工作完整設定 (job.toml)</h2>
+          <div class="field-grid">
+            <label class="field">中文標題<input type="text" id="cfgTitle" /></label>
+            <label class="field">畫面模式 (visual.mode)
+              <select id="cfgVisualMode">
+                <option value="auto">auto</option>
+                <option value="html">html (HyperFrames + GSAP)</option>
+                <option value="poster">poster (海報鏡頭)</option>
+                <option value="pptx-export">pptx-export</option>
+                <option value="none">none (僅配音字幕)</option>
+              </select>
+            </label>
+            <label class="field">配音引擎 (voice.engine)
+              <select id="cfgVoiceEngine">
+                <option value="voicebox">voicebox (本機聲音克隆)</option>
+                <option value="edge-tts">edge-tts (免啟動免費台灣腔)</option>
+              </select>
+            </label>
+            <label class="field">Voicebox 聲紋名稱<input type="text" id="cfgVoiceProfile" /></label>
+            <label class="field">edge-tts 聲線
+              <select id="cfgEdgeVoice">
+                <option value="zh-TW-HsiaoChenNeural">zh-TW-HsiaoChenNeural (曉臻)</option>
+                <option value="zh-TW-YunJheNeural">zh-TW-YunJheNeural (雲哲)</option>
+                <option value="zh-TW-HsiaoYuNeural">zh-TW-HsiaoYuNeural (曉雨)</option>
+              </select>
+            </label>
+            <label class="field">edge-tts 語速<input type="text" id="cfgEdgeRate" value="+0%" /></label>
+            <label class="field">響度 LUFS (-30 ~ -8)<input type="number" id="cfgLoudness" value="-16" /></label>
+            <label class="field">燒錄字幕 (burn_in)
+              <select id="cfgBurnIn"><option value="true">是 (輸出 video_subtitled.mp4)</option><option value="false">否</option></select>
+            </label>
+            <label class="field">備份輸出目錄 (選填)<input type="text" id="cfgBackupDir" placeholder="/Volumes/..." /></label>
+          </div>
+          <div class="field-grid">
+            <label class="field">講稿檔名 (inputs.script)<input type="text" id="cfgInScript" /></label>
+            <label class="field">PPTX 檔名 (inputs.pptx)<input type="text" id="cfgInPptx" /></label>
+            <label class="field">海報檔名 (inputs.poster)<input type="text" id="cfgInPoster" /></label>
+            <label class="field">分鏡檔名 (inputs.scenes)<input type="text" id="cfgInScenes" /></label>
+          </div>
+          <div class="row">
+            <button class="btn" id="saveJobConfigBtn" type="button">儲存 job.toml 設定</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h2>講稿編輯 (input/script.md)</h2>
+            <textarea id="scriptEditor" style="min-height:200px;"></textarea>
+            <div class="row">
+              <button class="btn" id="saveScriptBtn" type="button">儲存講稿</button>
+              <button class="btn btn-soft" id="formatScriptBtn" type="button">自動斷句並儲存</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>規劃說明 (input/brief.md)</h2>
+            <textarea id="briefEditor" style="min-height:200px;"></textarea>
+            <div class="row">
+              <button class="btn" id="saveBriefBtn" type="button">儲存規劃說明</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h2>專有名詞詞彙表 (vocabulary.tsv)</h2>
+            <div class="field-grid">
+              <label class="field">Key (講稿中用 {{key}})<input type="text" id="vocKey" placeholder="例如 BART" /></label>
+              <label class="field">字幕顯示<input type="text" id="vocSub" placeholder="例如 BART" /></label>
+              <label class="field">TTS 念法<input type="text" id="vocTts" placeholder="例如 霸特" /></label>
+            </div>
+            <div class="row"><button class="btn btn-soft" id="saveVocabBtn" type="button">新增 / 更新詞彙</button></div>
+            <pre class="logbox" id="vocabListLog">載入中…</pre>
+          </div>
+          <div class="card">
+            <h2>全域環境設定 (.env)</h2>
+            <div class="field-grid">
+              <label class="field">VOICEBOX_URL<input type="text" id="envVoicebox" /></label>
+              <label class="field">OLLAMA_BASE_URL<input type="text" id="envOllama" /></label>
+              <label class="field">LOG_LEVEL
+                <select id="envLogLevel"><option value="INFO">INFO</option><option value="DEBUG">DEBUG</option><option value="WARNING">WARNING</option></select>
+              </label>
+            </div>
+            <div class="row"><button class="btn btn-ghost" id="saveEnvBtn" type="button">儲存 .env 全域設定</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 3: Narrate & Antigravity Plan -->
+      <section class="view" id="view-narrate">
+        <div class="grid-2">
+          <div class="card">
+            <h2>Step 3A：先聲後影（生成配音與量測秒數）</h2>
+            <p class="muted">先依設定（Voicebox 或 edge-tts）產生配音與字幕，再用 ffprobe 算出每頁秒數。</p>
+            <div class="row">
+              <button class="btn" id="buildNarrationBtn" type="button">1. 生成配音與字幕 (narrate build)</button>
+              <button class="btn btn-soft" id="calcTimingBtn" type="button">2. 計算投影片秒數 (video timing)</button>
+            </div>
+            <pre class="logbox" id="narrateLog">尚未執行</pre>
+          </div>
+
+          <div class="card">
+            <h2>Step 3B：交給 Antigravity 規劃分鏡</h2>
+            <p class="muted">點擊後會啟動 <code>agy -p</code> 讀取 <code>brief.md</code> 與時間軸並自動產出草稿至 <code>review/</code>，對話抽屜會顯示即時思考與回覆。</p>
+            <div class="field-grid">
+              <label class="field">規劃目標格式
+                <select id="planModeSelect">
+                  <option value="html">HTML / GSAP / HyperFrames (review/index.html)</option>
+                  <option value="poster">海報鏡頭分鏡 (review/scenes.toml)</option>
+                </select>
+              </label>
+            </div>
+            <label class="field">補充給 Antigravity 的指示
+              <textarea id="planInstruction" placeholder="例如：第 1 幕用大標題淡入，第 2 幕強調數據對比…"></textarea>
+            </label>
+            <div class="row">
+              <button class="btn" id="runAgyPlanBtn" type="button">✨ 啟動 Antigravity (agy CLI) 規劃</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>review/ 草稿預覽與核可移入 input/</h2>
+          <div class="row" id="reviewActionsRow">
+            <button class="btn btn-soft" id="previewReviewHtmlBtn" type="button">預覽 review/index.html</button>
+            <button class="btn" id="approveHtmlBtn" type="button">核可 index.html -> input/</button>
+            <button class="btn" id="approveScenesBtn" type="button">核可 scenes.toml -> input/</button>
+          </div>
+          <iframe class="preview-frame" id="reviewPreviewFrame" title="review 預覽"></iframe>
+        </div>
+      </section>
+
+      <!-- View 4: Render & Verify -->
+      <section class="view" id="view-render">
+        <div class="card">
+          <h2>Step 4：渲染畫面、合成配音並驗收</h2>
+          <div class="row">
+            <button class="btn" id="renderHtmlBtn" type="button">渲染 HTML 影片 (HyperFrames)</button>
+            <button class="btn btn-soft" id="renderPosterBtn" type="button">渲染海報影片 (Poster)</button>
+            <button class="btn btn-ghost" id="checkVideoBtn" type="button">執行影片驗收 (video check)</button>
+          </div>
+          <pre class="logbox" id="renderLog">尚未渲染</pre>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h2>成品影片播放</h2>
+            <video class="player" id="videoPlayer" controls></video>
+          </div>
+          <div class="card">
+            <h2>逐頁抽格總覽 (video_contact_sheet.jpg)</h2>
+            <img class="sheet" id="contactSheetImg" alt="尚無縮圖總覽" />
+          </div>
+        </div>
+      </section>
+    </div>
   </main>
-  <script>
-    async function loadDashboard() {
-      try {
-        const [hRes, jRes] = await Promise.all([fetch('/health'), fetch('/api/jobs')]);
-        const health = await hRes.json();
-        const jobs = await jRes.json();
-        document.getElementById('healthText').textContent =
-          `狀態：${health.status} ｜ 環境：${health.app_env} ｜ 工作區：${health.workspace}`;
-        document.getElementById('jobsText').textContent = jobs.output || '尚無工作';
-      } catch (err) {
-        document.getElementById('healthText').textContent = '連線失敗：' + err;
-      }
-    }
-    document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
-    loadDashboard();
-  </script>
+</div>
+
+<!-- Antigravity Chat Drawer (對齊 notebooklm-batch-studio .qa-drawer) -->
+<aside class="qa-drawer" id="qaDrawer" aria-hidden="true" aria-label="Antigravity 規劃對話">
+  <div class="qa-drawer-head">
+    <strong>✨ Antigravity 分鏡規劃對話 (agy CLI)</strong>
+    <div class="row">
+      <button class="btn btn-ghost btn-sm" id="copyPromptBtn" type="button">複製提示詞</button>
+      <button class="btn btn-ghost btn-sm" id="qaCloseBtn" type="button">關閉</button>
+    </div>
+  </div>
+  <div class="qa-drawer-msgs" id="qaMsgs">
+    <div class="qa-msg ai">在這裡可直接與 Antigravity（agy CLI）對話規劃分鏡；發送後會出現輸入中動畫，並將回覆與草稿結果顯示於此。</div>
+  </div>
+  <div class="qa-drawer-foot">
+    <div class="qa-input-row">
+      <textarea id="qaInput" placeholder="輸入規劃要求或修改意見，Enter 發送…"></textarea>
+      <button class="btn" id="qaSendBtn" type="button">發送</button>
+    </div>
+  </div>
+</aside>
+
+<script src="/studio.js"></script>
 </body>
 </html>

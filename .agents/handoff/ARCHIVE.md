@@ -33,3 +33,10 @@
 ### [2026-10-21 17:27 UTC] 完成任務 `TASK-002` — 遷移批次 2：services 層（業務流程） (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Migrated and refactored 27 services files into src/video_studio/services/, unified entrypoints CLI, added unit tests, passed mypy strict and review guard
+
+### [2026-10-21 17:28 UTC] 認領任務 `TASK-003` (遷移批次 3：文件（README、規格、決策、已知問題）) (by `antigravity`)
+- **相關範圍**: `docs/architecture/ARCHITECTURE.md, docs/specs/, openwebui/OPENWEBUI.md, templates/TEMPLATES.md, video/VIDEO.md, legacy`
+
+### [2026-10-21 17:30 UTC] 完成任務 `TASK-003` — 遷移批次 3：文件（README、規格、決策、已知問題） (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Migrated documentation into ARCHITECTURE.md, updated root README.md, added SPEC-001, SPEC-002, and SPEC-003
