@@ -541,13 +541,14 @@ async function runRenderEndpoint(mode) {
  */
 async function handleDraftScript() {
   if (!state.currentJob) return;
-  showToast('正在用本機 Ollama 生成講稿草稿…', 'info', 3000);
+  showToast('正在以 agy CLI 生成講稿草稿…', 'info', 3500);
   const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/script/draft`, {
     method: 'POST',
     body: JSON.stringify({
       instruction: document.getElementById('scriptDraftInstruction').value,
       language: document.getElementById('cfgVoiceLanguage').value,
       duration_sec: Number(document.getElementById('scriptDraftDuration').value || 90),
+      model: document.getElementById('planModelSelect')?.value || '',
     }),
   });
   document.getElementById('scriptEditor').value = res.content || '';
@@ -574,10 +575,13 @@ async function handleLoadReviewScript() {
  */
 async function handleTranslateBilingual() {
   if (!state.currentJob) return;
-  showToast('正在生成雙語字幕翻譯…', 'info', 3000);
+  showToast('正在以 agy CLI 翻譯雙語字幕…', 'info', 3500);
   const res = await api(`/api/jobs/${encodeURIComponent(state.currentJob)}/subtitles/bilingual`, {
     method: 'POST',
-    body: JSON.stringify({ target_lang: document.getElementById('cfgSubtitleSecondaryLang').value }),
+    body: JSON.stringify({
+      target_lang: document.getElementById('cfgSubtitleSecondaryLang').value,
+      model: document.getElementById('planModelSelect')?.value || '',
+    }),
   });
   showToast(res.output || '已完成雙語翻譯', 'success');
 }

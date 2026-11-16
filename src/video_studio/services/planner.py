@@ -153,6 +153,36 @@ def list_agy_models() -> list[dict[str, str]]:
     return models
 
 
+def run_agy_prompt(prompt: str, model: str = "", timeout: int = 180) -> str | None:
+    """Run a synchronous one-shot `agy -p` prompt as the primary AI brain.
+
+    Args:
+        prompt: Prompt text for agy CLI.
+        model: Optional agy model ID.
+        timeout: Subprocess timeout in seconds.
+
+    Returns:
+        Response text if agy succeeded, or None if agy is unavailable or failed.
+    """
+    agy_bin = _resolve_agy_bin()
+    if not agy_bin:
+        return None
+    cmd = [agy_bin, "-p", prompt]
+    if model.strip():
+        cmd.extend(["--model", model.strip()])
+    try:
+        proc = subprocess.run(
+            cmd, cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except Exception as exc:
+        logger.warning("agy -p failed, will allow Ollama fallback: %s", exc)
+        return None
+    if proc.returncode != 0 or not proc.stdout.strip():
+        logger.warning("agy -p exited %s: %s", proc.returncode, proc.stderr.strip())
+        return None
+    return proc.stdout.strip()
+
+
 def start_agy_plan(
     job_name: str,
     user_instruction: str = "",

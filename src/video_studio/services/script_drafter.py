@@ -9,6 +9,7 @@ from video_studio.config.settings import load_config as load_app_config
 from video_studio.services.common import job as J
 from video_studio.services.common.ollama_client import generate_text, is_ollama_reachable
 from video_studio.services.narrate.core.script import split_sentences
+from video_studio.services.planner import run_agy_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -82,20 +83,21 @@ def draft_script_to_review(
         RuntimeError: If local Ollama is unreachable.
     """
     app_cfg = load_app_config()
-    if not is_ollama_reachable(app_cfg.ollama_base_url):
-        raise RuntimeError(
-            f"本機 Ollama 未啟動（{app_cfg.ollama_base_url}）。"
-            "請先啟動 Ollama，或改於「Antigravity 規劃對話」請 agy 生成。"
-        )
     job = J.find(job_name)
     brief_path = job.input / "brief.md"
     brief_text = brief_path.read_text(encoding="utf-8") if brief_path.exists() else ""
     prompt = build_script_draft_prompt(job.title, brief_text, instruction, language, duration_sec)
-    raw = generate_text(
-        prompt=prompt,
-        base_url=app_cfg.ollama_base_url,
-        model=model or app_cfg.ollama_model,
-    )
+    raw = run_agy_prompt(prompt, model=model or "")
+    if raw is None:
+        if not is_ollama_reachable(app_cfg.ollama_base_url):
+            raise RuntimeError(
+                f"agy CLI 與本機 Ollama（{app_cfg.ollama_base_url}）皆無法使用，無法生成講稿。"
+            )
+        raw = generate_text(
+            prompt=prompt,
+            base_url=app_cfg.ollama_base_url,
+            model=app_cfg.ollama_model,
+        )
     formatted = split_sentences(raw)
     job.review.mkdir(parents=True, exist_ok=True)
     out_path = job.review / "script.md"

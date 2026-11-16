@@ -46,13 +46,10 @@ class TestAvatarScriptBilingual(unittest.TestCase):
 
     def test_script_draft_to_review_and_load(self) -> None:
         """Verify POST /script/draft writes formatted script to review/script.md without overwriting input."""
-        with (
-            patch("video_studio.services.script_drafter.is_ollama_reachable", return_value=True),
-            patch(
-                "video_studio.services.script_drafter.generate_text",
-                return_value=(
-                    "# 講稿：相對論\n\n## 投影片 1\n大家好，我是愛因斯坦。今天我們來聊聊時間為什麼會變慢。"
-                ),
+        with patch(
+            "video_studio.services.script_drafter.run_agy_prompt",
+            return_value=(
+                "# 講稿：相對論\n\n## 投影片 1\n大家好，我是愛因斯坦。今天我們來聊聊時間為什麼會變慢。"
             ),
         ):
             res = self.client.post(

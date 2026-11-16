@@ -14,6 +14,7 @@ All notable changes to **video-studio** are documented here
 - feat(studio): add 10s Avatar A/B preview, 10s prosody A/B/C preview, and word-level prosody tags (by `@Antigravity`)
 - feat(studio): add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection (by `@Antigravity`)
 - feat(ui): expose OLLAMA_MODEL and SADTALKER_DIR in Web UI env settings (by `@Antigravity`)
+- feat(ai): make agy-cli primary brain for script drafting and bilingual translation with Ollama fallback (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

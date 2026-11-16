@@ -80,12 +80,14 @@ class ScriptDraftRequest(BaseModel):
     instruction: str = Field(default="", description="Topic or prompt for the script")
     language: str = Field(default="zh", description="Spoken language code")
     duration_sec: int = Field(default=90, description="Target duration in seconds")
+    model: str = Field(default="", description="Optional agy CLI model ID")
 
 
 class BilingualRequest(BaseModel):
     """Request payload for translating script.md into bilingual subtitles."""
 
     target_lang: str = Field(default="zh-TW", description="Target secondary subtitle language")
+    model: str = Field(default="", description="Optional agy CLI model ID")
 
 
 class AvatarApplyRequest(BaseModel):
@@ -443,6 +445,7 @@ def draft_script_route(job_name: str, req: ScriptDraftRequest) -> dict[str, Any]
             instruction=req.instruction,
             language=req.language,
             duration_sec=req.duration_sec,
+            model=req.model or None,
         )
         return {"ok": True, "path": str(path), "content": content, "output": f"已生成講稿草稿至 {path.name}"}
     except RuntimeError as exc:
@@ -477,7 +480,7 @@ def generate_bilingual_route(job_name: str, req: BilingualRequest) -> dict[str, 
         Summary dictionary with TSV path and line count.
     """
     try:
-        tsv_path, count = bilingual.translate_job_script_bilingual(job_name, req.target_lang)
+        tsv_path, count = bilingual.translate_job_script_bilingual(job_name, req.target_lang, req.model)
         return {"ok": True, "path": str(tsv_path), "count": count, "output": f"已完成 {count} 句雙語字幕翻譯"}
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

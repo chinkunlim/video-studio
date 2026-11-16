@@ -11,6 +11,7 @@ from video_studio.config.settings import load_config as load_app_config
 from video_studio.services.common import job as J
 from video_studio.services.common.ollama_client import generate_text, is_ollama_reachable
 from video_studio.services.narrate.core.script import parse as parse_script
+from video_studio.services.planner import run_agy_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -91,31 +92,39 @@ def load_bilingual_map(tsv_path: Path) -> dict[str, str]:
     return mapping
 
 
-def translate_job_script_bilingual(job_name: str, target_lang: str = "zh-TW") -> tuple[Path, int]:
-    """Translate a job's input/script.md into work/script_bilingual.tsv via local Ollama.
+def translate_job_script_bilingual(
+    job_name: str,
+    target_lang: str = "zh-TW",
+    model: str = "",
+) -> tuple[Path, int]:
+    """Translate a job's input/script.md into work/script_bilingual.tsv via agy CLI (or Ollama fallback).
 
     Args:
         job_name: Target job name.
         target_lang: Target secondary subtitle language.
+        model: Optional agy CLI model ID.
 
     Returns:
         Tuple of (TSV path, number of translated lines).
 
     Raises:
-        RuntimeError: If script.md is missing or Ollama is unreachable.
+        RuntimeError: If script.md is missing or both agy and Ollama are unavailable.
     """
     job = J.find(job_name)
     if not job.script or not job.script.exists():
         raise RuntimeError("找不到 input/script.md，請先準備或生成講稿。")
     app_cfg = load_app_config()
-    if not is_ollama_reachable(app_cfg.ollama_base_url):
-        raise RuntimeError(f"本機 Ollama 未啟動（{app_cfg.ollama_base_url}），無法自動翻譯雙語字幕。")
-
     spoken_lines = [ln.raw for ln in parse_script(job.script.read_text(encoding="utf-8"))]
     if not spoken_lines:
         raise RuntimeError("input/script.md 沒有可翻譯的句子。")
     prompt = build_bilingual_prompt(spoken_lines, target_lang)
-    raw = generate_text(prompt=prompt, base_url=app_cfg.ollama_base_url, model=app_cfg.ollama_model)
+    raw = run_agy_prompt(prompt, model=model)
+    if raw is None:
+        if not is_ollama_reachable(app_cfg.ollama_base_url):
+            raise RuntimeError(
+                f"agy CLI 與本機 Ollama（{app_cfg.ollama_base_url}）皆無法使用，無法翻譯雙語字幕。"
+            )
+        raw = generate_text(prompt=prompt, base_url=app_cfg.ollama_base_url, model=app_cfg.ollama_model)
     rows = parse_bilingual_output(raw, spoken_lines)
     tsv_path = job.work / "script_bilingual.tsv"
     save_bilingual_tsv(tsv_path, rows)
