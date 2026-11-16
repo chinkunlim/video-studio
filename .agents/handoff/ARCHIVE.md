@@ -29,3 +29,7 @@
 
 ### [2026-10-21 17:07 UTC] 認領任務 `TASK-002` (遷移批次 2：services 層（業務流程）) (by `antigravity`)
 - **相關範圍**: `src/video_studio/services/, legacy`
+
+### [2026-10-21 17:27 UTC] 完成任務 `TASK-002` — 遷移批次 2：services 層（業務流程） (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Migrated and refactored 27 services files into src/video_studio/services/, unified entrypoints CLI, added unit tests, passed mypy strict and review guard
