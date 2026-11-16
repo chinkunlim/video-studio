@@ -132,12 +132,16 @@ def _install_security_middleware(app: FastAPI, cfg: AppConfig) -> None:
             HTTP response or 403 error JSON.
         """
         host_header = (request.headers.get("host") or "").split(":")[0].lower()
-        if host_header and host_header not in allowed_hosts:
+        is_tailnet_host = host_header.endswith(".ts.net")
+        if host_header and host_header not in allowed_hosts and not is_tailnet_host:
             return JSONResponse({"detail": "Forbidden host"}, status_code=403)
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
             origin = request.headers.get("origin")
-            if origin and origin.rstrip("/") not in allowed_origins:
-                return JSONResponse({"detail": "Forbidden origin"}, status_code=403)
+            if origin:
+                norm_origin = origin.rstrip("/")
+                origin_host = norm_origin.split("://", 1)[-1].split("/", 1)[0].split(":")[0].lower()
+                if norm_origin not in allowed_origins and not origin_host.endswith(".ts.net"):
+                    return JSONResponse({"detail": "Forbidden origin"}, status_code=403)
         return await call_next(request)
 
 
