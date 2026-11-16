@@ -64,6 +64,13 @@ def _poster_and_lang_rules(job: J.Job, follow_poster_design: bool) -> list[str]:
             f"2. 跨語系海報翻譯：目前語音語言為 `{voice_lang}`，請自動將海報上所有中文標題、"
             f"內文、圖表標籤翻譯為自然流暢的 `{voice_lang}` 呈現於畫面中。"
         )
+    if posters:
+        rules.append(
+            "3. 講解聚焦 Highlight 與動態運鏡（必做）："
+            "講解海報不同段落時，當前講到的區塊必須有明顯的高亮聚焦效果（發光外框／微幅放大／重點標記動畫），"
+            "非當前區塊適度降暗（opacity 降至 ~0.45）；搭配 GSAP 平滑推拉運鏡（pan/zoom）、"
+            "圖表或關鍵詞依講稿節奏逐一進場，並於畫面加入章節進度條，讓觀眾清楚跟上目前進度且畫面生動不單調。"
+        )
     return rules
 
 
