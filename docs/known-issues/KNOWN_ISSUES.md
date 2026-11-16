@@ -15,3 +15,4 @@
 |---|---|---|---|---|
 | [ISSUE-001](001-media-contact-sheet-missing.md) | 🟢 已根治 (Resolved) | 影片驗收驗證時缺少 video_contact_sheet.jpg 產出邏輯 | media.check 函式執行驗收時因缺少影格網格縮圖生成，造成驗收流程回傳錯誤 | `services/video/engine/media.py` / `test_workflow_video.py` |
 | [ISSUE-002](002-host-python-tomllib-detection.md) | 🟢 已根治 (Resolved) | 舊版主機 Python 環境下執行 check 誤報 tomllib 未宣告依賴 | 當使用系統 Python 3.9 執行 agentctl check 時，因標準函式庫尚未內建 tomllib，導致 setup_env.py 誤判其為第三方未宣告套件 | `.agents/bin/setup_env.py` |
+| [ISSUE-003](003-empty-workspace-job-parse.md) | 🟢 已根治 (Resolved) | Empty workspace job list parsed sv.py as job name causing 500 error | When workspace has no jobs, studio.js split the help text and sent sv.py to /api/jobs/*/detail. | TODO |

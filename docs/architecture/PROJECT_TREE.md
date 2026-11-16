@@ -113,6 +113,7 @@ video-studio/
 │   ├── known-issues/                       # [已知問題庫] 一問題一檔案
 │   │   ├── 001-media-contact-sheet-missing.md
 │   │   ├── 002-host-python-tomllib-detection.md
+│   │   ├── 003-empty-workspace-job-parse.md
 │   │   ├── _TEMPLATE.md                    # 已知問題範本 (tracker_cli 會套用)
 │   │   └── KNOWN_ISSUES.md                 # 已知問題總表 (🔴/🟡/🟢)
 │   ├── migration/                          # [遷移紀錄] 舊專案搬移清單、批次與完成標準

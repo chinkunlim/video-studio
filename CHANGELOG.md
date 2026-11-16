@@ -25,6 +25,7 @@ All notable changes to **video-studio** are documented here
 
 ### Fixed
 - fix(overlay): fallback to load_default font and install fonts-noto-cjk in CI (by `@antigravity`)
+- fix(studio): ignore empty-workspace hint in job dropdown and return 404 on missing job (by `@Antigravity`)
 
 ### Documentation
 - docs: migrate design specs and update project architecture documentation (TASK-003) (`TASK-003`, by `@antigravity`)

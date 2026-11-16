@@ -59,6 +59,10 @@ class TestStudioUIAndPlanner(unittest.TestCase):
         self.assertEqual(js.status_code, 200)
         self.assertIn("runAntigravityPlan", js.text)
         self.assertIn("showToast", js.text)
+        self.assertIn("^(generate|dub|extract)", js.text)
+
+        missing = self.client.get("/api/jobs/nonexistent-job/detail")
+        self.assertEqual(missing.status_code, 404)
 
         tune_js = self.client.get("/studio-layout-tune.js")
         self.assertEqual(tune_js.status_code, 200)

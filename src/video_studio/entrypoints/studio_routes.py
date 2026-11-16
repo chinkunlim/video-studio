@@ -181,7 +181,10 @@ def get_job_detail(job_name: str) -> dict[str, Any]:
     Returns:
         Structured job detail dictionary for the Web UI.
     """
-    job = J.find(job_name)
+    try:
+        job = J.find(job_name)
+    except J.JobError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     script_text = job.script.read_text(encoding="utf-8") if job.script and job.script.exists() else ""
     brief_path = job.input / "brief.md"
     brief_text = brief_path.read_text(encoding="utf-8") if brief_path.exists() else ""
@@ -220,7 +223,10 @@ def update_job_config(job_name: str, req: JobConfigUpdate) -> dict[str, Any]:
     Returns:
         Confirmation dictionary.
     """
-    job = J.find(job_name)
+    try:
+        job = J.find(job_name)
+    except J.JobError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     content = _serialize_job_toml(job.type, req)
     (job.dir / "job.toml").write_text(content, encoding="utf-8")
     return {"ok": True, "output": f"已儲存 {job.name}/job.toml"}
@@ -237,7 +243,10 @@ def update_job_script(job_name: str, req: TextContentUpdate) -> dict[str, Any]:
     Returns:
         Saved content and status message.
     """
-    job = J.find(job_name)
+    try:
+        job = J.find(job_name)
+    except J.JobError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     text = script_mod.split_sentences(req.content) if req.auto_format else req.content
     target = job.script or (job.input / "script.md")
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -260,7 +269,10 @@ def update_job_brief(job_name: str, req: TextContentUpdate) -> dict[str, Any]:
     Returns:
         Confirmation dictionary.
     """
-    job = J.find(job_name)
+    try:
+        job = J.find(job_name)
+    except J.JobError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     job.input.mkdir(parents=True, exist_ok=True)
     (job.input / "brief.md").write_text(req.content, encoding="utf-8")
     return {"ok": True, "output": f"已儲存 {job.name}/input/brief.md"}
@@ -277,7 +289,10 @@ async def upload_job_asset(job_name: str, file: Annotated[UploadFile, File(...)]
     Returns:
         Saved filename confirmation.
     """
-    job = J.find(job_name)
+    try:
+        job = J.find(job_name)
+    except J.JobError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     fname = Path(file.filename or "upload.bin").name
     if not SAFE_NAME_RE.fullmatch(fname):
         raise HTTPException(status_code=400, detail="檔名僅允許英數字、點、底線與連字號")

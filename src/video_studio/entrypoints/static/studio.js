@@ -137,7 +137,11 @@ async function refreshJobs() {
   document.getElementById('envSadtalkerDir').value = envRes.SADTALKER_DIR || '';
   document.getElementById('envLogLevel').value = envRes.LOG_LEVEL || 'INFO';
 
-  const names = (jobsRes.output || '').split('\n').map(l => l.trim().split(/\s+/)[1]).filter(Boolean);
+  const names = (jobsRes.output || '')
+    .split('\n')
+    .map(l => l.trim().match(/^(generate|dub|extract)\s+([A-Za-z0-9._-]+)/))
+    .filter(Boolean)
+    .map(m => m[2]);
   const sel = document.getElementById('jobSelect');
   const prev = state.currentJob || sel.value;
   sel.innerHTML = names.length ? names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('') : '<option value="">尚無工作</option>';
