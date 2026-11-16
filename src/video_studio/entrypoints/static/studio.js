@@ -133,6 +133,8 @@ async function refreshJobs() {
   document.getElementById('vocabListLog').textContent = vocRes.output || '（詞彙表空白）';
   document.getElementById('envVoicebox').value = envRes.VOICEBOX_URL || '';
   document.getElementById('envOllama').value = envRes.OLLAMA_BASE_URL || '';
+  document.getElementById('envOllamaModel').value = envRes.OLLAMA_MODEL || '';
+  document.getElementById('envSadtalkerDir').value = envRes.SADTALKER_DIR || '';
   document.getElementById('envLogLevel').value = envRes.LOG_LEVEL || 'INFO';
 
   const names = (jobsRes.output || '').split('\n').map(l => l.trim().split(/\s+/)[1]).filter(Boolean);
@@ -458,6 +460,8 @@ async function handleSaveEnv() {
       values: {
         VOICEBOX_URL: document.getElementById('envVoicebox').value.trim(),
         OLLAMA_BASE_URL: document.getElementById('envOllama').value.trim(),
+        OLLAMA_MODEL: document.getElementById('envOllamaModel').value.trim(),
+        SADTALKER_DIR: document.getElementById('envSadtalkerDir').value.trim(),
         LOG_LEVEL: document.getElementById('envLogLevel').value,
       },
     }),

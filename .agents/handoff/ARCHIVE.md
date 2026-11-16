@@ -95,3 +95,7 @@
 ### [2026-11-16 02:40 UTC] 完成任務 `TASK-007` — Refactor oversized functions and resolve all Code Review Guard warnings (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Added graphify-out/ to .gitignore, refactored oversized/deep-nesting/multi-param functions across entrypoints, adapters, and services, updated PROJECT_RULES.md §3, and verified 34/34 tests + ruff + mypy strict + graphify update.
+
+### [2026-11-16 02:41 UTC] 建立任務 `TASK-008`: Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`

@@ -5,20 +5,22 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 04:18 UTC`
+- **最後更新時間**: `2026-11-16 04:21 UTC`
 - **最近操作 Agent**: `Antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `1da6cd7 feat(studio): add 10s Avatar A/B preview, 10s prosody A/B/C preview, and word-level prosody tags [agent:Antigravity]`
+- **最新 Git Commit**: `986822a feat(studio): add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection [agent:Antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
-|---|---|---|---|---|---|---|
-| **TASK-014**<br/>Add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection | 🟢 `in_progress` | `Antigravity` | `-` | - | - | - |
+> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-16 04:21 UTC] 完成任務 `TASK-014` — Add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection (by `Antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: (無)
 
 ### [2026-11-16 04:18 UTC] 認領任務 `TASK-014` (Add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection) (by `Antigravity`)
 - **相關範圍**: `-`
@@ -95,7 +97,3 @@
 ### [2026-11-16 02:41 UTC] 認領任務 `TASK-008` (Add FastAPI HTTP API, MCP Server, and Web UI) (by `antigravity`)
 - **相關範圍**: `-`
 - **接棒自**: `antigravity`
-
-### [2026-11-16 02:41 UTC] 建立任務 `TASK-008`: Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
