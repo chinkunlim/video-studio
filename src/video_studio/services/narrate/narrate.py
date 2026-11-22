@@ -10,7 +10,6 @@ from __future__ import annotations
 import csv
 import json
 import logging
-import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,15 +24,29 @@ from video_studio.services.narrate.core import (
     generate,
     numbers,
     prosody,
+    samples,
     script,
     subtitles,
     vocab,
     whisper,
 )
 from video_studio.services.narrate.core.edge_tts_client import DEFAULT_EDGE_VOICE, EdgeTTSClient
+from video_studio.services.narrate.core.samples import (
+    VOICE_SAMPLE_TEXTS,
+    ensure_voice_samples,
+    get_cached_voice_samples,
+    voice_sample_cache_dir,
+)
 from video_studio.services.narrate.core.takes import TakeEntry, Takes
 from video_studio.services.narrate.core.takes import key as take_key
 from video_studio.services.narrate.core.voicebox import Voicebox
+
+__all__ = [
+    "VOICE_SAMPLE_TEXTS",
+    "ensure_voice_samples",
+    "get_cached_voice_samples",
+    "voice_sample_cache_dir",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -87,14 +100,15 @@ def load_narrate_config(job: J.Job | None = None) -> dict[str, Any]:
     voice_cfg = job.cfg.get("voice", {})
     if voice_cfg.get("profile"):
         cfg["voicebox"]["profile"] = voice_cfg["profile"]
-    if voice_cfg.get("language"):
-        cfg["voicebox"]["language"] = str(voice_cfg["language"]).strip()
-    if voice_cfg.get("engine"):
-        cfg["tts"]["engine"] = str(voice_cfg["engine"]).strip().lower()
-    if voice_cfg.get("edge_voice"):
-        cfg["tts"]["edge_voice"] = str(voice_cfg["edge_voice"]).strip()
-    if voice_cfg.get("edge_rate"):
-        cfg["tts"]["edge_rate"] = str(voice_cfg["edge_rate"]).strip()
+    for src_key, dst_sec, dst_key in (
+        ("language", "voicebox", "language"),
+        ("engine", "tts", "engine"),
+        ("edge_voice", "tts", "edge_voice"),
+        ("edge_rate", "tts", "edge_rate"),
+    ):
+        if voice_cfg.get(src_key):
+            val = str(voice_cfg[src_key]).strip()
+            cfg[dst_sec][dst_key] = val.lower() if src_key == "engine" else val
     whisper_cfg = job.cfg.get("whisper", {})
     if whisper_cfg.get("model"):
         cfg["whisper"]["model"] = str(whisper_cfg["model"]).strip()
@@ -180,7 +194,7 @@ def list_lines(job: J.Job) -> str:
 
 
 def preview_prosody_10s(job: J.Job, sample_text: str = "") -> dict[str, str]:
-    """Generate 10-second normal/energetic/calm prosody audio previews into review/.
+    """Generate 10-second normal/energetic/calm prosody audio previews into needs_review/<job>/.
 
     Args:
         job: Target Job instance.
@@ -196,120 +210,7 @@ def preview_prosody_10s(job: J.Job, sample_text: str = "") -> dict[str, str]:
         text = " ".join(ln.raw for ln in lines[:2])
     if not text:
         text = "大家好，歡迎來到今天的分享。今天我們來聊聊 [loud]核心關鍵[/loud] 與未來的發展。"
-    clean_text, spans = prosody.parse_prosody_tags(text)
-    vb = _build_tts_client(cfg)
-    vb.check_ready()
-    raw_bytes = vb.generate(clean_text, cfg["voicebox"].get("language"))
-    job.review.mkdir(parents=True, exist_ok=True)
-    base_wav = job.work / "prosody_base_10s.wav"
-    base_wav.parent.mkdir(parents=True, exist_ok=True)
-    raw_tmp = job.work / "prosody_raw.wav"
-    raw_tmp.write_bytes(raw_bytes)
-    audio.cut(raw_tmp, base_wav, audio.CutOptions(start=0.0, end=10.0, rate=24000))
-    words = whisper.words(base_wav, cfg["whisper"]["model"])
-    timed = prosody.match_word_spans(spans, words)
-    out: dict[str, str] = {}
-    for preset in ("normal", "energetic", "calm"):
-        fname = f"prosody_{preset}.wav"
-        prosody.apply_prosody_to_wav(base_wav, job.review / fname, timed, preset=preset)
-        out[preset] = fname
-    return out
-
-
-VOICE_SAMPLE_TEXTS: dict[str, str] = {
-    "en": ("Welcome to today's presentation. Let's walk through the key findings and practical insights."),
-    "zh": "大家好，歡迎來到今天的簡報分享。接下來我們將一起了解核心重點與實務應用。",
-    "ja": "皆さん、こんにちは。本日のプレゼンテーションへようこそ。重要なポイントをご紹介します。",
-    "ko": "안녕하세요. 오늘 발표에 오신 것을 환영합니다. 핵심 내용을 함께 살펴보겠습니다.",
-}
-
-
-def voice_sample_cache_dir() -> Path:
-    """Return the DATA_DIR directory storing pre-cached 10s voice/prosody samples.
-
-    Returns:
-        Path to DATA_DIR/cache/voice_samples.
-    """
-    return load_app_config().data_dir / "cache" / "voice_samples"
-
-
-def _safe_voice_key(voice_key: str) -> str:
-    """Sanitize a voice/profile identifier for safe filesystem caching.
-
-    Args:
-        voice_key: Raw voice or profile name.
-
-    Returns:
-        Filesystem-safe token string.
-    """
-    return re.sub(r"[^A-Za-z0-9._-]+", "_", voice_key.strip() or "default")
-
-
-def get_cached_voice_samples(voice_key: str) -> dict[str, str]:
-    """Return cached 10s sample filenames for a voice key if all 3 presets exist.
-
-    Args:
-        voice_key: Edge-TTS voice ID or Voicebox profile name.
-
-    Returns:
-        Mapping of preset ('normal', 'energetic', 'calm') to filename, or empty dict if incomplete.
-    """
-    cdir = voice_sample_cache_dir()
-    safe = _safe_voice_key(voice_key)
-    out: dict[str, str] = {}
-    for preset in ("normal", "energetic", "calm"):
-        fname = f"{safe}_{preset}.wav"
-        if not (cdir / fname).is_file():
-            return {}
-        out[preset] = fname
-    return out
-
-
-def ensure_voice_samples(
-    voice_key: str,
-    language: str = "zh",
-    engine: str = "edge-tts",
-    rate: str = "+0%",
-) -> dict[str, str]:
-    """Ensure 10s normal/energetic/calm cached preview WAVs exist for a specific voice.
-
-    Args:
-        voice_key: Edge-TTS voice ID or Voicebox profile name.
-        language: Language code ('en', 'zh', 'ja', 'ko').
-        engine: TTS engine ('edge-tts' or 'voicebox').
-        rate: Edge-TTS rate string (e.g. '+0%', '-10%').
-
-    Returns:
-        Mapping of preset name to cached filename inside DATA_DIR/cache/voice_samples.
-    """
-    cached = get_cached_voice_samples(voice_key)
-    if cached:
-        return cached
-    cdir = voice_sample_cache_dir()
-    cdir.mkdir(parents=True, exist_ok=True)
-    safe = _safe_voice_key(voice_key)
-    lang_code = language.split("-")[0].lower()
-    text = VOICE_SAMPLE_TEXTS.get(lang_code, VOICE_SAMPLE_TEXTS["zh"])
-    cfg: dict[str, Any] = {
-        "voicebox": {"url": load_app_config().voicebox_url, "profile": voice_key, "language": lang_code},
-        "tts": {"engine": engine, "edge_voice": voice_key or DEFAULT_EDGE_VOICE, "edge_rate": rate},
-    }
-    client = _build_tts_client(cfg)
-    client.check_ready()
-    raw_bytes = client.generate(text, lang_code)
-    raw_tmp = cdir / f"_{safe}_raw.wav"
-    base_wav = cdir / f"_{safe}_base10s.wav"
-    raw_tmp.write_bytes(raw_bytes)
-    audio.cut(raw_tmp, base_wav, audio.CutOptions(start=0.0, end=10.0, rate=24000))
-    out: dict[str, str] = {}
-    for preset in ("normal", "energetic", "calm"):
-        fname = f"{safe}_{preset}.wav"
-        prosody.apply_prosody_to_wav(base_wav, cdir / fname, [], preset=preset)
-        out[preset] = fname
-    raw_tmp.unlink(missing_ok=True)
-    base_wav.unlink(missing_ok=True)
-    logger.info("已預先快取聲線試聽範本：%s (%s)", voice_key, lang_code)
-    return out
+    return samples.render_prosody_preview(job, cfg, text)
 
 
 def scan_vocab(job: J.Job) -> str:
@@ -539,44 +440,6 @@ def build_narration(job: J.Job) -> str:
     )
 
 
-def _save_audition_takes(job: J.Job, ln: script.Line, tts_val: str, res: list[dict[str, Any]]) -> list[str]:
-    """保存试听候选音档与 takes.json 元资料。
-
-    Args:
-        job: 工作物件。
-        ln: 讲稿行物件。
-        tts_val: 念法文字。
-        res: 生成通过的 take 清单。
-
-    Returns:
-        格式化输出行清册。
-    """
-    dest_dir = job.review / "audition" / f"line{ln.no:03d}"
-    if dest_dir.exists():
-        shutil.rmtree(dest_dir)
-    dest_dir.mkdir(parents=True)
-    meta: list[dict[str, Any]] = []
-    lines_out: list[str] = [f"[{ln.no}] {tts_val}"]
-    for k, r in enumerate(res, 1):
-        dest = generate.store(r, dest_dir / f"{k}.wav")
-        meta.append(
-            {
-                "take": k,
-                "file": str(dest.relative_to(job.review)),
-                "words": r["words"],
-                "sim": r["sim"],
-                "wrap": r["wrap"],
-                "hyp": r["hyp"],
-            }
-        )
-        lines_out.append(f"  {dest}  ｜{r['hyp']}")
-    (dest_dir / "takes.json").write_text(
-        json.dumps({"tts": tts_val, "takes": meta}, ensure_ascii=False, indent=1), encoding="utf-8"
-    )
-    lines_out.append(f"\n听完后选用：uv run narrate/narrate.py pick {job.name} {ln.no} <编号>")
-    return lines_out
-
-
 def audition_line(job: J.Job, line_no: int, takes_count: int = 4) -> str:
     """为特定讲稿行生成多个试听版本。
 
@@ -602,7 +465,7 @@ def audition_line(job: J.Job, line_no: int, takes_count: int = 4) -> str:
         (job.work / "gen" / take_key(tts_val), cfg),
         generate.TakeOptions(tries=len(generate.WRAPS), keep_all=True),
     )[:takes_count]
-    return "\n".join(_save_audition_takes(job, ln, tts_val, res))
+    return "\n".join(samples.save_audition_takes(job, ln, tts_val, res))
 
 
 def pick_take(job: J.Job, line_no: int, take_no: int) -> str:
@@ -619,28 +482,4 @@ def pick_take(job: J.Job, line_no: int, take_no: int) -> str:
     lines, _ = load_lines(job)
     if not 1 <= line_no <= len(lines):
         raise RuntimeError(f"没有第 {line_no} 行（讲稿共 {len(lines)} 行）")
-    ln = lines[line_no - 1]
-    tts_val = getattr(ln, "tts", "")
-    d = job.review / "audition" / f"line{ln.no:03d}"
-    if not (d / "takes.json").exists():
-        raise RuntimeError(f"第 {ln.no} 行还没有试听版本，请先 audition")
-    meta = json.loads((d / "takes.json").read_text(encoding="utf-8"))
-    if meta.get("tts") != tts_val:
-        raise RuntimeError("这一行的念法在试听后改过了，请重新 audition")
-    chosen = next((x for x in meta.get("takes", []) if x.get("take") == take_no), None)
-    if chosen is None:
-        raise RuntimeError(f"没有第 {take_no} 个版本")
-    dest = job.takes_dir / f"{take_key(tts_val)}.wav"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    src_take = job.review / chosen["file"]
-    if not src_take.exists():
-        src_take = job.dir / chosen["file"]
-    shutil.copy2(src_take, dest)
-    takes_of(job).put(
-        tts_val,
-        dest,
-        TakeEntry(
-            words=chosen["words"], source=f"audition 第{take_no}个", sim=chosen.get("sim"), locked=True
-        ),
-    )
-    return f"第 {ln.no} 行改用第 {take_no} 个版本，并锁定。下次 build 会用它。"
+    return samples.pick_audition_take(job, lines[line_no - 1], take_no, takes_of(job))

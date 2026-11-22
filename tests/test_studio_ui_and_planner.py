@@ -75,6 +75,14 @@ class TestStudioUIAndPlanner(unittest.TestCase):
         self.assertIn("initDraftAutosave", ux_js.text)
         self.assertIn("refreshLiveTerminal", ux_js.text)
 
+        shell_js = self.client.get("/studio-shell.js")
+        self.assertEqual(shell_js.status_code, 200)
+        self.assertIn("initStudioUxOverhaul", shell_js.text)
+
+        actions_js = self.client.get("/studio-actions.js")
+        self.assertEqual(actions_js.status_code, 200)
+        self.assertIn("bindOverviewEvents", actions_js.text)
+
         tail = self.client.get("/api/logs/tail?lines=10")
         self.assertEqual(tail.status_code, 200)
         self.assertIn("lines", tail.json())

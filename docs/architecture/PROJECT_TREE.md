@@ -185,9 +185,11 @@ video-studio/
 │       │   │   └── settings_logs.py
 │       │   ├── static/
 │       │   │   ├── index.html
+│       │   │   ├── studio-actions.js
 │       │   │   ├── studio-layout-tune.js
 │       │   │   ├── studio-prosody.js
 │       │   │   ├── studio-release.js
+│       │   │   ├── studio-shell.js
 │       │   │   ├── studio-theme.css
 │       │   │   ├── studio-ux.js
 │       │   │   ├── studio.css
@@ -196,7 +198,9 @@ video-studio/
 │       │   ├── api.py
 │       │   ├── cli.py
 │       │   ├── mcp_server.py
+│       │   ├── mcp_studio_tools.py
 │       │   ├── schemas.py
+│       │   ├── security.py
 │       │   └── studio_routes.py
 │       ├── services/
 │       │   ├── common/
@@ -219,6 +223,7 @@ video-studio/
 │       │   │   │   ├── generate.py
 │       │   │   │   ├── numbers.py
 │       │   │   │   ├── prosody.py
+│       │   │   │   ├── samples.py
 │       │   │   │   ├── script.py
 │       │   │   │   ├── subtitles.py
 │       │   │   │   ├── takes.py
