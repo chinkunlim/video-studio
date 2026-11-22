@@ -9,7 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
+from video_studio.config.settings import load_config
+
 logger = logging.getLogger(__name__)
+DEFAULT_PORTRAIT_BG_RGB = (245, 242, 235)
 
 
 @dataclass(frozen=True)
@@ -56,6 +61,48 @@ def avatar_environment_status(sadtalker_dir: Path | None) -> dict[str, Any]:
             "checkpoints": checkpoints,
         },
     }
+
+
+def ensure_opaque_portrait(
+    image_path: Path,
+    work_dir: Path,
+    bg_rgb: tuple[int, int, int] = DEFAULT_PORTRAIT_BG_RGB,
+) -> Path:
+    """Composite transparent RGBA portrait images onto an opaque cream background.
+
+    Args:
+        image_path: Source portrait image path.
+        work_dir: Working directory where the flattened PNG is written if needed.
+        bg_rgb: Solid RGB background color used behind alpha transparency.
+
+    Returns:
+        Original path when already opaque, or path to flattened RGB PNG.
+    """
+    with Image.open(image_path) as raw:
+        if "A" not in raw.getbands():
+            return image_path
+        min_alpha = raw.getchannel("A").getextrema()[0]
+        if isinstance(min_alpha, int) and min_alpha == 255:
+            return image_path
+        rgba = raw.convert("RGBA")
+        bg = Image.new("RGBA", rgba.size, (*bg_rgb, 255))
+        work_dir.mkdir(parents=True, exist_ok=True)
+        out_path = work_dir / f"{image_path.stem}_opaque.png"
+        Image.alpha_composite(bg, rgba).convert("RGB").save(out_path)
+    logger.info("Composited transparent portrait onto opaque background: %s", out_path)
+    return out_path
+
+
+def _sadtalker_env() -> dict[str, str]:
+    """Build subprocess environment for SadTalker with PyTorch 2.6+ and Apple MPS flags.
+
+    Returns:
+        Environment dictionary inheriting AppConfig process settings.
+    """
+    env = load_config().process_env()
+    env.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
+    env.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+    return env
 
 
 def _probe_duration(media_path: Path) -> float:
@@ -113,6 +160,7 @@ def render_lightweight_avatar(
     duration = _probe_duration(audio_path)
     frames = max(1, int(round(duration * fps)))
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
+    src_img = ensure_opaque_portrait(image_path, out_mp4.parent)
     vf = (
         "scale=512:512:force_original_aspect_ratio=increase,"
         "crop=512:512,"
@@ -126,7 +174,7 @@ def render_lightweight_avatar(
         "-loop",
         "1",
         "-i",
-        str(image_path),
+        str(src_img),
         "-i",
         str(audio_path),
         "-vf",
@@ -175,20 +223,24 @@ def render_sadtalker_avatar(
     venv_py = sadtalker_dir / ".venv" / "bin" / "python"
     result_dir = out_mp4.parent / "sadtalker_raw"
     result_dir.mkdir(parents=True, exist_ok=True)
+    src_img = ensure_opaque_portrait(image_path, result_dir)
     cmd = [
         str(venv_py),
         str(sadtalker_dir / "inference.py"),
         "--driven_audio",
         str(audio_path),
         "--source_image",
-        str(image_path),
+        str(src_img),
         "--result_dir",
         str(result_dir),
         "--preprocess",
         "full",
+        "--still",
     ]
     logger.info("Running Route A SadTalker inference in %s", sadtalker_dir)
-    proc = subprocess.run(cmd, cwd=str(sadtalker_dir), capture_output=True, text=True, check=False)
+    proc = subprocess.run(
+        cmd, cwd=str(sadtalker_dir), env=_sadtalker_env(), capture_output=True, text=True, check=False
+    )
     if proc.returncode != 0:
         raise RuntimeError(f"SadTalker inference failed: {proc.stderr[-500:]}")
     mp4s = sorted(result_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)

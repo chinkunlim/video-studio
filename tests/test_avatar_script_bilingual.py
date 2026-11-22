@@ -10,15 +10,19 @@ from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from video_studio.config.settings import AppConfig
 from video_studio.entrypoints.api import create_app
 from video_studio.services.common import job as J
 from video_studio.services.narrate.core import bilingual, prosody, subtitles
 from video_studio.services.video.engine.avatar_engine import (
+    DEFAULT_PORTRAIT_BG_RGB,
     avatar_environment_status,
+    ensure_opaque_portrait,
     overlay_avatar_pip,
     render_lightweight_avatar,
+    render_sadtalker_avatar,
 )
 
 
@@ -392,3 +396,56 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         new_prompt = planner.build_plan_prompt("einstein-demo", "fresh edit", thread_mode="new", history=hist)
         self.assertNotIn("keep header clean", new_prompt)
         self.assertIn("已開啟新對話串", new_prompt)
+
+    def test_opaque_portrait_and_sadtalker_env_flags(self) -> None:
+        """Verify RGBA portraits get warm cream fill and SadTalker gets --still and PyTorch/MPS env."""
+        rgb_img = self.data_dir / "rgb_avatar.png"
+        Image.new("RGB", (64, 64), (10, 20, 30)).save(rgb_img)
+        self.assertEqual(ensure_opaque_portrait(rgb_img, self.data_dir / "out_rgb"), rgb_img)
+
+        rgba_img = self.data_dir / "rgba_avatar.png"
+        im = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+        for x in range(16, 48):
+            for y in range(16, 48):
+                im.putpixel((x, y), (90, 60, 40, 255))
+        im.save(rgba_img)
+
+        work_dir = self.data_dir / "work_opaque"
+        flattened = ensure_opaque_portrait(rgba_img, work_dir)
+        self.assertEqual(flattened, work_dir / "rgba_avatar_opaque.png")
+        with Image.open(flattened) as out_im:
+            self.assertEqual(out_im.mode, "RGB")
+            self.assertEqual(out_im.getpixel((0, 0)), DEFAULT_PORTRAIT_BG_RGB)
+
+        sad_dir = self.data_dir / "fake_sadtalker"
+        (sad_dir / ".venv" / "bin").mkdir(parents=True, exist_ok=True)
+        (sad_dir / ".venv" / "bin" / "python").write_text("", encoding="utf-8")
+        (sad_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
+        (sad_dir / "checkpoints" / "SadTalker_V0.0.2_512.safetensors").write_bytes(b"ckpt")
+
+        audio = self.data_dir / "dummy.wav"
+        audio.write_bytes(b"RIFF")
+        out_mp4 = self.data_dir / "sad_out.mp4"
+        captured: dict[str, object] = {}
+
+        def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            captured["cmd"] = cmd
+            captured["env"] = kwargs.get("env")
+            res_idx = cmd.index("--result_dir") + 1
+            res_dir = Path(cmd[res_idx])
+            (res_dir / "result.mp4").write_bytes(b"mp4")
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+        with patch("video_studio.services.video.engine.avatar_engine.subprocess.run", side_effect=fake_run):
+            res_path = render_sadtalker_avatar(rgba_img, audio, out_mp4, sad_dir)
+
+        self.assertTrue(res_path.is_file())
+        cmd_list = captured["cmd"]
+        assert isinstance(cmd_list, list)
+        self.assertIn("--still", cmd_list)
+        src_arg = cmd_list[cmd_list.index("--source_image") + 1]
+        self.assertTrue(src_arg.endswith("rgba_avatar_opaque.png"))
+        env_dict = captured["env"]
+        assert isinstance(env_dict, dict)
+        self.assertEqual(env_dict.get("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"), "1")
+        self.assertEqual(env_dict.get("PYTORCH_ENABLE_MPS_FALLBACK"), "1")
