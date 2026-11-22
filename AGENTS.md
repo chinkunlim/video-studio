@@ -18,10 +18,11 @@
 | 「存檔」「commit」 | `python3 scripts/agentctl.py commit --agent <名字> --model <模型>`（訊息用英文） |
 | 「去上課」「先暫停」「等一下回來」 | `python3 scripts/agentctl.py pause "<English reason>"` |
 | 「換人做」「交給 Cursor」 | `python3 scripts/agentctl.py task handoff TASK-NNN --to <agent> --done-items ... --todo-items ...` |
-| 「結束對話」「收工」「今天先這樣」 | `python3 scripts/agentctl.py closeout --agent <名字> --goal ... --decisions ... --issues ... --next ...` |
+| 「結束對話」「收工」「今天先這樣」 | **先全面更新所有 md**（`session-closeout` skill §1），再 `python3 scripts/agentctl.py closeout --agent <名字> --goal ... --decisions ... --issues ... --next ...`（會 commit 並推送到 GitHub） |
 | 「推上去」 | 先列出未推送的 commit 並**確認**，同意後才 `agentctl commit --push` |
 | 「出版本」「專案完成了」 | `python3 scripts/agentctl.py finish`（驗收清單）；要發布再加 `--tag`（Unreleased → 新版本 + 本機 tag） |
 | 「做一個網頁」「給 Open WebUI / Ollama / Agent 用」 | **先依 [`LOCAL_AI_ENVIRONMENT.md`](docs/standards/LOCAL_AI_ENVIRONMENT.md) §2 確認需求**並請使用者確認摘要，再做 FastAPI + MCP（核心規則 13）；專案沒有 `api` 時先問使用者 |
+| 「架構合規嗎」「檢查架構」「專案健檢」「全面掃描」「有沒有更新」 | `python3 scripts/agentctl.py scan` |
 | 「環境怪怪的」「換電腦了」 | `python3 scripts/agentctl.py doctor --fix` |
 
 ## 2. 核心規則（必須遵守）
@@ -35,10 +36,12 @@
 7. **單向分層**：依 `.agents/project.toml` 的 `[architecture] layers`，上層可依賴下層，反之禁止。
 8. **環境隔離（不污染主機）**：Python 只用 `uv add` / `uv run`，Node 只用 `pnpm add` / `pnpm exec`；禁止 `pip install`、`npm`、`npx`、全域安裝與 `sudo`（見 [`ENVIRONMENT_AND_DEPENDENCIES.md`](docs/standards/ENVIRONMENT_AND_DEPENDENCIES.md)）。
 9. **本機服務只綁 `127.0.0.1`**：網址寫 `http://127.0.0.1:<port>`，不寫 `localhost`、不綁 `0.0.0.0`。
-10. **Git**：完成一個可通過測試的修改就用 `agentctl commit`；訊息一律英文；未經使用者明確同意不得 push（見 [`GIT_AND_VERSIONING.md`](docs/standards/GIT_AND_VERSIONING.md)）。
+10. **Git**：完成一個可通過測試的修改就用 `agentctl commit`；訊息一律英文；未經使用者明確同意不得 push，收工（closeout）例外：使用者已同意收工時推送（見 [`GIT_AND_VERSIONING.md`](docs/standards/GIT_AND_VERSIONING.md)）。
 11. **通用規則回寫母版**：使用者提出「以後每個專案都要這樣」的規則時，寫進 [`docs/TEMPLATE_FEEDBACK.md`](docs/TEMPLATE_FEEDBACK.md)，由使用者決定是否更新專案模板；只適用本專案的規則寫進 [`PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md)。
-12. **Log 追蹤**：執行的開始與結束、外部呼叫、跳過與重試、例外都要記 log，不記秘密與個資。Python 每個模組用 `logger = logging.getLogger(__name__)`，只有 entrypoints 可 `print`，log 檔在 `DATA_DIR/logs/`，用 run id 追蹤一次執行（見 [`CODING_PRINCIPLES.md`](docs/standards/CODING_PRINCIPLES.md) §0.4）。
+12. **Log 追蹤**：每個有函式的程式檔都要在開頭建立模組 logger（`code-review-guard` 的 `[Logging]` 會擋，設定在 `[quality] require_logger`）；執行的開始與結束、外部呼叫、跳過與重試、例外都要記 log，不記秘密與個資。Python 每個模組用 `logger = logging.getLogger(__name__)`，只有 entrypoints 可 `print`，log 檔在 `DATA_DIR/logs/`，用 run id 追蹤一次執行（見 [`CODING_PRINCIPLES.md`](docs/standards/CODING_PRINCIPLES.md) §0.4）。
 13. **網頁一定要能給 AI 工具用**：使用者要網頁、API，或要讓 Open WebUI / Ollama / 其他 Agent 使用時，先依 [`LOCAL_AI_ENVIRONMENT.md`](docs/standards/LOCAL_AI_ENVIRONMENT.md) §2 的清單確認需求（誰用、哪些動作會改資料、接哪些工具、要不要本機模型、資料、介面、啟動方式、埠號、驗收），整理成摘要請使用者確認；再一律用 FastAPI（`--with api`），不要做單純的網頁。同一組 `services` 由三個入口呼叫：HTTP 路由（OpenAPI 給 Open WebUI）、MCP 工具（`entrypoints/mcp_server.py`，給 Claude Code、Antigravity、OpenCode、Cursor、Open WebUI）與網頁。新增功能時三個入口一起接；會修改或刪除資料的 MCP 工具要有 `confirm` 參數。
+14. **一鍵安裝與後期平滑更新**：專案到最後必須具備一鍵安裝能力（如 `./install.sh`、`python3 scripts/agentctl.py setup` 或明確的一鍵啟動指令），自動完成套件鎖定安裝（`uv sync` / `pnpm install`）、`.env` 初始化、建立 `DATA_DIR` 目錄與資料庫遷移；同時必須設計並記錄後期的更新方法（如更新指令、資料庫向下相容遷移、保護既有資料與使用者設定不被覆蓋），禁止讓使用者手動除錯或執行繁雜的多步驟流程（見 [`docs/standards/env/install_and_update.md`](docs/standards/env/install_and_update.md)）。
+15. **Code Review 即時修復（零忽視、當下解決）**：執行 `code-review-guard` 或 `agentctl check` 時，若出現任何警告或錯誤（包含註解缺漏、巢狀過深、函式過長、參數過多、跨層依賴、成對呼叫缺失等），**嚴禁忽視、略過或推延至下次，必須立刻重構修正或按規範解決**，確保進入 Git Commit 的程式碼庫永遠維持零違規與最高品質標準（見 [`docs/standards/coding/code_review_zero_tolerance.md`](docs/standards/coding/code_review_zero_tolerance.md)）。
 <!-- RULES_END -->
 
 ## 2.5 Agent 分工（選填，由使用者維護）
@@ -65,18 +68,21 @@
 
 **命名規則**：整個專案只有根目錄一份 `README.md`；每個 `docs/` 子資料夾用全大寫的說明/總表檔（如 `KNOWN_ISSUES.md`），新增紀錄時照同資料夾的 `_TEMPLATE.md` 格式寫。
 
-## 4. 規範文件（需要時再讀）
+## 4. 規範文件（漸進揭露：按任務精確載入，禁止無腦全讀）
 
-| 文件 | 何時讀 |
-|---|---|
-| [`CODING_PRINCIPLES.md`](docs/standards/CODING_PRINCIPLES.md) | 寫或重構程式前（含註解規範） |
-| [`ARCHITECTURE_RULES.md`](docs/standards/ARCHITECTURE_RULES.md) | 新增模組、調整 import 或分層時 |
-| [`MULTI_AGENT_COLLABORATION.md`](docs/standards/MULTI_AGENT_COLLABORATION.md) | 接手、交接、收尾時 |
-| [`TESTING_AND_QUALITY.md`](docs/standards/TESTING_AND_QUALITY.md) | 寫測試、錯誤處理時 |
-| [`GIT_AND_VERSIONING.md`](docs/standards/GIT_AND_VERSIONING.md) | commit、發版時 |
-| [`LOCAL_AI_ENVIRONMENT.md`](docs/standards/LOCAL_AI_ENVIRONMENT.md) | 使用者要網頁 / API / 給 AI 工具用、要接 Ollama 或 Open WebUI、排除 AI 工具連線問題時（這台電腦的 AI 工具、埠號、需求確認清單） |
-| [`ENVIRONMENT_AND_DEPENDENCIES.md`](docs/standards/ENVIRONMENT_AND_DEPENDENCIES.md) | 安裝/移除套件、執行工具、設定本機服務前（uv、pnpm、Brewfile、DATA_DIR、127.0.0.1） |
-| [`PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md) | **每次開工都讀**：本專案特有的規則（領域知識、例外、禁忌） |
+| 任務情境 | 必讀模組（精確載入） | 禁止載入的不相干文件（節省 Token） |
+|---|---|---|
+| **每次開工 / 接手** | [`PROJECT_RULES.md`](docs/standards/PROJECT_RULES.md)<br>[`handoff/LATEST.md`](.agents/handoff/LATEST.md) | 其餘所有 standards/ |
+| **寫程式碼、重構、加註解** | [`coding/comments.md`](docs/standards/coding/comments.md)<br>[`coding/principles.md`](docs/standards/coding/principles.md)<br>[`coding/code_review_zero_tolerance.md`](docs/standards/coding/code_review_zero_tolerance.md) | `web/`、`env/`、`testing/` |
+| **修改或寫入資料** | [`coding/data_guard.md`](docs/standards/coding/data_guard.md) | `web/`、`GIT_AND_VERSIONING.md` |
+| **新增模組 / 分層架構** | [`architecture/layers.md`](docs/standards/architecture/layers.md)<br>[`architecture/workflow_parity.md`](docs/standards/architecture/workflow_parity.md) | `testing/`、`coding/comments.md` |
+| **開發 Web / API / MCP** | [`web/fastapi_mcp.md`](docs/standards/web/fastapi_mcp.md)<br>[`LOCAL_AI_ENVIRONMENT.md`](docs/standards/LOCAL_AI_ENVIRONMENT.md) | `testing/`、`coding/data_guard.md` |
+| **UI 介面設計 / 視覺風格** | [`web/taste_design.md`](docs/standards/web/taste_design.md) | `architecture/`、`testing/` |
+| **寫測試、虛擬測試** | [`testing/virtual_testing.md`](docs/standards/testing/virtual_testing.md)<br>[`testing/empirical_evidence.md`](docs/standards/testing/empirical_evidence.md) | `web/`、`coding/data_guard.md` |
+| **環境、依賴、DATA_DIR、安裝更新** | [`env/data_dir_layout.md`](docs/standards/env/data_dir_layout.md)<br>[`env/icloud_rules.md`](docs/standards/env/icloud_rules.md)<br>[`env/install_and_update.md`](docs/standards/env/install_and_update.md) | `architecture/`、`testing/` |
+| **Git commit、交接、收工** | [`GIT_AND_VERSIONING.md`](docs/standards/GIT_AND_VERSIONING.md)<br>[`MULTI_AGENT_COLLABORATION.md`](docs/standards/MULTI_AGENT_COLLABORATION.md) | `coding/`、`architecture/` |
+
+> 完整標準全集總目錄：[`docs/standards/STANDARDS.md`](docs/standards/STANDARDS.md)（含所有主題的完整連結與全集單一檔案）
 
 ## 5. 可用 Skills
 

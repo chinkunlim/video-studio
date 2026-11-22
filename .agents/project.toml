@@ -46,7 +46,7 @@ evals = ""
 
 [skills]
 # Installed skills; `agentctl update` keeps exactly these up to date
-enabled = ["adr-issue-tracker", "api-adapter-scaffold", "code-review-guard", "legacy-migration", "session-closeout", "tdd-bugfix"]
+enabled = ["adr-issue-tracker", "api-adapter-scaffold", "code-review-guard", "compliance-scanner", "legacy-migration", "project-auditor", "session-closeout", "tdd-bugfix"]
 
 [agents]
 require_agent_attribution = true

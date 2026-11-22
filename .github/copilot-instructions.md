@@ -21,10 +21,11 @@
 | 「存檔」「commit」 | `python3 scripts/agentctl.py commit --agent <名字> --model <模型>`（訊息用英文） |
 | 「去上課」「先暫停」「等一下回來」 | `python3 scripts/agentctl.py pause "<English reason>"` |
 | 「換人做」「交給 Cursor」 | `python3 scripts/agentctl.py task handoff TASK-NNN --to <agent> --done-items ... --todo-items ...` |
-| 「結束對話」「收工」「今天先這樣」 | `python3 scripts/agentctl.py closeout --agent <名字> --goal ... --decisions ... --issues ... --next ...` |
+| 「結束對話」「收工」「今天先這樣」 | **先全面更新所有 md**（`session-closeout` skill §1），再 `python3 scripts/agentctl.py closeout --agent <名字> --goal ... --decisions ... --issues ... --next ...`（會 commit 並推送到 GitHub） |
 | 「推上去」 | 先列出未推送的 commit 並**確認**，同意後才 `agentctl commit --push` |
 | 「出版本」「專案完成了」 | `python3 scripts/agentctl.py finish`（驗收清單）；要發布再加 `--tag`（Unreleased → 新版本 + 本機 tag） |
 | 「做一個網頁」「給 Open WebUI / Ollama / Agent 用」 | **先依 [`LOCAL_AI_ENVIRONMENT.md`](../docs/standards/LOCAL_AI_ENVIRONMENT.md) §2 確認需求**並請使用者確認摘要，再做 FastAPI + MCP（核心規則 13）；專案沒有 `api` 時先問使用者 |
+| 「架構合規嗎」「檢查架構」「專案健檢」「全面掃描」「有沒有更新」 | `python3 scripts/agentctl.py scan` |
 | 「環境怪怪的」「換電腦了」 | `python3 scripts/agentctl.py doctor --fix` |
 
 ## 2. 核心規則（必須遵守）
@@ -38,10 +39,12 @@
 7. **單向分層**：依 `.agents/project.toml` 的 `[architecture] layers`，上層可依賴下層，反之禁止。
 8. **環境隔離（不污染主機）**：Python 只用 `uv add` / `uv run`，Node 只用 `pnpm add` / `pnpm exec`；禁止 `pip install`、`npm`、`npx`、全域安裝與 `sudo`（見 [`ENVIRONMENT_AND_DEPENDENCIES.md`](../docs/standards/ENVIRONMENT_AND_DEPENDENCIES.md)）。
 9. **本機服務只綁 `127.0.0.1`**：網址寫 `http://127.0.0.1:<port>`，不寫 `localhost`、不綁 `0.0.0.0`。
-10. **Git**：完成一個可通過測試的修改就用 `agentctl commit`；訊息一律英文；未經使用者明確同意不得 push（見 [`GIT_AND_VERSIONING.md`](../docs/standards/GIT_AND_VERSIONING.md)）。
+10. **Git**：完成一個可通過測試的修改就用 `agentctl commit`；訊息一律英文；未經使用者明確同意不得 push，收工（closeout）例外：使用者已同意收工時推送（見 [`GIT_AND_VERSIONING.md`](../docs/standards/GIT_AND_VERSIONING.md)）。
 11. **通用規則回寫母版**：使用者提出「以後每個專案都要這樣」的規則時，寫進 [`docs/TEMPLATE_FEEDBACK.md`](../docs/TEMPLATE_FEEDBACK.md)，由使用者決定是否更新專案模板；只適用本專案的規則寫進 [`PROJECT_RULES.md`](../docs/standards/PROJECT_RULES.md)。
-12. **Log 追蹤**：執行的開始與結束、外部呼叫、跳過與重試、例外都要記 log，不記秘密與個資。Python 每個模組用 `logger = logging.getLogger(__name__)`，只有 entrypoints 可 `print`，log 檔在 `DATA_DIR/logs/`，用 run id 追蹤一次執行（見 [`CODING_PRINCIPLES.md`](../docs/standards/CODING_PRINCIPLES.md) §0.4）。
+12. **Log 追蹤**：每個有函式的程式檔都要在開頭建立模組 logger（`code-review-guard` 的 `[Logging]` 會擋，設定在 `[quality] require_logger`）；執行的開始與結束、外部呼叫、跳過與重試、例外都要記 log，不記秘密與個資。Python 每個模組用 `logger = logging.getLogger(__name__)`，只有 entrypoints 可 `print`，log 檔在 `DATA_DIR/logs/`，用 run id 追蹤一次執行（見 [`CODING_PRINCIPLES.md`](../docs/standards/CODING_PRINCIPLES.md) §0.4）。
 13. **網頁一定要能給 AI 工具用**：使用者要網頁、API，或要讓 Open WebUI / Ollama / 其他 Agent 使用時，先依 [`LOCAL_AI_ENVIRONMENT.md`](../docs/standards/LOCAL_AI_ENVIRONMENT.md) §2 的清單確認需求（誰用、哪些動作會改資料、接哪些工具、要不要本機模型、資料、介面、啟動方式、埠號、驗收），整理成摘要請使用者確認；再一律用 FastAPI（`--with api`），不要做單純的網頁。同一組 `services` 由三個入口呼叫：HTTP 路由（OpenAPI 給 Open WebUI）、MCP 工具（`entrypoints/mcp_server.py`，給 Claude Code、Antigravity、OpenCode、Cursor、Open WebUI）與網頁。新增功能時三個入口一起接；會修改或刪除資料的 MCP 工具要有 `confirm` 參數。
+14. **一鍵安裝與後期平滑更新**：專案到最後必須具備一鍵安裝能力（如 `./install.sh`、`python3 scripts/agentctl.py setup` 或明確的一鍵啟動指令），自動完成套件鎖定安裝（`uv sync` / `pnpm install`）、`.env` 初始化、建立 `DATA_DIR` 目錄與資料庫遷移；同時必須設計並記錄後期的更新方法（如更新指令、資料庫向下相容遷移、保護既有資料與使用者設定不被覆蓋），禁止讓使用者手動除錯或執行繁雜的多步驟流程（見 [`docs/standards/env/install_and_update.md`](../docs/standards/env/install_and_update.md)）。
+15. **Code Review 即時修復（零忽視、當下解決）**：執行 `code-review-guard` 或 `agentctl check` 時，若出現任何警告或錯誤（包含註解缺漏、巢狀過深、函式過長、參數過多、跨層依賴、成對呼叫缺失等），**嚴禁忽視、略過或推延至下次，必須立刻重構修正或按規範解決**，確保進入 Git Commit 的程式碼庫永遠維持零違規與最高品質標準（見 [`docs/standards/coding/code_review_zero_tolerance.md`](../docs/standards/coding/code_review_zero_tolerance.md)）。
 
 ## Skills
 | Skill | 何時使用 | 指令 |
