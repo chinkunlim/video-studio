@@ -158,6 +158,11 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"📦 框架 v{lock.get('framework_version', '?')} ➔ v{version}（skills: {', '.join(skills)}）")
     print_plan(plan)
+    drift = installer.detect_framework_drift(ROOT, template_dir)
+    if drift:
+        print("⚠️ 偵測到專案自有設定與母版規則漂移（需手動對齊）：")
+        for item in drift:
+            print(f"  ⚠️ {item}")
     if args.dry_run:
         return 0
     current = apply_plan(plan, mapping, installer)

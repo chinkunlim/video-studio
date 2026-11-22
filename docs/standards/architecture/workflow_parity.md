@@ -30,3 +30,7 @@
 2. **純淨圖譜價值**：
    - 消除數千個外部節點雜訊，確保知識圖譜僅呈現專案本體的「God Nodes」、關鍵呼叫鏈與分層關係。
    - 定期從知識圖譜檢查專案模組耦合度與潛在架構孤島，指導系統重構。
+3. **Graphify 自動更新 Hooks 與局部讀檔協議**：
+   - `.agents/hooks/` 內建 `post-commit`、`post-merge`、`post-checkout` 與 `graphify-refresh.sh`（0-token 背景 AST 增量更新、`graphify-out/` 不存在時靜默略過、10 分鐘過期鎖自癒、最多保留 3 份日期備份、未安裝 `graphify` 時不阻擋 Git）。
+   - `.graphifyignore` 預設排除 `.agents/`、`graphify-out/`、`static/vendor/`、`web/vendor/` 及自動報告。
+   - **局部讀檔省 Token**：開啟大檔案前先查 `graphify-out/GRAPH_REPORT.md` 定位目標函式與行號，再用 `StartLine`/`EndLine` 局部讀取，避免全文載入浪費 Context。

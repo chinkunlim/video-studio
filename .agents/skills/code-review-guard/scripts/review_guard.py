@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import fnmatch
 import json
 from pathlib import Path
 import re
@@ -66,7 +67,7 @@ BRACE_LANG_PATTERNS: dict[str, list[re.Pattern[str]]] = {
 JS_EXTS = (".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx")
 MARKUP_HEADERS = {".html": "<!--", ".htm": "<!--", ".css": "/*", ".scss": "/*"}
 TEST_FILE_RE = re.compile(r"(^test_.*\.py$|_test\.(py|go)$|\.(test|spec)\.[cm]?[jt]sx?$)")
-SKIP_DIRS = {"node_modules", "__pycache__", ".venv", "venv", "dist", "build", "target"}
+SKIP_DIRS = {"node_modules", "__pycache__", ".venv", "venv", "dist", "build", "target", "vendor"}
 DEFAULT_CONFIG = {
     "architecture": {"source_roots": ["src"], "layers": [], "env_access_layers": ["config"]},
     "quality": {"max_function_lines": 30, "hard_max_function_lines": 50, "max_params": 4, "max_nesting": 3,
@@ -620,16 +621,18 @@ def paired_call_issues(all_text: str, config: dict) -> list[dict]:
     return issues
 
 
-def removed_comment_issues(root: Path) -> list[dict]:
+def removed_comment_issues(root: Path, staged_only: bool = False) -> list[dict]:
     """Warn when the uncommitted diff deletes many existing comment lines.
 
     Args:
         root: Project root directory.
+        staged_only: When True, inspect only staged diff (`--cached`).
 
     Returns:
         An IMPORTANT finding when more than 3 comment lines are deleted, else nothing.
     """
-    res = subprocess.run(["git", "diff", "HEAD", "--unified=0"], cwd=root, capture_output=True, text=True)
+    cmd = ["git", "diff", "--cached", "--unified=0"] if staged_only else ["git", "diff", "HEAD", "--unified=0"]
+    res = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
     if res.returncode != 0:
         return []
     removed = sum(
@@ -641,8 +644,53 @@ def removed_comment_issues(root: Path) -> list[dict]:
     return [_issue("IMPORTANT", "(git diff)", 1, f"[Surgical] 本次修改刪除了 {removed} 行既有註解；除非是自己剛寫的，否則不要刪除既有註解。")]
 
 
+def is_excluded_file(rel: str, config: dict) -> bool:
+    """Tell whether a file matches `[quality] exclude_paths` (third-party / vendor / minified files).
+
+    Args:
+        rel: Repo-relative POSIX path.
+        config: Loaded project configuration.
+
+    Returns:
+        True when the file should be skipped from review.
+    """
+    patterns = config.get("quality", {}).get("exclude_paths", ["vendor", "*.min.js", "*.min.mjs", "*.min.css"])
+    parts = Path(rel).parts
+    name = Path(rel).name
+    for raw in patterns:
+        pat = str(raw).strip().rstrip("/")
+        if not pat:
+            continue
+        if not any(ch in pat for ch in "*?["):
+            if "/" not in pat and pat in parts:
+                return True
+            if "/" in pat and (rel == pat or rel.startswith(pat + "/")):
+                return True
+        elif fnmatch.fnmatch(rel, pat) or fnmatch.fnmatch(name, pat):
+            return True
+    return False
+
+
+def staged_source_files(root: Path) -> set[str]:
+    """List repo-relative paths currently staged in git (Added/Copied/Modified/Renamed).
+
+    Args:
+        root: Project root directory.
+
+    Returns:
+        Set of repo-relative POSIX paths (empty if none staged or outside git).
+    """
+    res = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    if res.returncode != 0:
+        return set()
+    return {p for p in res.stdout.split("\0") if p}
+
+
 def iter_source_files(root: Path, config: dict, pc_mod: object) -> list[Path]:
-    """List the source files to audit.
+    """List the source files to audit, skipping cache directories and `[quality] exclude_paths`.
 
     Args:
         root: Project root directory.
@@ -655,11 +703,34 @@ def iter_source_files(root: Path, config: dict, pc_mod: object) -> list[Path]:
     dirs = pc_mod.source_dirs(root, config) if pc_mod is not None else [d for d in [root / "src"] if d.is_dir()]  # type: ignore[attr-defined]
     files = []
     for src_dir in dirs:
-        files += [f for f in sorted(src_dir.rglob("*")) if f.is_file() and not SKIP_DIRS.intersection(f.relative_to(root).parts)]
+        for f in sorted(src_dir.rglob("*")):
+            if not f.is_file():
+                continue
+            rel = f.relative_to(root).as_posix()
+            if not SKIP_DIRS.intersection(f.relative_to(root).parts) and not is_excluded_file(rel, config):
+                files.append(f)
     return files
 
 
 DEFERRABLE_TAGS = ("[Docs]", "[Size]", "[Layer]", "[Logging]")
+
+
+def _parse_legacy_renames(raw: str) -> set[str]:
+    """Parse NUL-delimited `git diff --name-status -z` output for unchanged moves out of `legacy/`.
+
+    Args:
+        raw: Standard output from `git diff --name-status -M100% --diff-filter=R -z`.
+
+    Returns:
+        Repo-relative destination paths renamed from `legacy/` with 100% similarity.
+    """
+    parts = raw.split("\0")
+    moves: set[str] = set()
+    for i in range(0, len(parts) - 2, 3):
+        status, old, new = parts[i], parts[i + 1], parts[i + 2]
+        if status == "R100" and old.startswith("legacy/"):
+            moves.add(new)
+    return moves
 
 
 def staged_legacy_moves(root: Path) -> set[str]:
@@ -675,13 +746,23 @@ def staged_legacy_moves(root: Path) -> set[str]:
         ["git", "diff", "--cached", "--name-status", "-M100%", "--diff-filter=R", "-z"],
         cwd=root, capture_output=True, text=True, check=False,
     )
-    parts = res.stdout.split("\0")
-    moves = set()
-    for i in range(0, len(parts) - 2, 3):
-        status, old, new = parts[i], parts[i + 1], parts[i + 2]
-        if status == "R100" and old.startswith("legacy/"):
-            moves.add(new)
-    return moves
+    return _parse_legacy_renames(res.stdout)
+
+
+def head_legacy_moves(root: Path) -> set[str]:
+    """List files moved unchanged out of `legacy/` in `HEAD` (must be fixed before the next commit).
+
+    Args:
+        root: Project root directory (a git repository).
+
+    Returns:
+        Repo-relative destination paths from `HEAD~1..HEAD`, or empty when `HEAD~1` is absent.
+    """
+    res = subprocess.run(
+        ["git", "diff", "--name-status", "-M100%", "--diff-filter=R", "-z", "HEAD~1", "HEAD"],
+        cwd=root, capture_output=True, text=True, check=False,
+    )
+    return _parse_legacy_renames(res.stdout) if res.returncode == 0 else set()
 
 
 def defer_legacy_moves(issues: list[dict], moves: set[str]) -> list[dict]:
@@ -702,36 +783,58 @@ def defer_legacy_moves(issues: list[dict], moves: set[str]) -> list[dict]:
     return out
 
 
-def run_review(root: Path, allow_legacy_moves: bool = False) -> tuple[list[dict], bool]:
-    """Audit the whole project.
+def _audit_single_file(f: Path, text: str, rel: str, layer: str | None, ctx: tuple[dict, list[tuple[str, str]]]) -> list[dict]:
+    """Run all file-level checks on one source file.
+
+    Args:
+        f: File path.
+        text: File contents.
+        rel: Repo-relative POSIX path.
+        layer: Architectural layer name or None.
+        ctx: Tuple of `(config, secret_patterns)`.
+
+    Returns:
+        List of findings for this file.
+    """
+    config, patterns = ctx
+    issues = secret_issues(text, rel, patterns)
+    if f.suffix in (".py", *BRACE_LANG_PATTERNS):
+        issues += file_size_issues(text, rel, config["quality"])
+    if f.suffix == ".py":
+        issues += audit_python_file(text, rel, layer, config)
+    elif f.suffix.lower() in MARKUP_HEADERS:
+        issues += markup_header_issues(text, rel, config)
+    elif f.suffix in BRACE_LANG_PATTERNS:
+        issues += audit_brace_file(text, rel, layer, config)
+    return issues
+
+
+def run_review(root: Path, allow_legacy_moves: bool = False, staged_only: bool = False) -> tuple[list[dict], bool]:
+    """Audit the project (or only staged files when `staged_only` is True).
 
     Args:
         root: Project root directory.
         allow_legacy_moves: Defer docs/size/layer findings of files staged as unchanged moves out of `legacy/`.
+        staged_only: When True, emit per-file issues only for currently staged files (paired calls still scan all).
 
     Returns:
         Tuple of findings and whether the review passed (no blocking CRITICAL findings).
     """
     config, pc_mod = _load_project_cfg(root)
     patterns = getattr(pc_mod, "SECRET_PATTERNS", FALLBACK_SECRET_PATTERNS)
+    staged_set = (staged_source_files(root) | head_legacy_moves(root)) if staged_only else None
     issues: list[dict] = []
     all_text = ""
     for f in iter_source_files(root, config, pc_mod):
         rel = f.relative_to(root).as_posix()
-        layer = pc_mod.detect_layer(rel, config) if pc_mod is not None else None  # type: ignore[attr-defined]
         text = f.read_text(encoding="utf-8", errors="replace")
         all_text += "\n" + text
-        issues += secret_issues(text, rel, patterns)
-        if f.suffix in (".py", *BRACE_LANG_PATTERNS):
-            issues += file_size_issues(text, rel, config["quality"])
-        if f.suffix == ".py":
-            issues += audit_python_file(text, rel, layer, config)
-        elif f.suffix.lower() in MARKUP_HEADERS:
-            issues += markup_header_issues(text, rel, config)
-        elif f.suffix in BRACE_LANG_PATTERNS:
-            issues += audit_brace_file(text, rel, layer, config)
+        if staged_set is not None and rel not in staged_set:
+            continue
+        layer = pc_mod.detect_layer(rel, config) if pc_mod is not None else None  # type: ignore[attr-defined]
+        issues += _audit_single_file(f, text, rel, layer, (config, patterns))
     issues += paired_call_issues(all_text, config)
-    issues += removed_comment_issues(root)
+    issues += removed_comment_issues(root, staged_only=staged_only)
     if allow_legacy_moves:
         issues = defer_legacy_moves(issues, staged_legacy_moves(root))
     blocking = bool(config["quality"].get("block_on_critical", True)) and any(i["severity"] == "CRITICAL" for i in issues)
@@ -768,10 +871,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("target", nargs="?", default=".", help="專案根目錄")
     parser.add_argument("--json", action="store_true", help="以 JSON 輸出")
     parser.add_argument("--quiet", action="store_true", help="只輸出 CRITICAL（給 git hook 使用）")
+    parser.add_argument("--staged", action="store_true", help="只檢查已暫存 (staged) 的檔案，避免受其他並行修改干擾")
     parser.add_argument("--allow-legacy-moves", action="store_true",
                         help="本次 commit 從 legacy/ 原樣搬入的檔案，註解/大小/分層問題先降為警告（給 pre-commit 使用）")
     args = parser.parse_args(argv)
-    issues, passed = run_review(Path(args.target).resolve(), args.allow_legacy_moves)
+    issues, passed = run_review(Path(args.target).resolve(), args.allow_legacy_moves, staged_only=args.staged)
     if args.json:
         print(json.dumps({"passed": passed, "issues": issues}, ensure_ascii=False, indent=2))
     else:

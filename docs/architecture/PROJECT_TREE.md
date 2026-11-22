@@ -23,6 +23,10 @@ video-studio/
 │   │   ├── ARCHIVE.md                      # [歷史交接歸檔] 超過 20 筆之舊交接紀錄自動歸檔
 │   │   └── LATEST.md                       # [即時交接看板] 目前分支、進行中/待接手任務、已完成與待辦事項
 │   ├── hooks/                              # [版本控管的 git hooks] 由 core.hooksPath 啟用（pre-commit、pre-push）
+│   │   ├── graphify-refresh.sh
+│   │   ├── post-checkout
+│   │   ├── post-commit
+│   │   ├── post-merge
 │   │   ├── pre-commit
 │   │   └── pre-push
 │   ├── lib/                                # 框架共用 Python 函式庫 (設定載入、目錄樹註解)

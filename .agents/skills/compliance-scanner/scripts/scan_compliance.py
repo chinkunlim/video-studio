@@ -55,8 +55,51 @@ def run_command(cmd: list[str], cwd: Path) -> tuple[int, str, str]:
     return proc.returncode, proc.stdout, proc.stderr
 
 
+def resolve_template_info(root: Path) -> tuple[str, Path | None]:
+    """Read `FRAMEWORK_VERSION` dynamically from the template (or local config when absent).
+
+    Args:
+        root: Project root directory.
+
+    Returns:
+        Tuple of `(template_version, template_root_or_none)`.
+    """
+    candidates = [root / ".agents" / "lib" / "project_config.py"]
+    sibling = root.parent / "01 project_template"
+    sibling_cfg = sibling / ".agents" / "lib" / "project_config.py"
+    tpl_root = sibling if sibling_cfg.is_file() else None
+    if sibling_cfg.is_file():
+        candidates.insert(0, sibling_cfg)
+    for cfg in candidates:
+        if cfg.is_file():
+            match = re.search(r'FRAMEWORK_VERSION\s*=\s*"([^"]+)"', cfg.read_text(encoding="utf-8"))
+            if match:
+                return match.group(1), tpl_root
+    return "3.6.0", tpl_root
+
+
+def _detect_drift(root: Path, template_root: Path | None) -> list[str]:
+    """Invoke `detect_framework_drift` from `.agents/lib/framework_install.py` when available.
+
+    Args:
+        root: Project root directory.
+        template_root: Template directory or None.
+
+    Returns:
+        List of drift findings.
+    """
+    lib_dir = root / ".agents" / "lib"
+    if not (lib_dir / "framework_install.py").is_file():
+        return []
+    if str(lib_dir) not in sys.path:
+        sys.path.insert(0, str(lib_dir))
+    import framework_install  # type: ignore
+
+    return list(framework_install.detect_framework_drift(root, template_root))
+
+
 def check_framework_status(root: Path) -> dict[str, Any]:
-    """Inspect framework version and synchronization status with the template.
+    """Inspect framework version, file synchronization, and rules/skills drift with the template.
 
     Args:
         root: Project root directory.
@@ -83,25 +126,31 @@ def check_framework_status(root: Path) -> dict[str, Any]:
         if match:
             current_ver = match.group(1)
 
-    template_ver = "3.5.0"
+    template_ver, template_dir = resolve_template_info(root)
     findings: list[str] = []
+    drift_findings: list[str] = []
     is_template = (root / "src" / "project_template").exists()
 
     if is_template:
         findings.append("當前專案為母版核心庫 (project_template)，處於最新 SSOT 基準版本。")
-        is_up_to_date = True
+        drift_findings = _detect_drift(root, root)
+        findings.extend(drift_findings)
     else:
-        is_up_to_date = (current_ver == template_ver)
-        if not is_up_to_date:
+        if current_ver != template_ver:
             findings.append(f"專案框架版本 ({current_ver}) 落後於母版最新版本 ({template_ver})。")
-
         update_bin = root / ".agents" / "bin" / "update_framework.py"
-        if update_bin.exists():
-            code, out, _ = run_command([sys.executable, str(update_bin), "--preview"], root)
-            if code == 0 and "母版有更新" in out:
+        if update_bin.exists() and template_dir is not None:
+            code, out, _ = run_command(
+                [sys.executable, str(update_bin), "--from", str(template_dir), "--dry-run"],
+                root,
+            )
+            if code == 0 and ("🔄 更新" in out or "➕ 新增" in out):
                 findings.append("母版有待同步的框架檔案，可執行 `python3 scripts/agentctl.py update` 更新。")
+        drift_findings = _detect_drift(root, template_dir)
+        findings.extend(drift_findings)
 
-    status = "PASS" if is_up_to_date and not (not is_template and findings) else ("PASS" if is_template else "WARN")
+    has_warn = bool(drift_findings) if is_template else bool(findings)
+    status = "WARN" if has_warn else "PASS"
     return {
         "category": "框架與母版同步 (Framework Sync)",
         "status": status,

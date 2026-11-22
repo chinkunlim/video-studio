@@ -37,3 +37,23 @@
 - ❌ 浮誇無功能性的發光霓虹邊框（Glow effects）。
 - ❌ 沒有內容依據的通用卡片堆疊與過度圓角（Full rounded pill cards）。
 - ❌ 失去焦點的同質化科技風暗黑主題。
+
+---
+
+## 4. 標準網頁開發流程 (Standard Web Dev Pipeline)
+
+1. **設計理念對齊**：撰寫程式前先對齊 `DESIGN.md` 與 Step 0 原型審批。
+2. **三入口同步實作**：同一 `services` 同步接好 HTTP 路由、MCP 工具與網頁互動，並維持文檔／介面用語一致（純文字膠囊語彙、不混雜冗餘 emoji）。
+3. **三視口自適應驗證**：檢查桌面、平板與手機三種視口；僅保留有意義之留白與層級，不強制單一固定版型。
+4. **動效與狀態一致性**：所有彈窗、抽屜與按鈕統一引用 `styles.css` 中的 Motion Tokens（`--dur-hover` / `--dur-slide` / `--ease`），同類交互節奏溫潤一致並尊重 `prefers-reduced-motion`。
+5. **審計與收尾**：執行 `frontend-design` 審查與 `python3 scripts/agentctl.py check`、靜態契約測試 `tests/test_web_contracts.py` 皆須零錯誤。
+
+---
+
+## 5. 跨裝置觸控與無建置前端規範
+
+1. **觸控友善熱區**：所有互動控制項於 `@media (pointer: coarse)` 下確保觸控目標 $\ge 44\text{px}$（最低不小於 $36\text{px}$），拖曳把手須加 `touch-action: none`；平板與手機無鍵盤時重要功能必備顯式按鈕入口。
+2. **Zero-Build 前端核心 (`web/api_client.js`)**：
+   - `apiFetch` 僅在網路斷線時對 `GET` 自動重試 1 次，對 `POST` / `PUT` / `PATCH` / `DELETE` **絕不自動重試**，並統一顯示離線提示條 `#offlineBanner`。
+   - 跨模組狀態同步採用輕量 `createEventBus()` 與 `createStateStore()`，避免全域變數緊耦合。
+3. **離線 Vendor 打包**：外部字型或 JS 庫一律以 `pnpm` 鎖版安裝後透過腳本複製進 `web/vendor/`（或 `static/vendor/`），確保斷網完全可用且自動受 `code-review-guard` 與 `.graphifyignore` 排除。

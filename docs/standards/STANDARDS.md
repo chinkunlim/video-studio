@@ -11,15 +11,15 @@
 | 任務領域 | 核心子模組 | 內容重點 | 完整母檔參照 |
 |---|---|---|---|
 | **程式碼註解與可觀測性** | [`coding/comments.md`](coding/comments.md) | 函式開頭用途、參數說明、Logger 規範、Karpathy 4 原則 | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §0 |
-| **軟體設計與原子化** | [`coding/principles.md`](coding/principles.md) | SOLID、DRY、FP/OOP 混合、Atomic 門檻 | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §1-§5.3 |
-| **資料寫入防護** | [`coding/data_guard.md`](coding/data_guard.md) | 格式與內容嚴格隔離、字元級零刪字稽核、指紋校驗 | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §5.4 |
+| **軟體設計與原子化** | [`coding/principles.md`](coding/principles.md) | SOLID、DRY、FP/OOP 混合、Atomic 門檻、Anti-Swallow 與隔離 | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §1-§5.6 |
+| **資料寫入防護** | [`coding/data_guard.md`](coding/data_guard.md) | 格式與內容嚴格隔離、字元級零刪字稽核、指紋校驗、重跑歸檔隔離 | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §5.4 |
 | **Code Review 即時修復** | [`coding/code_review_zero_tolerance.md`](coding/code_review_zero_tolerance.md) | 零忽視原則、五大代碼異味重構手法（Early Return、DTO） | [`CODING_PRINCIPLES.md`](CODING_PRINCIPLES.md) §5.5 |
-| **系統架構分層** | [`architecture/layers.md`](architecture/layers.md) | 單向分層依賴（entrypoints ➔ adapters ➔ services ➔ domain ➔ config）、10 大工程守則 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) §1-§2 |
-| **流程對齊與圖譜純淨** | [`architecture/workflow_parity.md`](architecture/workflow_parity.md) | 使用者視角端到端流程一致性、.graphifyignore 純淨圖譜 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) 守則 11-12 |
-| **Web API 與 MCP 整合** | [`web/fastapi_mcp.md`](web/fastapi_mcp.md) | FastAPI 結構、OpenAPI 三重記錄、MCP confirm 機制 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) §3-§4 |
-| **前端品味與原型審批** | [`web/taste_design.md`](web/taste_design.md) | Step 0 前置審批關卡、受眾心理學分析、Design Dials | - |
-| **虛擬測試體系** | [`testing/virtual_testing.md`](testing/virtual_testing.md) | 4 層虛擬測試（單元、Dummy 樣本、虛擬使用者、Web 走測） | [`TESTING_AND_QUALITY.md`](TESTING_AND_QUALITY.md) §1-§2 |
-| **實證檢驗與完成定義** | [`testing/empirical_evidence.md`](testing/empirical_evidence.md) | 實證檢驗鐵律（Snapshot/Log/Pilot）、DoD 清單 | [`TESTING_AND_QUALITY.md`](TESTING_AND_QUALITY.md) §1.1, §3 |
+| **系統架構分層** | [`architecture/layers.md`](architecture/layers.md) | 單向分層、wiring.py 組裝根、Protocol 解耦、平行領域拆分 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) §1-§2 |
+| **流程對齊與圖譜純淨** | [`architecture/workflow_parity.md`](architecture/workflow_parity.md) | 端到端流程一致性、.graphifyignore、Graphify Hooks 與局部讀檔 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) 守則 11-12 |
+| **Web API 與 MCP 整合** | [`web/fastapi_mcp.md`](web/fastapi_mcp.md) | FastAPI/MCP 三入口、Request DB Scope、NoCache/路徑防穿越、埠號預檢 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) §3-§4 |
+| **前端品味與原型審批** | [`web/taste_design.md`](web/taste_design.md) | Step 0 原型審批、標準開發流程、跨裝置觸控與 Zero-Build 規範 | - |
+| **虛擬測試體系** | [`testing/virtual_testing.md`](testing/virtual_testing.md) | 4 層虛擬測試、Web/OpenAPI 靜態契約測試、系統路徑測試硬隔離 | [`TESTING_AND_QUALITY.md`](TESTING_AND_QUALITY.md) §1-§2 |
+| **實證檢驗與完成定義** | [`testing/empirical_evidence.md`](testing/empirical_evidence.md) | 實證檢驗鐵律、DoD 清單、已證實/推測/錯誤三欄交叉審查 | [`TESTING_AND_QUALITY.md`](TESTING_AND_QUALITY.md) §1.1, §3 |
 | **資料目錄規劃** | [`env/data_dir_layout.md`](env/data_dir_layout.md) | DATA_DIR 資料程式分離、releases/模組/archive 隔離劃分 | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) §7 |
 | **iCloud 同步規範** | [`env/icloud_rules.md`](env/icloud_rules.md) | 當次明確授權、Output-only、集中存放 project-data/ | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) §7 |
 | **一鍵安裝與平滑更新** | [`env/install_and_update.md`](env/install_and_update.md) | 一鍵安裝自動化、環境自檢、資料庫向下相容遷移、更新資料防覆蓋 | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) §10 |

@@ -20,9 +20,11 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import stat
 import subprocess
+import sys
 
 LOCK_RELATIVE_PATH = Path(".agents") / "framework.lock"
 SKIP_PARTS = {"upstream", "__pycache__", ".DS_Store", "node_modules"}
@@ -204,3 +206,130 @@ def read_lock(target_root: Path) -> dict:
     if not path.exists():
         return {"skills": [], "files": {}}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _extract_rules_block(agents_md: Path) -> str:
+    """Extract text between `<!-- RULES_START -->` and `<!-- RULES_END -->`.
+
+    Args:
+        agents_md: Path to `AGENTS.md`.
+
+    Returns:
+        The extracted rules section, or an empty string if the markers are absent.
+    """
+    if not agents_md.is_file():
+        return ""
+    text = agents_md.read_text(encoding="utf-8", errors="replace")
+    start_marker, end_marker = "<!-- RULES_START -->", "<!-- RULES_END -->"
+    if start_marker not in text or end_marker not in text:
+        return ""
+    return text.split(start_marker, 1)[1].split(end_marker, 1)[0]
+
+
+def _rule_numbers(block: str) -> set[int]:
+    """Extract numbered core rule indices (`N. **...`) from an AGENTS.md rules block.
+
+    Args:
+        block: Text extracted by `_extract_rules_block()`.
+
+    Returns:
+        Set of integer rule numbers found.
+    """
+    return {int(m.group(1)) for m in re.finditer(r"^\s*(\d+)\.\s+\*\*", block, flags=re.M)}
+
+
+def _load_project_cfg(project_root: Path) -> dict:
+    """Load `.agents/project.toml` using `project_config` without polluting module cache.
+
+    Args:
+        project_root: Project root directory.
+
+    Returns:
+        Merged project configuration dictionary.
+    """
+    lib_dir = project_root / ".agents" / "lib"
+    if not (lib_dir / "project_config.py").exists():
+        lib_dir = Path(__file__).resolve().parent
+    lib_str = str(lib_dir)
+    if lib_str not in sys.path:
+        sys.path.insert(0, lib_str)
+    import project_config  # type: ignore
+
+    return project_config.load_config(project_root)
+
+
+def _check_rules_drift(project_root: Path, template_root: Path | None) -> list[str]:
+    """Detect missing core rules or commands in `AGENTS.md` relative to the template.
+
+    Args:
+        project_root: Project root directory.
+        template_root: Optional template root directory for direct comparison.
+
+    Returns:
+        List of drift findings for `AGENTS.md`.
+    """
+    findings: list[str] = []
+    proj_block = _extract_rules_block(project_root / "AGENTS.md")
+    if not proj_block:
+        return ["AGENTS.md 缺少 <!-- RULES_START -->..<!-- RULES_END --> 規則區段（請補齊後執行 agentctl sync）"]
+    expected_nums = set(range(1, 16))
+    need_scan = (project_root / ".agents" / "skills" / "compliance-scanner").is_dir()
+    if template_root and (template_root / "AGENTS.md").is_file():
+        tpl_block = _extract_rules_block(template_root / "AGENTS.md")
+        expected_nums = _rule_numbers(tpl_block) or expected_nums
+        need_scan = "agentctl.py scan" in tpl_block
+    missing_nums = sorted(expected_nums - _rule_numbers(proj_block))
+    if missing_nums:
+        nums_str = ", ".join(str(n) for n in missing_nums)
+        findings.append(f"AGENTS.md 核心規則落後母版，缺少規則編號：{nums_str}（請同步 AGENTS.md 並執行 agentctl sync）")
+    if need_scan and "agentctl.py scan" not in proj_block:
+        findings.append("AGENTS.md 核心規則區段缺少 `agentctl.py scan` 觸發指令（請同步 AGENTS.md 並執行 agentctl sync）")
+    return findings
+
+
+def _check_skills_drift(project_root: Path, template_root: Path | None) -> list[str]:
+    """Compare `[skills] enabled` in `.agents/project.toml` against installed skills and core catalog.
+
+    Args:
+        project_root: Project root directory.
+        template_root: Optional template root directory holding `catalog.json`.
+
+    Returns:
+        List of drift findings for `[skills] enabled`.
+    """
+    cfg = _load_project_cfg(project_root)
+    enabled = {str(s) for s in cfg.get("skills", {}).get("enabled", []) if str(s).strip()}
+    if not enabled:
+        return []
+    skills_dir = project_root / ".agents" / "skills"
+    installed = (
+        {d.name for d in skills_dir.iterdir() if d.is_dir() and (d / "SKILL.md").is_file()}
+        if skills_dir.is_dir()
+        else set()
+    )
+    catalog = load_catalog(template_root or project_root)
+    core_skills = {k for k, v in catalog.items() if v.get("tier") == "core"}
+    findings: list[str] = []
+    missing_core = sorted(core_skills - enabled)
+    missing_dirs = sorted(enabled - installed)
+    unlisted = sorted(installed - enabled)
+    if missing_core:
+        findings.append(f"[skills] enabled 缺少核心技能：{', '.join(missing_core)}")
+    if missing_dirs:
+        findings.append(f"[skills] enabled 列出但未安裝的技能：{', '.join(missing_dirs)}")
+    if unlisted:
+        findings.append(f"已安裝但未列入 [skills] enabled 的技能：{', '.join(unlisted)}")
+    return findings
+
+
+def detect_framework_drift(project_root: Path, template_root: Path | None = None) -> list[str]:
+    """Detect project-owned config/doc drift from template standards (AGENTS.md rules & skills list).
+
+    Args:
+        project_root: Project root directory to inspect.
+        template_root: Optional template directory (`01 project_template`); defaults to built-in expectations.
+
+    Returns:
+        Human-readable drift warning strings (empty when aligned).
+    """
+    return _check_rules_drift(project_root, template_root) + _check_skills_drift(project_root, template_root)

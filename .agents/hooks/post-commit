@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# =============================================================================
+# post-commit — refresh the graphify knowledge graph in the background (see graphify-refresh.sh).
+# =============================================================================
+exec bash "$(git rev-parse --show-toplevel)/.agents/hooks/graphify-refresh.sh"

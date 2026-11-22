@@ -45,13 +45,24 @@ stateDiagram-v2
 
 - `claim` 會拒絕接手 `done` 或「別人仍在 `in_progress`」的任務；確定上一位已離開時加 `--force`（會記錄在 history）。
 
-## 4. 交接（任務沒做完就要換人或結束）
+## 4. 交接、並行安全與跨會話驗收（Handoff & Cross-Review）
+
+- **共用工作區並行防誤殺**：
+  - Git `pre-commit` hook 執行 `review_guard.py --staged`，只阻擋本次要提交（staged）檔案中的問題。
+  - `closeout` 會比對工作區未提交檔案與其他 Agent 處於 `in_progress` 的任務卡；若發現他人進行中檔案衝突將自動停下，需加 `--paths <自己的檔案>` 精準提交（或 `--force-all` 明確接手）。
+  - 本機有已 commit 但未推上的進度時，`agentctl commit --push` 可直接完成推送。
+- **跨會話實機驗收清單 (`TASK-NNN-checklist.md`)**：對需人工實機操作驗證的修復，建立時加上 `--checklist`（或執行 `agentctl task checklist TASK-NNN`），記錄驗證步驟、預期 log 關鍵字與「不可修改之使用者決定」。
+- **多 Agent 交叉審查回報三欄**：查證者須以 `git show` / 實際 log / 字元比對獨立驗証，嚴格區分「**已證實**／**推測**／**錯誤**」回報，不可只複述前任說詞。
 
 ```bash
 python3 scripts/agentctl.py task handoff TASK-001 --agent claude-code --to cursor \
   --done-items "完成 service 層與單元測試" \
   --todo-items "UI 錯誤提示尚未做" \
   --blockers "手機版寬度下徽章會折行，待確認設計"
+```
+
+```bash
+python3 scripts/agentctl.py task create "修復實機渲染流程" --agent claude-code --checklist
 ```
 
 ## 5. 收尾（使用者說「結束對話 / 收工」）

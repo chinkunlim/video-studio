@@ -7,12 +7,13 @@ Purpose:
     agent (or the next session) can pick up exactly where the last one stopped.
 
 Commands:
-    create   Register a task card `.agents/tasks/TASK-NNN-<slug>.json`.
-    claim    Take over an `open` or `handed_off` task (refuses tasks another agent
-             is still working on unless `--force`).
-    handoff  Pause a task and record done items, remaining TODOs and blockers.
-    done     Mark a task finished with a summary.
-    list     Print every task card.
+    create     Register a task card `.agents/tasks/TASK-NNN-<slug>.json` (`--checklist` also creates `TASK-NNN-checklist.md`).
+    claim      Take over an `open` or `handed_off` task (refuses tasks another agent
+               is still working on unless `--force`).
+    handoff    Pause a task and record done items, remaining TODOs and blockers.
+    done       Mark a task finished with a summary.
+    list       Print every task card.
+    checklist  Create `.agents/tasks/TASK-NNN-checklist.md` for cross-session live verification.
 
 Every command refreshes `.agents/handoff/LATEST.md`: a live board at the top plus a
 timeline of the last 20 events (older events move to `.agents/handoff/ARCHIVE.md`).
@@ -156,6 +157,69 @@ def save_task(path: Path, task: dict) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(task, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+CHECKLIST_TEMPLATE = """# {task_id} 實機驗收清單 — {title}
+
+- **狀態**：`{status}`
+- **負責 Agent**：`{agent}`
+- **建立日期**：`{created_at}`
+
+## 1. 真機／實機驗證步驟
+
+1. [ ] TODO: 步驟一（環境／服務啟動指令與操作路徑）
+2. [ ] TODO: 步驟二（實際輸入資料與使用者操作動作）
+3. [ ] TODO: 步驟三（預期畫面、檔案輸出或狀態變化）
+
+## 2. 預期 Log 關鍵字與檢核指標
+
+- `DATA_DIR/logs/app.log` 預期出現：`TODO`
+- `DATA_DIR/logs/errors.log` 預期無 `ERROR` / `CRITICAL` 紀錄
+
+## 3. 實證回報格式
+
+交接或回報時須將發現分為三欄並附上客觀證據（Snapshot Diff / 執行 Log / 截圖）：
+- **已證實 (Verified)**：有實機 log 或比對輸出作證
+- **推測 (Inferred)**：尚未實測的推論（嚴禁寫成已修復）
+- **錯誤 (Failed)**：失敗現象與完整錯誤訊息
+
+## 4. 不可修改之使用者決定 (Non-Negotiable Decisions)
+
+- TODO: 記錄使用者在本任務拍板定案、下一位 Agent 禁止推翻的條件
+
+## 5. 跨會話逐項核對表
+
+| 項目 | 驗證方式 | 實證證據 | 狀態 |
+|---|---|---|---|
+| 核心功能實測 | TODO | 待附 log / 截圖 | ⬜ 待驗證 |
+"""
+
+
+def write_task_checklist(task: dict, root: Path = ROOT, force: bool = False) -> Path:
+    """Create `.agents/tasks/TASK-NNN-checklist.md` for cross-session live verification.
+
+    Args:
+        task: Task metadata dictionary (`id`, `title`, `status`, `agent`, `created_at`).
+        root: Project root directory.
+        force: Overwrite an existing checklist file when True.
+
+    Returns:
+        Path to the checklist Markdown file.
+    """
+    task_id = str(task.get("id", "TASK-000"))
+    dest = tasks_dir(root) / f"{task_id}-checklist.md"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() and not force:
+        return dest
+    content = CHECKLIST_TEMPLATE.format(
+        task_id=task_id,
+        title=task.get("title", ""),
+        status=task.get("status", "open"),
+        agent=task.get("agent") or "-",
+        created_at=task.get("created_at") or _now_iso(),
+    )
+    dest.write_text(content, encoding="utf-8")
+    return dest
 
 
 def _git_info(root: Path = ROOT) -> tuple[str, str]:
@@ -333,13 +397,14 @@ def _record(task: dict, action: str, **details: str) -> None:
     task.setdefault("history", []).append({"timestamp": now, "action": action, **details})
 
 
-def cmd_create(title: str, paths: list[str], agent: str) -> int:
-    """Create a task card, optionally claiming it immediately.
+def cmd_create(title: str, paths: list[str], agent: str, checklist: bool = False) -> int:
+    """Create a task card, optionally claiming it immediately or generating a verification checklist.
 
     Args:
         title: Task title.
         paths: Files or folders the task is about (informational, helps the next agent).
         agent: Agent to assign right away; empty leaves the task `open`.
+        checklist: Also generate `.agents/tasks/TASK-NNN-checklist.md` when True.
 
     Returns:
         Process exit code (0 on success).
@@ -362,12 +427,34 @@ def cmd_create(title: str, paths: list[str], agent: str) -> int:
     _record(task, "created_and_claimed" if resolved else "created", agent=resolved or "system")
     path = tasks_dir() / f"{task_id}-{_slugify(title)}.json"
     save_task(path, task)
+    if checklist:
+        chk = write_task_checklist(task, root=ROOT)
+        print(f"📋 已建立實機驗收清單 ({chk.relative_to(ROOT)})")
     update_handoff_file(
         f"建立任務 `{task_id}`: {md_cell(title)}",
         resolved or "system",
         [f"**狀態**: `{task['status']}`", f"**相關範圍**: `{md_cell(', '.join(paths) or '-')}`"],
     )
     print(f"✅ 已建立任務卡 `{task_id}` ({path.relative_to(ROOT)})")
+    return 0
+
+
+def cmd_checklist(task_id: str, force: bool = False) -> int:
+    """Create a cross-session verification checklist for an existing task card.
+
+    Args:
+        task_id: Task ID such as `TASK-001`.
+        force: Overwrite an existing checklist file when True.
+
+    Returns:
+        Process exit code (0 on success, 1 when task is missing).
+    """
+    loaded = _load_task_or_fail(task_id)
+    if not loaded:
+        return 1
+    _, task = loaded
+    dest = write_task_checklist(task, root=ROOT, force=force)
+    print(f"📋 已產生驗收清單：{dest.relative_to(ROOT)}")
     return 0
 
 
@@ -496,6 +583,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_create.add_argument("--title", default="", help="任務標題")
     p_create.add_argument("--paths", nargs="+", default=[], help="此任務主要涉及的目錄或檔案（供下一位 Agent 參考）")
     p_create.add_argument("--agent", default="", help="立即指派給特定 Agent")
+    p_create.add_argument("--checklist", action="store_true", help="同步建立 TASK-NNN-checklist.md 跨會話實機驗收清單")
+
+    p_checklist = sub.add_parser("checklist", help="為既有任務建立跨會話實機驗收清單 (TASK-NNN-checklist.md)")
+    p_checklist.add_argument("task_id", help="任務編號，如 TASK-001")
+    p_checklist.add_argument("--force", action="store_true", help="若清單已存在則覆寫重建")
 
     p_claim = sub.add_parser("claim", help="接手 open 或 handed_off 任務")
     p_claim.add_argument("task_id", help="任務編號，如 TASK-001")
@@ -530,7 +622,9 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = build_parser().parse_args(argv)
     if args.cmd == "create":
-        return cmd_create(args.title or args.title_pos or "Untitled Task", args.paths, args.agent)
+        return cmd_create(args.title or args.title_pos or "Untitled Task", args.paths, args.agent, checklist=args.checklist)
+    if args.cmd == "checklist":
+        return cmd_checklist(args.task_id, force=args.force)
     if args.cmd == "claim":
         return cmd_claim(args.task_id, args.agent, args.force)
     if args.cmd == "handoff":

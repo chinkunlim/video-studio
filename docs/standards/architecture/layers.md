@@ -36,3 +36,11 @@ flowchart TD
 8. **儲存防衛與向後相容 (Storage Hygiene)**：新增欄位保持向下相容，資料庫結構變更必須提供 Alembic 遷移檔。
 9. **目錄樹與入口防脫節 (Drift Detection)**：架構變更後透過 `agentctl sync` 與 `agentctl tree` 自動同步文件與入口。
 10. **四向溯源體系 (Four-Way Traceability)**：重大決策記 ADR，踩坑除錯記 ISSUE，在程式碼、測試與 commit 訊息相互參照。
+
+---
+
+## 3. 共用組裝、Protocol 解耦與平行領域拆分
+
+1. **共用組裝層 (`entrypoints/wiring.py`)**：CLI、HTTP 與 MCP 三個入口共用的設定讀取、`session_factory` 建立與系統路徑安全解析（`safe_user_path`）統一置於 `entrypoints/wiring.py`，避免組裝邏輯四處重複。
+2. **Protocol 介面反轉 (`domain/protocols.py`)**：當 `services` 需要依賴多種 Repository 或外部用戶端時，於 `domain/protocols.py` 以 `typing.Protocol` 定義契約，使 `services` 100% 零匯入 `adapters` 並通過嚴格 `mypy --strict`。
+3. **中大型專案入口平行拆分 (Parallel Domain Splitting)**：當單一 `app.py` / `mcp_server.py` 超過 400–500 行時，主檔僅保留組裝根（Composition Root）與 `lifespan`，業務端點依領域拆為 `entrypoints/http/<domain>.py`（`APIRouter`）並平行對應 `entrypoints/mcp_<domain>.py`（`register_<domain>_tools`）。

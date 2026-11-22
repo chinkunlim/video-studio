@@ -205,3 +205,6 @@ export function calculateTotal(items, taxRate, coupon) { ... }
 - 執行 `code-review-guard` 或 `agentctl check` 時，任何警告與錯誤視為阻斷性問題，必須在當次對話中立刻解決，嚴禁假裝沒看見或推延至「未來再優化」。
 - 詳細重構手法（Early Return、Extract Function、DTO 封裝）見 [`docs/standards/coding/code_review_zero_tolerance.md`](coding/code_review_zero_tolerance.md)。
 
+### 5.6 嚴禁靜默失敗與靜默降級 (Anti-Swallow & Quarantine)
+- 外部失敗或空指標不可吞錯、不可退回 Mock 假資料卻回報正常；異常產出須隔離至 `DATA_DIR/needs_review/`（附 `.reason.json`），絕不破壞正式成品（見 [`docs/standards/coding/principles.md`](coding/principles.md) §5）。
+

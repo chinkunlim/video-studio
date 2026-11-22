@@ -193,7 +193,13 @@ def collect_modules(config: dict) -> list[dict]:
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*")):
-            if path.suffix not in CODE_SUFFIXES or not path.is_file() or "node_modules" in path.parts:
+            if (
+                path.suffix not in CODE_SUFFIXES
+                or not path.is_file()
+                or "node_modules" in path.parts
+                or "vendor" in path.parts
+                or path.name.endswith((".min.js", ".min.mjs", ".min.css"))
+            ):
                 continue
             rel = path.relative_to(ROOT).as_posix()
             if rel in seen:

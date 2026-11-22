@@ -49,7 +49,7 @@ fi
 # 4. Code review guard (skipped silently when Python or the skill is unavailable)
 GUARD=".agents/skills/code-review-guard/scripts/review_guard.py"
 if [ -n "$PY" ] && [ -f "$GUARD" ]; then
-  if ! "$PY" "$GUARD" --quiet --allow-legacy-moves; then
+  if ! "$PY" "$GUARD" --quiet --staged --allow-legacy-moves; then
     echo "❌ [PRE-COMMIT BLOCKED] code-review-guard found CRITICAL issues (run: $PY $GUARD)."
     exit 1
   fi

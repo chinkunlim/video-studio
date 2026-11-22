@@ -38,3 +38,11 @@ input/
 state/
 logs/
 needs_review/
+
+# 5. 框架與圖譜自身目錄 (Framework & Graph Outputs)
+.agents/
+graphify-out/
+docs/architecture/GRAPH_REPORT.md
+docs/architecture/AGENT_AUDIT_REPORT.md
+static/vendor/
+web/vendor/

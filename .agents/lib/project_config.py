@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 CONFIG_RELATIVE_PATH = Path(".agents") / "project.toml"
-FRAMEWORK_VERSION = "3.5.0"
+FRAMEWORK_VERSION = "3.6.0"
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "framework": {"version": FRAMEWORK_VERSION},
@@ -52,6 +52,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "hard_max_file_lines": 800,
         "max_commit_file_mb": 10,
         "block_data_files": True,
+        # Third-party/minified assets excluded from code-review-guard scans
+        "exclude_paths": ["vendor", "*.min.js", "*.min.mjs", "*.min.css"],
         # Only these layers may `print` (a CLI's real output); every other layer logs.
         "print_allowed_layers": ["entrypoints"],
         # Every source file in a layer that defines functions must create a module logger

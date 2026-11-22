@@ -53,7 +53,7 @@ graphify --version
 ### 已知的環境陷阱
 
 - **`DATA_DIR` 撞名**：Open WebUI 的安裝步驟在 `~/.zshrc` 加了 `export DATA_DIR="$HOME/open-webui-data"`。框架已處理：專案 `.env` 的 `DATA_DIR` 優先，`agentctl doctor` 會顯示忽略了哪個終端機設定。新的設定名稱不要再用 `DATA_DIR`、`PORT`、`HOST` 這類通用名稱。
-- **埠號**：全機的埠號總表在 `~/Desktop/projects/00 init_dev_env/PORTS.md`（目前已用 8080、8765–8770、11434、7456；macOS 自己佔用 5000、7000）。新專案的 `HTTP_PORT` 從表上「下一個可用的埠號」選，寫進 `docs/standards/PROJECT_RULES.md`，並回頭更新 PORTS.md。
+- **埠號**：全機的埠號總表在 `~/Desktop/projects/00 init_dev_env/PORTS.md`（目前已用 8080、8765–8772、11434、7456；macOS 自己佔用 5000、7000）。新專案的 `HTTP_PORT` 從表上「下一個可用的埠號」選，寫進 `docs/standards/PROJECT_RULES.md`，並回頭更新 `PORTS.md`；`entrypoints/http/server.py` 啟動前會透過 `port_is_free`（啟用 `SO_REUSEADDR` 防 `TIME_WAIT` 誤判）主動檢查佔用者。
 - **OpenCode v2 快取**：改了 `opencode.json` 後，第一次 `opencode mcp list` 可能顯示舊結果，再執行一次。
 - **`agy mcp list` 只列全域設定**：專案的 `.agents/mcp_config.json` 要在專案資料夾內的對話中確認（問它有哪些 MCP 工具）。
 - **桌面資料夾權限**：從「終端機」以外的程式啟動（例如某些預覽工具）讀不到 `~/Desktop` 時，到「系統設定 → 隱私權與安全性 → 檔案和資料夾」授權。

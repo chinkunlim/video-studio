@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# =============================================================================
+# post-checkout — refresh the graphify knowledge graph after a branch switch (see graphify-refresh.sh).
+# $3 is 1 for a branch checkout, 0 for a single-file checkout (nothing to do then).
+# =============================================================================
+[ "${3:-0}" = "1" ] || exit 0
+exec bash "$(git rev-parse --show-toplevel)/.agents/hooks/graphify-refresh.sh"

@@ -26,3 +26,15 @@
    - 先建立 `docs/known-issues/NNN-xxx.md` 記錄變更點與根因。
    - 將新版回應樣本放入 `tests/fixtures/`。
    - 更新解析函式，並補上防回歸單元測試。
+
+---
+
+## 3. 契約測試、Protocol 模擬與系統路徑硬隔離
+
+1. **靜態契約自動測試 (`tests/test_web_contracts.py`)**：
+   - **DOM ID 一致性**：自動比對 `web/*.js` 中的 `getElementById(...)` 與 `web/index.html`（及 JS 動態建立之 `.id`），0.1 秒離線攔截死按鈕。
+   - **OpenAPI 路由契約（`--with api --with web`）**：靜態掃描前端 `fetch()` / `apiFetch()` 呼叫路徑，比對 `app.openapi()["paths"]`，杜絕 404 假路徑。
+2. **Protocol 介面 + 零網路全流程 E2E 測試**：
+   - 在 `domain/protocols.py` 定義抽象 `Protocol`，測試以單一 `DummyClient` + 記憶體 `sqlite://` + `FastAPI TestClient` 執行零網路端到端使用者旅程。
+3. **系統路徑測試硬隔離 (`safe_user_path`)**：
+   - 所有寫入使用者系統目錄（如 `~/Desktop`、`~/.config/`）的功能，須透過 `entrypoints/wiring.py` 的 `safe_user_path()` 解析；當 `APP_ENV=test` 時自動隔離導向 `DATA_DIR/_test_isolated/`，嚴禁單元測試污染開發者本機目錄。

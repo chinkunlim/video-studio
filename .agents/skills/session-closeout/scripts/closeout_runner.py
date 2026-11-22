@@ -286,6 +286,53 @@ def active_task_of(root: Path, agent: str) -> str:
     return owned[0] if len(owned) == 1 else ""
 
 
+def _path_matches_scope(rel: str, scopes: list[str]) -> bool:
+    """Check whether `rel` matches any path prefix in `scopes`.
+
+    Args:
+        rel: Repo-relative POSIX path.
+        scopes: Path prefixes listed on a task card.
+
+    Returns:
+        True when `rel` falls inside one of `scopes`.
+    """
+    norm = rel.strip("/")
+    for scope in scopes:
+        prefix = str(scope).strip("/")
+        if prefix and (norm == prefix or norm.startswith(prefix + "/")):
+            return True
+    return False
+
+
+def foreign_in_progress_files(root: Path, agent: str, changed: list[str]) -> list[tuple[str, str, str]]:
+    """Detect uncommitted files that belong to another agent's in-progress task card.
+
+    Args:
+        root: Project root directory.
+        agent: Current agent name.
+        changed: Uncommitted repo-relative paths in working tree.
+
+    Returns:
+        List of `(task_id, owner_agent, file_path)` conflicts.
+    """
+    folder = root / ".agents" / "tasks"
+    if not folder.exists() or not changed:
+        return []
+    conflicts: list[tuple[str, str, str]] = []
+    for f in sorted(folder.glob("TASK-*.json")):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        owner = str(data.get("agent", "")).strip()
+        scopes = list(data.get("paths", []))
+        if data.get("status") != "in_progress" or not owner or owner == agent or not scopes:
+            continue
+        task_id = str(data.get("id", f.stem))
+        conflicts.extend((task_id, owner, rel) for rel in changed if _path_matches_scope(rel, scopes))
+    return conflicts
+
+
 def first_line(text: str, fallback: str = "-") -> str:
     """Return the first non-empty line of a note, for one-line handoff bullets.
 
@@ -389,13 +436,14 @@ def append_handoff(root: Path, agent: str, notes: dict[str, str], record: tuple[
     agent_task.update_handoff_file(event_title="Session Closeout (結束對話收尾)", agent=agent, bullets=bullets, root=root)
 
 
-def commit_and_report(root: Path, agent: str, model: str) -> int:
+def commit_and_report(root: Path, agent: str, model: str, paths: list[str] | None = None) -> int:
     """Commit remaining changes (pushing is done afterwards by `push_to_remote()`).
 
     Args:
         root: Project root directory.
         agent: Agent closing the session.
         model: Model name for the commit trailer (may be empty).
+        paths: Optional path prefixes limiting which modified files are committed.
 
     Returns:
         Exit code of `auto_commit.py` (0 when it is not installed).
@@ -405,9 +453,37 @@ def commit_and_report(root: Path, agent: str, model: str) -> int:
         return 0
     cmd = [sys.executable, str(auto_commit), "--closeout", "--agent", agent]
     cmd += ["--model", model] if model else []
-    task = active_task_of(root, agent)
-    cmd += ["--task", task] if task else []
+    if paths:
+        cmd += ["--paths", *paths]
+    else:
+        task = active_task_of(root, agent)
+        cmd += ["--task", task] if task else []
     return subprocess.run(cmd, cwd=root, check=False).returncode
+
+
+def _guard_foreign_tasks(root: Path, agent: str, lib, args: argparse.Namespace) -> int:
+    """Stop closeout when uncommitted changes overlap another agent's active task unless scoped.
+
+    Args:
+        root: Project root directory.
+        agent: Current agent name.
+        lib: Loaded `project_config` module or None.
+        args: Parsed command-line arguments.
+
+    Returns:
+        0 when safe to proceed, 1 when conflicting files block closeout.
+    """
+    if args.paths or getattr(args, "force_all", False) or lib is None:
+        return 0
+    uncommitted = [p for _, p in lib.git_changed_files(root)]
+    conflicts = foreign_in_progress_files(root, agent, uncommitted)
+    if not conflicts:
+        return 0
+    print("❌ 偵測到工作區內有屬於其他 Agent 進行中任務的檔案，已中止收尾以避免互相覆寫：", file=sys.stderr)
+    for task_id, owner, rel in conflicts[:10]:
+        print(f"   • {task_id} (@{owner}) ➔ {rel}", file=sys.stderr)
+    print("💡 請使用 `--paths <你的檔案...>` 只收尾自己的修改，或確認已接手後加 `--force-all`。", file=sys.stderr)
+    return 1
 
 
 def run_closeout(root: Path, args: argparse.Namespace) -> int:
@@ -424,6 +500,8 @@ def run_closeout(root: Path, args: argparse.Namespace) -> int:
     cfg = lib.load_config(root) if lib else {"commands": {"test": ""}}
     agent, model = lib.resolve_agent_identity(args.agent, args.model, root=root) if lib else (args.agent or "unattributed-agent", args.model)
     print("=" * 68 + f"\n🏁 Session Closeout — Agent: {agent}\n" + "=" * 68)
+    if _guard_foreign_tasks(root, agent, lib, args) != 0:
+        return 1
 
     print("\n[1/7] 🧪 執行測試與 Code Review Guard...")
     if run_tests(root, cfg) != 0:
@@ -464,7 +542,7 @@ def run_closeout(root: Path, args: argparse.Namespace) -> int:
     append_handoff(root, agent, notes, record)
 
     print("\n[6/7] 🔒 本機 Commit...")
-    if commit_and_report(root, agent, model) != 0:
+    if commit_and_report(root, agent, model, args.paths) != 0:
         print("❌ Commit 失敗，沒有推送。", file=sys.stderr)
         return 1
     if args.no_push:
@@ -493,6 +571,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--next", default="", help="下一步建議")
     parser.add_argument("--note", default="", help="留給下一個 Agent 的一句話交接")
     parser.add_argument("--transcript", default="", help="對話匯出檔（非 Claude Code 時使用；Claude Code 自動讀取）")
+    parser.add_argument("--paths", nargs="+", default=[], help="只提交這些路徑（共用目錄多人接力時避免誤打包他人修改）")
+    parser.add_argument("--force-all", action="store_true", help="即使偵測到其他 Agent 進行中任務的檔案也照常收尾")
     parser.add_argument("--strict-docs", action="store_true", help="強制文件檢查：若缺少 ADR、Known Issues 或 CHANGELOG 更新則中止收尾")
     parser.add_argument("--no-push", action="store_true", help="只在本機 commit，不推送（預設收尾會推送到 upstream）")
     parser.add_argument("--push", action="store_true", help=argparse.SUPPRESS)  # v3.3 and before; pushing is now the default

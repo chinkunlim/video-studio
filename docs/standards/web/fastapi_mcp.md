@@ -37,3 +37,18 @@
    - 會寫入、修改、刪除、提交或部署的工具，**必須包含 `confirm: bool = False` 參數**。若未獲明確確認，需拒絕執行並詳細回報預計變更範圍。
 3. **Stdout 禁令**：
    - Stdio 模式下的 MCP 伺服器**絕對禁止直接 `print` 到 stdout**（stdout 為 JSON-RPC 通道），所有日誌一律走 Logger 寫入 stderr 或日誌檔。
+
+---
+
+## 4. FastAPI + DB 連線隔離、安全性、埠號預檢與入口拆分
+
+1. **Request-Scoped DB Session 中介層（`--with api --with db` 內建）**：
+   - 請求期間透過 `ContextVar`（`_DB_SCOPE`）綁定 `make_request_scoped_session`，並於 `add_db_session_scope` 中介層的 `finally` 自動呼叫 `registry.remove()` 歸還連線，根治執行緒池連線洩漏。
+   - 背景 Worker、CLI 與 MCP stdio 另行使用獨立的 `with session_scope(factory):`，不混用 HTTP 請求級 session。
+2. **本機 Web 安全與防快取三件套**：
+   - `NoCacheStaticFiles`：所有靜態 HTML/CSS/JS 回傳 `Cache-Control: no-cache`，防止瀏覽器／Safari 延遲載入舊程式。
+   - `add_local_only_guard`：驗證 `Host`（含 `HTTP_ALLOWED_HOSTS` 如 `host.docker.internal` 與 Tailscale 主機名，比對含埠或去埠主機名）與寫入請求之 `Origin`。
+   - `safe_resolve_under(root, relative_path)`：所有下載與檔案輸出路由一律透過 `Path.resolve()` + `is_relative_to()` 阻斷 `../` 路徑穿越。
+3. **啟動前埠號預檢 (`entrypoints/http/port_check.py`)**：
+   - 啟動 `uvicorn` 前呼叫 `port_is_free(host, port)`（socket 啟用 `SO_REUSEADDR` 避免 `TIME_WAIT` 誤判）；若被佔用則以 `lsof` 顯示佔用行程 PID 並指引查詢 `~/Desktop/projects/00 init_dev_env/PORTS.md` 后安全停止。
+4. **平行領域拆分**：當 `app.py` / `mcp_server.py` 隨業務增長接近 400–500 行時，主檔僅保留組裝根與 `lifespan`，業務路由拆入 `entrypoints/http/<domain>.py`（`APIRouter`）並對應 `entrypoints/mcp_<domain>.py`。

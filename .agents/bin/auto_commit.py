@@ -488,6 +488,34 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _handle_no_changes(args: argparse.Namespace, config: dict, threshold: int) -> int:
+    """Handle the case where there are no uncommitted changes (supports `--push` and `--closeout`).
+
+    Args:
+        args: Parsed command-line arguments.
+        config: Loaded project configuration.
+        threshold: Push reminder threshold.
+
+    Returns:
+        Process exit code (0 on success, 1 when `--push` fails due to missing upstream).
+    """
+    print("ℹ️ 指定範圍內沒有未提交的變更。")
+    if args.push:
+        unpushed, has_upstream = get_unpushed_commits()
+        if not has_upstream:
+            print("⚠️ 這個分支沒有遠端分支（upstream），無法推送。", file=sys.stderr)
+            return 1
+        if unpushed:
+            push_with_permission()
+            print(f"🚀 已推送 {len(unpushed)} 個既有的本機 Commit 至遠端儲存庫 (git push)。")
+        else:
+            print("✅ 遠端分支已是最新，無須推送。")
+        return 0
+    if args.closeout:
+        print_push_reminder(read_version(ROOT, config), True, threshold)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the full commit pipeline.
 
@@ -506,10 +534,7 @@ def main(argv: list[str] | None = None) -> int:
         refresh_generated_docs()
     changes = collect_changes(prefixes)
     if not changes:
-        print("ℹ️ 指定範圍內沒有未提交的變更。")
-        if args.closeout:
-            print_push_reminder(read_version(ROOT, config), True, threshold)
-        return 0
+        return _handle_no_changes(args, config, threshold)
 
     plan = build_plan(args, config, changes)
     print("=" * 64)

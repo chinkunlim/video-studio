@@ -38,6 +38,8 @@ sys.path.insert(0, str(ROOT / ".agents" / "lib"))
 IMPORT_HINTS = {
     "bs4": "beautifulsoup4", "cv2": "opencv-python", "dotenv": "python-dotenv", "fitz": "PyMuPDF",
     "PIL": "Pillow", "sklearn": "scikit-learn", "yaml": "PyYAML", "telegram": "python-telegram-bot",
+    "docx": "python-docx", "pptx": "python-pptx", "jwt": "PyJWT", "dateutil": "python-dateutil",
+    "magic": "python-magic",
     "google": "google-* (check which Google package you use)",
 }
 
@@ -176,7 +178,7 @@ def local_module_names(source_roots: list[Path]) -> set[str]:
     return names
 
 
-PYTHON_STDLIB_EXTRAS = {"tomllib", "__future__"}
+PYTHON_STDLIB_EXTRAS = {"tomllib", "__future__", "graphlib", "zoneinfo", "annotationlib"}
 
 
 def is_stdlib(name: str) -> bool:
