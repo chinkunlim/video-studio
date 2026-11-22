@@ -5,10 +5,10 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-16 04:21 UTC`
+- **最後更新時間**: `2026-11-22 03:31 UTC`
 - **最近操作 Agent**: `Antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `986822a feat(studio): add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection [agent:Antigravity]`
+- **最新 Git Commit**: `d63ee05 feat(api): allow tailnet .ts.net Host and Origin headers for Tailscale Serve access [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
@@ -17,6 +17,14 @@
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-22 03:31 UTC] 完成任務 `TASK-015` — Align DATA_DIR role layout and add output releases publishing (by `Antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Aligned DATA_DIR role layout with releases publishing, split studio_routes, hardened host/env guards, added MCP tool parity, and resolved doc TODOs
+
+### [2026-11-19 17:01 UTC] 建立任務 `TASK-015`: Align DATA_DIR role layout and add output releases publishing (by `Antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `-`
 
 ### [2026-11-16 04:21 UTC] 完成任務 `TASK-014` — Add visual prosody highlight editor, immutable original script preservation, and agy-cli model selection (by `Antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -89,11 +97,3 @@
 ### [2026-11-16 03:24 UTC] 建立任務 `TASK-009`: Add edge-tts dual TTS engine and HTML/GSAP/HyperFrames rendering mode (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
-
-### [2026-11-16 02:46 UTC] 完成任務 `TASK-008` — Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
-- **狀態**: ✅ 已完成 (`done`)
-- **完成摘要**: Implemented FastAPI HTTP API (127.0.0.1:8772), Streamable HTTP /mcp and stdio MCP server with confirm gates, lightweight Web UI with /docs link, updated PORTS.md and AI tool configs, and passed all 38 tests.
-
-### [2026-11-16 02:41 UTC] 認領任務 `TASK-008` (Add FastAPI HTTP API, MCP Server, and Web UI) (by `antigravity`)
-- **相關範圍**: `-`
-- **接棒自**: `antigravity`

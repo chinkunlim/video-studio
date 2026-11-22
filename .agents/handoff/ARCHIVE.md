@@ -99,3 +99,11 @@
 ### [2026-11-16 02:41 UTC] 建立任務 `TASK-008`: Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
 - **狀態**: `in_progress`
 - **相關範圍**: `-`
+
+### [2026-11-16 02:41 UTC] 認領任務 `TASK-008` (Add FastAPI HTTP API, MCP Server, and Web UI) (by `antigravity`)
+- **相關範圍**: `-`
+- **接棒自**: `antigravity`
+
+### [2026-11-16 02:46 UTC] 完成任務 `TASK-008` — Add FastAPI HTTP API, MCP Server, and Web UI (by `antigravity`)
+- **狀態**: ✅ 已完成 (`done`)
+- **完成摘要**: Implemented FastAPI HTTP API (127.0.0.1:8772), Streamable HTTP /mcp and stdio MCP server with confirm gates, lightweight Web UI with /docs link, updated PORTS.md and AI tool configs, and passed all 38 tests.

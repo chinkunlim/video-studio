@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import socket
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -36,6 +37,7 @@ from video_studio.services.extract_audio import extract as extract_mod
 from video_studio.services.narrate import narrate as narrate_mod
 from video_studio.services.narrate.core import vocab
 from video_studio.services.sv import approve_file, check_job_status, init_job, list_jobs
+from video_studio.services.video import release as release_mod
 from video_studio.services.video import video as video_mod
 
 logger = logging.getLogger(__name__)
@@ -101,6 +103,57 @@ def port_is_free(host: str, port: int) -> bool:
         return sock.connect_ex((host, port)) != 0
 
 
+def _is_allowed_host(host: str, allowed_hosts: set[str], suffixes: tuple[str, ...]) -> bool:
+    """Return whether an incoming HTTP Host header is permitted.
+
+    Args:
+        host: Normalized lowercase hostname without port.
+        allowed_hosts: Exact permitted hostnames.
+        suffixes: Permitted domain suffixes (e.g. `.ts.net`).
+
+    Returns:
+        True when empty, exact-matched, or suffix-matched.
+    """
+    if not host or host in allowed_hosts:
+        return True
+    return any(host.endswith(suffix) for suffix in suffixes)
+
+
+def _is_allowed_origin(origin: str, allowed_origins: set[str], suffixes: tuple[str, ...]) -> bool:
+    """Return whether an HTTP Origin header is permitted for mutating requests.
+
+    Args:
+        origin: Raw Origin header string.
+        allowed_origins: Exact permitted origins.
+        suffixes: Permitted host suffixes (e.g. `.ts.net`).
+
+    Returns:
+        True when empty, exact-matched, or matching an allowed host suffix.
+    """
+    if not origin:
+        return True
+    norm = origin.rstrip("/")
+    if norm in allowed_origins:
+        return True
+    origin_host = norm.split("://", 1)[-1].split("/", 1)[0].split(":")[0].lower()
+    return any(origin_host.endswith(suffix) for suffix in suffixes)
+
+
+def _build_cors_origin_regex(suffixes: tuple[str, ...]) -> str | None:
+    """Build a CORS origin regex matching HTTP(S) origins under allowed host suffixes.
+
+    Args:
+        suffixes: Normalized domain suffixes starting with `.`.
+
+    Returns:
+        Compiled regex pattern string for CORSMiddleware, or None when disabled.
+    """
+    if not suffixes:
+        return None
+    joined = "|".join(re.escape(suffix) for suffix in suffixes)
+    return rf"^https?://[^/]+(?:{joined})(?::\d+)?$"
+
+
 def _install_security_middleware(app: FastAPI, cfg: AppConfig) -> None:
     """Register Host/Origin validation and CORS middleware for local-only access.
 
@@ -108,9 +161,11 @@ def _install_security_middleware(app: FastAPI, cfg: AppConfig) -> None:
         app: FastAPI application instance.
         cfg: Application configuration.
     """
+    suffixes = cfg.http_allowed_host_suffixes
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(cfg.http_allowed_origins),
+        allow_origin_regex=_build_cors_origin_regex(suffixes),
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
@@ -132,16 +187,12 @@ def _install_security_middleware(app: FastAPI, cfg: AppConfig) -> None:
             HTTP response or 403 error JSON.
         """
         host_header = (request.headers.get("host") or "").split(":")[0].lower()
-        is_tailnet_host = host_header.endswith(".ts.net")
-        if host_header and host_header not in allowed_hosts and not is_tailnet_host:
+        if not _is_allowed_host(host_header, allowed_hosts, suffixes):
             return JSONResponse({"detail": "Forbidden host"}, status_code=403)
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            origin = request.headers.get("origin")
-            if origin:
-                norm_origin = origin.rstrip("/")
-                origin_host = norm_origin.split("://", 1)[-1].split("/", 1)[0].split(":")[0].lower()
-                if norm_origin not in allowed_origins and not origin_host.endswith(".ts.net"):
-                    return JSONResponse({"detail": "Forbidden origin"}, status_code=403)
+            origin = request.headers.get("origin") or ""
+            if not _is_allowed_origin(origin, allowed_origins, suffixes):
+                return JSONResponse({"detail": "Forbidden origin"}, status_code=403)
         return await call_next(request)
 
 
@@ -320,6 +371,31 @@ def _register_video_read_routes(app: FastAPI) -> None:
         return TextOutputResponse(output=video_mod.check_video(job_name, version))
 
 
+def _register_publish_route(app: FastAPI) -> None:
+    """Register the video release publish HTTP route.
+
+    Args:
+        app: FastAPI application instance.
+    """
+
+    @app.post("/api/jobs/{job_name}/video/publish", response_model=TextOutputResponse, tags=["video"])
+    def api_publish_release(job_name: str, req: VersionRequest) -> TextOutputResponse:
+        """Publish a rendered version into output/<job>/releases/<vN>/ (demotes previous release).
+
+        Args:
+            job_name: Target job name.
+            req: Optional version request.
+
+        Returns:
+            Release summary message.
+        """
+        try:
+            res = release_mod.publish_release(job_name, req.version)
+            return TextOutputResponse(output=str(res["message"]))
+        except (J.JobError, FileNotFoundError, RuntimeError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 def _register_video_routes(app: FastAPI) -> None:
     """Register mutating video and audio extraction HTTP routes.
 
@@ -327,6 +403,7 @@ def _register_video_routes(app: FastAPI) -> None:
         app: FastAPI application instance.
     """
     _register_video_read_routes(app)
+    _register_publish_route(app)
 
     @app.post("/api/jobs/{job_name}/video/scenes", response_model=TextOutputResponse, tags=["video"])
     def api_draft_scenes(job_name: str, req: DraftScenesRequest) -> TextOutputResponse:

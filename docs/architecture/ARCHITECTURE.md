@@ -59,23 +59,22 @@ flowchart TD
 | **重新配音** | `dub/` | 影片（畫面保留）＋講稿 | 新配音、字幕、換掉聲音的影片 | **原片畫面** |
 | **完整生成** | `generate/` | 講稿／pptx／海報／主題說明 | 配音、字幕、影片 | **配音時間** |
 
-### 工作區目錄架構 (Workspace Structure)
+### 資料目錄架構 (`DATA_DIR` Role Layout)
 
-程式透過 `video_studio.config.settings` 取得 `DATA_DIR` / `workspace` 路徑：
+程式透過 `video_studio.config.settings` 取得 `DATA_DIR` 路徑（見 [ADR-006](../adr/006-data-dir-role-layout-and-releases.md)）：
 
 ```text
-workspace/
+DATA_DIR/
 ├── shared/                       所有工作共用
 │   ├── vocabulary.tsv            詞彙表：字幕顯示 vs Voicebox 念法
 │   └── voice/samples/            複製聲音的音訊樣本
-├── extract/<job-name>/
-├── dub/<job-name>/
-└── generate/<job-name>/
-    ├── job.toml                  工作設定檔
-    ├── input/                    原始素材（程式不可修改）
-    ├── review/                   AI 起草、待確認檔案（確認後透過 approve 移入 input/）
-    ├── work/                     中間處理檔（takes/、暫存，可清理）
-    └── output/v1, v2, …          成品（版本遞增，永不覆蓋）
+├── input/<job-name>/             原始素材（唯讀，程式不可修改）
+├── needs_review/<job-name>/      AI 起草、待確認檔案與 review_history/
+├── work/<job-name>/              中間處理檔（takes/、gen/、暫存，可清理）
+├── state/<job-name>/job.toml     工作設定檔（type = extract | dub | generate）
+└── output/<job-name>/
+    ├── v1, v2, …                 歷次渲染版本庫（版本遞增，永不覆蓋）
+    └── releases/<vN>/            唯一最新定稿交付物（硬連結 .mp4 與字幕）
 ```
 
 ## 分層

@@ -61,6 +61,24 @@ class Takes:
             json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
         )
 
+    def resolve_clip(self, clip: str) -> Path:
+        """Resolve a stored clip path relative to ``self.dir`` (supports legacy ``work/`` prefix).
+
+        Args:
+            clip: Stored clip path string from takes.json.
+
+        Returns:
+            Resolved Path inside ``self.dir``.
+        """
+        p = self.dir / clip
+        if p.exists():
+            return p
+        if clip.startswith("work/"):
+            alt = self.dir / clip[5:]
+            if alt.exists():
+                return alt
+        return p
+
     def get(self, tts_text: str) -> dict[str, Any] | None:
         """查询某发音文字是否已有对应录音档。
 
@@ -71,7 +89,7 @@ class Takes:
             take 资料字典或 None。
         """
         t = self.data.get(key(tts_text))
-        if t and (self.dir / str(t.get("clip", ""))).exists():
+        if t and self.resolve_clip(str(t.get("clip", ""))).exists():
             return t
         return None
 

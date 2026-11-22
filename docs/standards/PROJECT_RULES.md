@@ -9,11 +9,13 @@
   - `extract`：純語音提取工作。從原始影片或音檔中萃取 48kHz 音訊、切分聲音樣本、或產生 Whisper 逐字稿與對齊時間軸。
   - `dub`：原片配音置換工作。保留原影片畫面，依講稿與時間軸重新合成配音與字幕，並替換原音軌。
   - `generate`：完整影音生成工作。依講稿、PowerPoint 簡報或高解析度海報，生成配音、字幕並渲染輸出全新影片。
-- **工作區四層結構**：位於 `DATA_DIR/workspace/<type>/<job-name>/`：
-  - `input/`：使用者或原始專案素材（唯讀，程式不可直接寫入）。
-  - `review/`：AI 或自動工具起草之草稿（需由使用者審閱後透過 `approve` 移入 `input/`）。
-  - `work/`：運算中間暫存區（如單句 takes、中間切片，可隨時清理重建）。
-  - `output/v1, v2, ...`：驗收產出的成品目錄，採嚴格版本遞增編號，永不覆蓋既有產物。
+- **工作區角色分層結構**：依 [ADR-006](../../docs/adr/006-data-dir-role-layout-and-releases.md) 位於 `DATA_DIR` 各角色目錄下（以 `<job-name>` 關聯）：
+  - `input/<job-name>/`：使用者或原始專案素材（唯讀，程式不可直接寫入）。
+  - `needs_review/<job-name>/`：AI 或自動工具起草之草稿、試聽檔與 `review_history/`（需由使用者審閱後透過 `approve` 移入 `input/`）。
+  - `work/<job-name>/`：運算中間暫存區（如單句 takes、中間切片，可隨時清理重建）。
+  - `state/<job-name>/job.toml`：各工作的設定檔（含 `type`、`title`、配音與字幕參數）。
+  - `output/<job-name>/v1, v2, ...`：驗收產出的成品版本庫，採嚴格版本遞增編號，永不覆蓋既有產物。
+  - `output/<job-name>/releases/<vN>/`：該工作唯一最新定稿交付區（僅硬連結 `.mp4` 與 `subtitles_{youtube,vlc}.srt`，發布新版時舊定稿自動退回未發布狀態）。
 - **語音與字幕技術名詞**：
   - `Voicebox`：本機語音合成服務，綁定 `http://127.0.0.1:17493`，需搭配目標講者參考音訊樣本執行聲音複製。
   - `Take`：單行講稿錄音版本，檔名格式為 `line_NNN_vM.wav`，選定最佳版本後以符號連結（symlink）至 `line_NNN.wav`。
@@ -24,7 +26,7 @@
 
 - **本機服務安全性**：Voicebox、Open WebUI 等所有內部 API 與微服務呼叫，一律只連接 `127.0.0.1`，禁止使用 `localhost` 或綁定公開介面。
 - **先聲後影時間基準**：在 `generate` 模式下，影片各段落長度必須由配音（`narration.wav`）實際量測秒數主導，畫面切換與鏡頭動畫依配音長度延展。
-- **草稿變更安全流程**：任何由 Open WebUI 或自動化指令起草的檔案（如 `script.md`、`scenes.toml`），必須先寫入 `review/`，待使用者檢核並明確確認後，再執行 `approve` 移入 `input/`。
+- **草稿變更安全流程**：任何由 Open WebUI 或自動化指令起草的檔案（如 `script.md`、`scenes.toml`），必須先寫入 `needs_review/<job-name>/`，待使用者檢核並明確確認後，再執行 `approve` 移入 `input/`。
 - **字幕繁簡轉換規範**：字幕檔案（SRT、VTT、ASS）一律透過 OpenCC 轉換為繁體中文（臺灣標準），講稿原始文字則保留原樣。
 - **成品版本遞增**：所有透過 `finish_video` 渲染之成品目錄 `output/v<N>/`，必須自動偵測最新版號並 `+1` 寫入新資料夾，保留歷史紀錄。
 

@@ -1,13 +1,14 @@
-"""工作（job）：工作区里的一份工作，以及它的资料夹结构。设计见 docs/DESIGN.md。
+"""工作（job）：DATA_DIR 裡的一份工作，以及它的角色分層資料夾結構。
 
-<workspace>/
-├── shared/vocabulary.tsv、shared/voice/samples/、shared/vocab_tries/
-└── <type>/<name>/                 type = extract | dub | generate
-    ├── job.toml                   这份工作的设定
-    ├── input/                     你提供或确认过的东西（程式不会改）
-    ├── review/                    等你确认的东西（AI 起草、预览图、试听档）
-    ├── work/                      中间档（takes、暂存），可以删、可以重算
-    └── output/v1, v2, …           成品，不覆盖
+<DATA_DIR>/
+├── shared/vocabulary.tsv、shared/voice/samples/
+├── input/<name>/                  你提供或確認過的素材（唯讀，程式不會改）
+├── needs_review/<name>/           等你確認的內容（AI 起草、試聽檔、review_history/）
+├── work/<name>/                   中間檔（takes、gen、暫存），可清理重建
+├── state/<name>/job.toml          這份工作的設定檔
+└── output/<name>/
+    ├── v1, v2, …                  歷次渲染版本庫（不覆蓋）
+    └── releases/<vN>/             唯一最新定稿交付物（硬連結）
 """
 
 from __future__ import annotations
@@ -32,13 +33,13 @@ class JobError(Exception):
 
 
 def workspace() -> Path:
-    """工作区位置：优先由 config 取得，其次预设路径。
+    """資料工作區根目錄：優先使用設定覆蓋（SPLIT_VOICE_WORKSPACE），否則使用 DATA_DIR。
 
     Returns:
-        工作区根目录绝对路径。
+        資料根目錄絕對路徑。
     """
     cfg = load_config()
-    return cfg.workspace_dir or (cfg.data_dir / "workspace")
+    return cfg.workspace_dir or cfg.data_dir
 
 
 def shared(ws: Path | None = None) -> Path:
@@ -78,53 +79,71 @@ class Job:
             JobError: 找不到 job.toml 或 TOML 解析错误。
         """
         self.dir = Path(path).resolve()
-        f = self.dir / "job.toml"
-        if not f.exists():
+        self.config_path: Path = self.dir / "job.toml"
+        if not self.config_path.exists():
             raise JobError(f"{self.dir} 不是一份工作（找不到 job.toml）")
         try:
-            self.cfg: dict[str, Any] = tomllib.loads(f.read_text(encoding="utf-8"))
+            self.cfg: dict[str, Any] = tomllib.loads(self.config_path.read_text(encoding="utf-8"))
         except tomllib.TOMLDecodeError as e:
-            raise JobError(f"{f} 格式错误：{e}。请对照 templates/ 里的范本修正。") from e
+            raise JobError(f"{self.config_path} 格式错误：{e}。请对照 templates/ 里的范本修正。") from e
         self.type: str = str(self.cfg.get("job", {}).get("type", ""))
         self.name: str = self.dir.name
         self.title: str = str(self.cfg.get("job", {}).get("title") or self.name)
+        self._data_root: Path | None = self.dir.parent.parent if self.dir.parent.name == "state" else None
 
     # 资料夹
     @property
     def input(self) -> Path:
-        """工作输入资料夹 input/。
+        """工作输入资料夹 input/<name>/。
 
         Returns:
             input 资料夹路径。
         """
+        if self._data_root is not None:
+            return self._data_root / "input" / self.name
         return self.dir / "input"
 
     @property
     def review(self) -> Path:
-        """工作审核资料夹 review/。
+        """工作审核资料夹 needs_review/<name>/。
 
         Returns:
-            review 资料夹路径。
+            needs_review 资料夹路径。
         """
+        if self._data_root is not None:
+            return self._data_root / "needs_review" / self.name
         return self.dir / "review"
 
     @property
     def work(self) -> Path:
-        """工作中间档资料夹 work/。
+        """工作中间档资料夹 work/<name>/。
 
         Returns:
             work 资料夹路径。
         """
+        if self._data_root is not None:
+            return self._data_root / "work" / self.name
         return self.dir / "work"
 
     @property
     def output(self) -> Path:
-        """工作成品资料夹 output/。
+        """工作成品资料夹 output/<name>/。
 
         Returns:
             output 资料夹路径。
         """
+        if self._data_root is not None:
+            return self._data_root / "output" / self.name
         return self.dir / "output"
+
+    @property
+    def releases(self) -> Path:
+        """工作定稿發布資料夾 output/<name>/releases/。
+
+        Returns:
+            releases 資料夾路徑。
+        """
+        return self.output / "releases"
 
     def input_file(self, key: str, default: str = "") -> Path | None:
         """job.toml [inputs] 里指定的档案（在 input/ 里）；没指定就回传 None。
@@ -201,50 +220,67 @@ class Job:
 
 
 def all_jobs(ws: Path | None = None) -> list[Job]:
-    """列出工作区内所有有效工作。
+    """列出資料區內所有有效工作。
 
     Args:
-        ws: 指定工作区路径，留空使用预设。
+        ws: 指定資料根目錄，留空使用預設。
 
     Returns:
-        Job 清单。
+        Job 清單。
     """
     ws = ws or workspace()
     out: list[Job] = []
+    seen: set[str] = set()
+    state_dir = ws / "state"
+    if state_dir.exists():
+        for d in sorted(state_dir.glob("*")):
+            if d.is_dir() and (d / "job.toml").exists():
+                job = Job(d)
+                out.append(job)
+                seen.add(job.name)
     for t in TYPES:
         type_dir = ws / t
         if not type_dir.exists():
             continue
         for d in sorted(type_dir.glob("*")):
-            if (d / "job.toml").exists():
+            if (d / "job.toml").exists() and d.name not in seen:
                 out.append(Job(d))
     return out
 
 
 def find(name: str, ws: Path | None = None) -> Job:
-    """「名称」「类型/名称」或完整路径 → Job。
+    """「名稱」「類型/名稱」或完整路徑 → Job。
 
     Args:
-        name: 搜寻的工作名称或路径。
-        ws: 工作区路径。
+        name: 搜尋的工作名稱或路徑。
+        ws: 資料根目錄。
 
     Returns:
-        找到的 Job 实例。
+        找到的 Job 實例。
 
     Raises:
-        JobError: 找不到或有多个同名工作时。
+        JobError: 找不到或有多個同名工作時。
     """
     ws = ws or workspace()
     p = Path(name).expanduser()
     if p.is_absolute() or (p / "job.toml").exists():
         return Job(p)
     if "/" in name:
+        if (ws / name / "job.toml").exists():
+            return Job(ws / name)
+        _, short_name = name.split("/", 1)
+        state_candidate = ws / "state" / short_name
+        if (state_candidate / "job.toml").exists():
+            return Job(state_candidate)
         return Job(ws / name)
+    state_candidate = ws / "state" / name
+    if (state_candidate / "job.toml").exists():
+        return Job(state_candidate)
     hits = [ws / t / name for t in TYPES if (ws / t / name / "job.toml").exists()]
     if len(hits) == 1:
         return Job(hits[0])
-    names = ", ".join(f"{j.type}/{j.name}" for j in all_jobs(ws)) or "没有"
+    names = ", ".join(f"{j.type}/{j.name}" for j in all_jobs(ws)) or "沒有"
     if not hits:
-        raise JobError(f"找不到工作「{name}」。工作区 {ws} 里的工作：{names}")
+        raise JobError(f"找不到工作「{name}」。資料區 {ws} 裡的工作：{names}")
     hit_names = ", ".join(str(h.relative_to(ws)) for h in hits)
-    raise JobError(f"「{name}」不只一个：{hit_names}。请写成「类型/名称」。")
+    raise JobError(f"「{name}」不只一個：{hit_names}。請寫成「類型/名稱」。")

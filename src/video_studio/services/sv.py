@@ -69,17 +69,21 @@ def list_jobs(ws: Path | None = None) -> str:
     return "\n".join(rows)
 
 
-def _scaffold_job_dir(job_type: str, name: str, title: str, d: Path) -> None:
-    """在工作区建立工作目录与范本档案。
+def _scaffold_job_dir(job_type: str, name: str, title: str, ws_path: Path) -> Path:
+    """在 DATA_DIR 角色分層目錄建立工作目錄與 job.toml 範本。
 
     Args:
-        job_type: 类型 ('extract', 'dub', 'generate')。
-        name: 识别英文代称。
-        title: 中文标题。
-        d: 工作根目录。
+        job_type: 類型 ('extract', 'dub', 'generate')。
+        name: 識別英文代稱。
+        title: 中文標題。
+        ws_path: 資料根目錄（DATA_DIR）。
+
+    Returns:
+        建立的 state/<name>/job.toml 路徑。
     """
-    for sub in ("input", "review", "work", "output"):
-        (d / sub).mkdir(parents=True, exist_ok=True)
+    for sub in ("input", "needs_review", "work", "output", "state"):
+        (ws_path / sub / name).mkdir(parents=True, exist_ok=True)
+    (ws_path / "output" / name / "releases").mkdir(parents=True, exist_ok=True)
     tpl_file = TEMPLATES / job_type / "job.toml"
     text = (
         tpl_file.read_text(encoding="utf-8")
@@ -88,47 +92,41 @@ def _scaffold_job_dir(job_type: str, name: str, title: str, d: Path) -> None:
     )
     if title:
         text = re.sub(r'^title = ".*?"', f'title = "{title}"', text, count=1, flags=re.M)
-    (d / "job.toml").write_text(text, encoding="utf-8")
-    tdir = TEMPLATES / job_type / "input"
-    if tdir.exists():
-        shutil.copytree(tdir, d / "input" / "templates")
-    readme_content = INPUT_README.get(job_type, "")
-    (d / "input" / "README.md").write_text(
-        f"# input/\n\n{readme_content}\n\ntemplates/ 里是范例；照着写好之后，存在 input/ 这一层。\n",
-        encoding="utf-8",
-    )
+    cfg_path = ws_path / "state" / name / "job.toml"
+    cfg_path.write_text(text, encoding="utf-8")
+    return cfg_path
 
 
 def init_job(job_type: str, name: str, title: str = "", ws: Path | None = None) -> str:
-    """建立一份新制作工作目录与范本档案。
+    """建立一份新製作工作目錄與設定檔。
 
     Args:
-        job_type: 类型 ('extract', 'dub', 'generate')。
-        name: 识别英文代称。
-        title: 中文标题。
-        ws: 工作区路径。
+        job_type: 類型 ('extract', 'dub', 'generate')。
+        name: 識別英文代稱。
+        title: 中文標題。
+        ws: 資料根目錄路徑。
 
     Returns:
-        建立结果文字说明。
+        建立結果文字說明。
 
     Raises:
-        RuntimeError: 参数不合格或资料夹已存在。
+        RuntimeError: 參數不合格或資料夾已存在。
     """
     if job_type not in J.TYPES:
-        raise RuntimeError(f"类型要是 {' / '.join(J.TYPES)} 其中一个")
+        raise RuntimeError(f"類型要是 {' / '.join(J.TYPES)} 其中一個")
     if not J.NAME_RE.fullmatch(name):
-        raise RuntimeError(f"名称「{name}」不合格：只能用小写英文、数字、连字号")
+        raise RuntimeError(f"名稱「{name}」不合格：只能用小寫英文、數字、連字號")
     ws_path = ws or J.workspace()
-    d = ws_path / job_type / name
-    if d.exists():
-        raise RuntimeError(f"{d} 已经存在，不会覆盖")
-    _scaffold_job_dir(job_type, name, title, d)
+    state_dir = ws_path / "state" / name
+    if state_dir.exists():
+        raise RuntimeError(f"{state_dir} 已經存在，不會覆蓋")
+    cfg_path = _scaffold_job_dir(job_type, name, title, ws_path)
     ensure_shared(ws_path)
     return (
-        f"已建立 {job_type}/{name}：{d}\n下一步：\n"
-        f"  1. 编辑 {d / 'job.toml'}\n"
-        f"  2. 把素材放进 {d / 'input'}\n"
-        f"  3. 执行 check 检查"
+        f"已建立 {job_type}/{name}：{state_dir}\n下一步：\n"
+        f"  1. 編輯 {cfg_path}\n"
+        f"  2. 把素材放進 {ws_path / 'input' / name}\n"
+        f"  3. 執行 check 檢查"
     )
 
 

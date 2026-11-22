@@ -37,13 +37,12 @@ class TestWorkflowJob(unittest.TestCase):
             msg = init_job(j_type, name, title=f"測試 {j_type}", ws=self.workspace)
             self.assertIn(f"已建立 {j_type}/{name}", msg)
 
-            j_dir = self.workspace / j_type / name
-            self.assertTrue(j_dir.exists())
-            self.assertTrue((j_dir / "job.toml").exists())
-            self.assertTrue((j_dir / "input").exists())
-            self.assertTrue((j_dir / "review").exists())
-            self.assertTrue((j_dir / "work").exists())
-            self.assertTrue((j_dir / "output").exists())
+            self.assertTrue((self.workspace / "state" / name / "job.toml").exists())
+            self.assertTrue((self.workspace / "input" / name).exists())
+            self.assertFalse((self.workspace / "input" / name / "templates").exists())
+            self.assertTrue((self.workspace / "needs_review" / name).exists())
+            self.assertTrue((self.workspace / "work" / name).exists())
+            self.assertTrue((self.workspace / "output" / name / "releases").exists())
 
             # 檢查共用目錄與詞彙表是否自動建立
             self.assertTrue((self.workspace / "shared" / "vocabulary.tsv").exists())
@@ -54,7 +53,7 @@ class TestWorkflowJob(unittest.TestCase):
         # 無效類型
         with self.assertRaises(RuntimeError) as ctx:
             init_job("invalid_type", "demo", ws=self.workspace)
-        self.assertIn("类型要是", str(ctx.exception))
+        self.assertIn("類型要是", str(ctx.exception))
 
         # 非小寫英文連字號命名
         with self.assertRaises(RuntimeError) as ctx:
@@ -65,7 +64,7 @@ class TestWorkflowJob(unittest.TestCase):
         init_job("generate", "dup-job", ws=self.workspace)
         with self.assertRaises(RuntimeError) as ctx:
             init_job("generate", "dup-job", ws=self.workspace)
-        self.assertIn("已经存在", str(ctx.exception))
+        self.assertIn("已經存在", str(ctx.exception))
 
     def test_list_jobs_formatting(self) -> None:
         """測試 list_jobs 列出多個工作。"""

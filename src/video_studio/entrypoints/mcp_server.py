@@ -6,17 +6,21 @@ Exposes read-only and confirm-gated mutating tools backed by the shared
 
 from __future__ import annotations
 
+import json
 import logging
 
 from mcp.server.mcpserver import MCPServer
 
 from video_studio.config.logging_setup import setup_logging
 from video_studio.config.settings import AppConfig, load_config
+from video_studio.services import planner, review_history, script_drafter
 from video_studio.services.common import job as J
 from video_studio.services.extract_audio import extract as extract_mod
 from video_studio.services.narrate import narrate as narrate_mod
-from video_studio.services.narrate.core import vocab
+from video_studio.services.narrate.core import bilingual, vocab
 from video_studio.services.sv import approve_file, check_job_status, init_job, list_jobs
+from video_studio.services.video import avatar_overlay
+from video_studio.services.video import release as release_mod
 from video_studio.services.video import video as video_mod
 
 logger = logging.getLogger(__name__)
@@ -211,12 +215,36 @@ def _register_video_read_tools(mcp: MCPServer) -> None:
         return video_mod.check_video(job_name, version)
 
 
+def _register_video_release_tools(mcp: MCPServer) -> None:
+    """Register video release publishing MCP tools.
+
+    Args:
+        mcp: Target MCPServer instance.
+    """
+
+    @mcp.tool()
+    def mcp_publish_release(job_name: str, version: str | None = None, confirm: bool = False) -> str:
+        """Publish a rendered version into output/<job>/releases/<vN>/ (requires confirm=True).
+
+        Args:
+            job_name: Job name.
+            version: Optional version name (defaults to latest).
+            confirm: Must be True to update releases/.
+
+        Returns:
+            Release summary message.
+        """
+        denied = _require_confirm(confirm, f"publish release for '{job_name}'")
+        return denied or str(release_mod.publish_release(job_name, version)["message"])
+
+
 def _register_video_write_tools(mcp: MCPServer) -> None:
     """Register mutating video rendering and audio extraction MCP tools.
 
     Args:
         mcp: Target MCPServer instance.
     """
+    _register_video_release_tools(mcp)
 
     @mcp.tool()
     def mcp_draft_scenes(job_name: str, source: str = "auto", confirm: bool = False) -> str:
@@ -281,6 +309,187 @@ def _register_video_write_tools(mcp: MCPServer) -> None:
         return f"完成：{extract_mod.extract_audio(video=video, out=out)}"
 
 
+def _register_studio_read_tools(mcp: MCPServer) -> None:
+    """Register read-only Studio inspection MCP tools.
+
+    Args:
+        mcp: Target MCPServer instance.
+    """
+
+    @mcp.tool()
+    def mcp_avatar_status() -> str:
+        """Return availability status of Route B (lightweight) and Route A (SadTalker)."""
+        return json.dumps(avatar_overlay.get_avatar_status(), ensure_ascii=False)
+
+    @mcp.tool()
+    def mcp_list_review_snapshots(job_name: str) -> str:
+        """List saved needs_review/<job>/ snapshots ordered newest first.
+
+        Args:
+            job_name: Job name.
+
+        Returns:
+            JSON string of snapshot metadata entries.
+        """
+        return json.dumps(review_history.list_snapshots(job_name), ensure_ascii=False)
+
+    @mcp.tool()
+    def mcp_get_plan_status(run_id: str) -> str:
+        """Get status and output of a background agy CLI planning run.
+
+        Args:
+            run_id: Planning run identifier.
+
+        Returns:
+            JSON string with status, output text, and error if any.
+        """
+        return json.dumps(planner.get_plan_status(run_id), ensure_ascii=False)
+
+
+def _register_studio_script_tools(mcp: MCPServer) -> None:
+    """Register mutating AI script drafting and bilingual subtitle MCP tools.
+
+    Args:
+        mcp: Target MCPServer instance.
+    """
+
+    @mcp.tool()
+    def mcp_draft_script(
+        job_name: str, instruction: str = "", language: str = "zh", confirm: bool = False
+    ) -> str:
+        """Draft script.md into needs_review/<job>/script.md (requires confirm=True).
+
+        Args:
+            job_name: Job name.
+            instruction: Prompt or topic guidance.
+            language: Spoken language code (zh, en, ja, ko).
+            confirm: Must be True to generate and write script draft.
+
+        Returns:
+            Draft summary or confirmation prompt.
+        """
+        denied = _require_confirm(confirm, f"為 {job_name} 起草講稿至 needs_review/")
+        if denied:
+            return denied
+        path, _ = script_drafter.draft_script_to_review(
+            job_name=job_name, instruction=instruction, language=language
+        )
+        return f"已生成講稿草稿：{path}"
+
+    @mcp.tool()
+    def mcp_generate_bilingual_subtitles(
+        job_name: str, target_lang: str = "zh-TW", model: str = "", confirm: bool = False
+    ) -> str:
+        """Translate input/script.md into work/<job>/script_bilingual.tsv (requires confirm=True).
+
+        Args:
+            job_name: Job name.
+            target_lang: Target secondary subtitle language.
+            model: Optional agy CLI model ID.
+            confirm: Must be True to write bilingual subtitle TSV.
+
+        Returns:
+            Translation summary or confirmation prompt.
+        """
+        denied = _require_confirm(confirm, f"為 {job_name} 翻譯雙語字幕 ({target_lang})")
+        if denied:
+            return denied
+        tsv_path, count = bilingual.translate_job_script_bilingual(job_name, target_lang, model)
+        return f"已完成 {count} 句雙語字幕翻譯：{tsv_path}"
+
+
+def _register_studio_plan_tools(mcp: MCPServer) -> None:
+    """Register mutating agy CLI planning and review snapshot restore MCP tools.
+
+    Args:
+        mcp: Target MCPServer instance.
+    """
+
+    @mcp.tool()
+    def mcp_start_plan(
+        job_name: str, instruction: str = "", mode: str = "html", confirm: bool = False
+    ) -> str:
+        """Start a background agy CLI planning run for a job (requires confirm=True).
+
+        Args:
+            job_name: Job name.
+            instruction: Planning instruction.
+            mode: Target visual mode ('html' or 'poster').
+            confirm: Must be True to launch agy CLI planning.
+
+        Returns:
+            JSON string of run handle or confirmation prompt.
+        """
+        denied = _require_confirm(confirm, f"啟動 {job_name} 的 agy {mode} 規劃任務")
+        if denied:
+            return denied
+        return json.dumps(planner.start_agy_plan(job_name, instruction, mode), ensure_ascii=False)
+
+    @mcp.tool()
+    def mcp_restore_review_snapshot(job_name: str, snap_id: str, confirm: bool = False) -> str:
+        """Restore a saved needs_review snapshot (requires confirm=True).
+
+        Args:
+            job_name: Job name.
+            snap_id: Snapshot identifier to restore.
+            confirm: Must be True to overwrite current review drafts.
+
+        Returns:
+            JSON string of restore metadata or confirmation prompt.
+        """
+        denied = _require_confirm(confirm, f"將 {job_name} 草稿退回至快照 {snap_id}")
+        if denied:
+            return denied
+        return json.dumps(review_history.restore_snapshot(job_name, snap_id), ensure_ascii=False)
+
+
+def _register_studio_media_tools(mcp: MCPServer) -> None:
+    """Register mutating Avatar and external video mux MCP tools.
+
+    Args:
+        mcp: Target MCPServer instance.
+    """
+
+    @mcp.tool()
+    def mcp_render_avatar_video(
+        job_name: str, engine: str = "lightweight", position: str = "bottom-right", confirm: bool = False
+    ) -> str:
+        """Composite an avatar presenter overlay onto the latest rendered video (requires confirm=True).
+
+        Args:
+            job_name: Job name.
+            engine: 'lightweight' or 'sadtalker'.
+            position: Corner placement ('bottom-right', 'bottom-left', 'top-right', 'top-left').
+            confirm: Must be True to render and overwrite output video.
+
+        Returns:
+            Result summary or confirmation prompt.
+        """
+        denied = _require_confirm(confirm, f"為 {job_name} 合成 {engine} Avatar 畫面")
+        if denied:
+            return denied
+        res = avatar_overlay.apply_avatar_to_job(job_name=job_name, engine=engine, position=position)
+        return f"已完成 {res.engine} Avatar 合成：{res.composited_video}"
+
+    @mcp.tool()
+    def mcp_mux_external_video(
+        job_name: str, video_path: str, version: str | None = None, confirm: bool = False
+    ) -> str:
+        """Mux an external video file with narration audio and subtitles (requires confirm=True).
+
+        Args:
+            job_name: Job name.
+            video_path: Path to source video or filename inside input/.
+            version: Optional output version name.
+            confirm: Must be True to write muxed output files.
+
+        Returns:
+            Mux summary or confirmation prompt.
+        """
+        denied = _require_confirm(confirm, f"將外部影片 {video_path} 與 {job_name} 配音合成")
+        return denied or video_mod.mux_external_video(job_name, video_path, version)
+
+
 def build_mcp_server(config: AppConfig | None = None) -> MCPServer:
     """Create and configure the video-studio MCPServer instance.
 
@@ -298,6 +507,10 @@ def build_mcp_server(config: AppConfig | None = None) -> MCPServer:
     _register_narrate_write_tools(mcp)
     _register_video_read_tools(mcp)
     _register_video_write_tools(mcp)
+    _register_studio_read_tools(mcp)
+    _register_studio_script_tools(mcp)
+    _register_studio_plan_tools(mcp)
+    _register_studio_media_tools(mcp)
     return mcp
 
 

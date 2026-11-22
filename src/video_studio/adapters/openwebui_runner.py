@@ -32,6 +32,24 @@ PRIVACY_HINT = (
 EventEmitter = Callable[[dict[str, Any]], Awaitable[None]]
 
 
+def _read_job_type(cfg_file: Path) -> str:
+    """Read job.type from a job.toml file, defaulting to 'generate'.
+
+    Args:
+        cfg_file: Path to a job.toml configuration file.
+
+    Returns:
+        Job type string ('extract', 'dub', or 'generate').
+    """
+    import tomllib
+
+    try:
+        parsed_cfg = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+        return str(parsed_cfg.get("job", {}).get("type", "generate"))
+    except tomllib.TOMLDecodeError:
+        return "generate"
+
+
 class ToolValves(BaseModel):
     """Configuration valves exposed to Open WebUI admin interface."""
 
@@ -111,7 +129,7 @@ class OpenWebUIRunner:
             ws = Path(self.valves.workspace_dir).expanduser()
         else:
             cfg = load_config()
-            ws = cfg.workspace_dir or (cfg.data_dir / "workspace")
+            ws = cfg.workspace_dir or cfg.data_dir
         try:
             ws.mkdir(parents=True, exist_ok=True)
             next(iter(ws.iterdir()), None)
@@ -138,17 +156,28 @@ class OpenWebUIRunner:
         return found
 
     def job_dirs(self) -> list[str]:
-        """List existing jobs in the workspace.
+        """List existing jobs in the data directory.
 
         Returns:
             List of job identifiers in format `type/name`.
         """
         ws = self.workspace()
         out: list[str] = []
+        seen: set[str] = set()
+        state_dir = ws / "state"
+        for j in sorted(state_dir.iterdir()) if state_dir.exists() else ():
+            cfg_file = j / "job.toml"
+            if not (j.is_dir() and cfg_file.exists()):
+                continue
+            out.append(f"{_read_job_type(cfg_file)}/{j.name}")
+            seen.add(j.name)
         for t in ("extract", "dub", "generate"):
             d = ws / t
-            if d.exists():
-                out.extend([f"{t}/{j.name}" for j in sorted(d.iterdir()) if (j / "job.toml").exists()])
+            if not d.exists():
+                continue
+            for j in sorted(d.iterdir()):
+                if (j / "job.toml").exists() and j.name not in seen:
+                    out.append(f"{t}/{j.name}")
         return out
 
     def resolve_job(self, job: str) -> str:

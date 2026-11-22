@@ -1,0 +1,28 @@
+{
+  "id": "TASK-015",
+  "title": "Align DATA_DIR role layout and add output releases publishing",
+  "status": "done",
+  "agent": "Antigravity",
+  "handed_off_from": "",
+  "handed_off_to": "",
+  "paths": [],
+  "done_items": "Aligned DATA_DIR role layout with releases publishing, split studio_routes, hardened host/env guards, added MCP tool parity, and resolved doc TODOs",
+  "todo_items": "",
+  "blockers": "",
+  "created_at": "2026-11-19 17:01 UTC",
+  "updated_at": "2026-11-22 03:31 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-19 17:01 UTC",
+      "action": "created_and_claimed",
+      "agent": "Antigravity"
+    },
+    {
+      "timestamp": "2026-11-22 03:31 UTC",
+      "action": "done",
+      "agent": "Antigravity",
+      "summary": "Aligned DATA_DIR role layout with releases publishing, split studio_routes, hardened host/env guards, added MCP tool parity, and resolved doc TODOs"
+    }
+  ],
+  "summary": "Aligned DATA_DIR role layout with releases publishing, split studio_routes, hardened host/env guards, added MCP tool parity, and resolved doc TODOs"
+}

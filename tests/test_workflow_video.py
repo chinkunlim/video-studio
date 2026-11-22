@@ -160,6 +160,46 @@ class TestWorkflowVideo(unittest.TestCase):
         self.assertIn("video.mp4", check_report)
         self.assertTrue((v1 / "video_check.txt").exists())
 
+    def test_publish_release_and_demote_previous(self) -> None:
+        """測試定稿發布硬連結、僅含交付物、以及新版取代舊版退回機制。"""
+        from video_studio.services.video import release as release_mod
+
+        v1 = self.job.output / "v1"
+        v1.mkdir(parents=True, exist_ok=True)
+        (v1 / "video.mp4").write_bytes(b"v1-video")
+        (v1 / "video_subtitled.mp4").write_bytes(b"v1-subtitled")
+        (v1 / "subtitles_youtube.srt").write_text("1\n", encoding="utf-8")
+        (v1 / "timeline.json").write_text("{}", encoding="utf-8")
+
+        res1 = release_mod.publish_release("video-e2e", "v1", ws=self.workspace)
+        self.assertEqual(res1["version"], "v1")
+        rel_v1 = self.job.releases / "v1"
+        self.assertTrue((rel_v1 / "video_subtitled.mp4").exists())
+        self.assertTrue((rel_v1 / "subtitles_youtube.srt").exists())
+        self.assertFalse((rel_v1 / "timeline.json").exists())
+        self.assertEqual(
+            (rel_v1 / "video_subtitled.mp4").stat().st_ino,
+            (v1 / "video_subtitled.mp4").stat().st_ino,
+        )
+
+        # 建立 v2 並發布，應自動將 v1 從 releases/ 退回（工作區 v1 原檔完整保留）
+        v2 = self.job.output / "v2"
+        v2.mkdir(parents=True, exist_ok=True)
+        (v2 / "video_subtitled.mp4").write_bytes(b"v2-subtitled")
+        res2 = release_mod.publish_release("video-e2e", "v2", ws=self.workspace)
+        self.assertEqual(res2["demoted"], ["v1"])
+        self.assertFalse(rel_v1.exists())
+        self.assertTrue((self.job.releases / "v2" / "video_subtitled.mp4").exists())
+        self.assertTrue((v1 / "video_subtitled.mp4").exists())
+        self.assertEqual(self.job.latest_output().name, "v2")
+
+        # 無 mp4 檔時應報錯
+        v3 = self.job.output / "v3"
+        v3.mkdir(parents=True, exist_ok=True)
+        (v3 / "narration.wav").write_bytes(b"wav")
+        with self.assertRaises(FileNotFoundError):
+            release_mod.publish_release("video-e2e", "v3", ws=self.workspace)
+
 
 if __name__ == "__main__":
     unittest.main()

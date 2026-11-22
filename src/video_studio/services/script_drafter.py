@@ -202,7 +202,7 @@ def draft_script_to_review(
     prompt = build_script_draft_prompt(
         job.title, brief_text, instruction, language, duration_sec, input_context=input_ctx
     )
-    raw = run_agy_prompt(prompt, model=model or "", add_dir=job.dir)
+    raw = run_agy_prompt(prompt, model=model or "", add_dir=job.input.parent.parent)
     if raw is None:
         if not is_ollama_reachable(app_cfg.ollama_base_url):
             raise RuntimeError(

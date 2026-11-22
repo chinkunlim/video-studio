@@ -18,6 +18,7 @@ from video_studio.services.extract_audio import extract as extract_mod
 from video_studio.services.narrate import narrate as narrate_mod
 from video_studio.services.narrate.core import script, vocab
 from video_studio.services.sv import approve_file, check_job_status, init_job, list_jobs
+from video_studio.services.video import release as release_mod
 from video_studio.services.video import video as video_mod
 
 logger = logging.getLogger(__name__)
@@ -169,6 +170,9 @@ def _handle_video(args: argparse.Namespace) -> int:
     if cmd == "check":
         print(video_mod.check_video(args.job, args.version))
         return 0
+    if cmd == "publish":
+        print(release_mod.publish_release(args.job, args.version)["message"])
+        return 0
     return 0
 
 
@@ -263,6 +267,9 @@ def _add_video_parser(sub: argparse._SubParsersAction[argparse.ArgumentParser]) 
     sp_mux.add_argument("--video", required=True)
     sp_mux.add_argument("--reserve-bottom", type=int, default=0)
     sp_mux.add_argument("--version")
+    sp_pub = vid_sub.add_parser("publish")
+    sp_pub.add_argument("job")
+    sp_pub.add_argument("--version")
 
 
 def build_parser() -> argparse.ArgumentParser:

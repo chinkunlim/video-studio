@@ -152,7 +152,7 @@ def takes_of(job: J.Job) -> Takes:
     Returns:
         Takes 实例。
     """
-    return Takes(job.dir, job.takes_json)
+    return Takes(job.work, job.takes_json)
 
 
 def list_lines(job: J.Job) -> str:
@@ -442,7 +442,8 @@ def _export_subtitles_and_meta(ctx: _ExportCtx) -> list[str]:
         sub_val = getattr(ln, "subtitle", "")
         t = takes.get(tts_val) or {}
         if not t.get("words"):
-            t["words"] = whisper.words(ctx.job.dir / str(t.get("clip", "")), ctx.cfg["whisper"]["model"])
+            clip_path = takes.resolve_clip(str(t.get("clip", "")))
+            t["words"] = whisper.words(clip_path, ctx.cfg["whisper"]["model"])
             takes.save()
         sub_lines.append({"text": sub_val, "words": t["words"], **tl})
     fixes_path = Path(__file__).resolve().parent / "traditional_fixes.tsv"
@@ -493,7 +494,7 @@ def _prepare_concat_items(job: J.Job, lines: list[script.Line], takes: Takes) ->
             "no": ln.no,
             "slide": ln.slide,
             "brk": ln.brk,
-            "clip": job.dir / str((takes.get(getattr(ln, "tts", "")) or {}).get("clip", "")),
+            "clip": takes.resolve_clip(str((takes.get(getattr(ln, "tts", "")) or {}).get("clip", ""))),
         }
         for ln in lines
     ]
@@ -561,7 +562,7 @@ def _save_audition_takes(job: J.Job, ln: script.Line, tts_val: str, res: list[di
         meta.append(
             {
                 "take": k,
-                "file": str(dest.relative_to(job.dir)),
+                "file": str(dest.relative_to(job.review)),
                 "words": r["words"],
                 "sim": r["sim"],
                 "wrap": r["wrap"],
@@ -631,7 +632,10 @@ def pick_take(job: J.Job, line_no: int, take_no: int) -> str:
         raise RuntimeError(f"没有第 {take_no} 个版本")
     dest = job.takes_dir / f"{take_key(tts_val)}.wav"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(job.dir / chosen["file"], dest)
+    src_take = job.review / chosen["file"]
+    if not src_take.exists():
+        src_take = job.dir / chosen["file"]
+    shutil.copy2(src_take, dest)
     takes_of(job).put(
         tts_val,
         dest,

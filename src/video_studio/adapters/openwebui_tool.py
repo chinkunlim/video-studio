@@ -151,8 +151,8 @@ class Tools(OpenWebUIVideoMixin):
         Returns:
             Formatted script note.
         """
-        job_type, name, title = job_meta
-        d = self._workspace() / job_type / name / "input"
+        _, name, title = job_meta
+        d = self._workspace() / "input" / name
         d.mkdir(parents=True, exist_ok=True)
         raw = d / "speech_script.txt"
         raw.write_text(script_text, encoding="utf-8")

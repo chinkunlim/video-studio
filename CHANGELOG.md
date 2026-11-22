@@ -34,6 +34,7 @@ All notable changes to **video-studio** are documented here
 - feat(planner): inform agy of burn_in subtitle mode and bottom safe band (by `@antigravity`)
 - feat(ui): overhaul studio shell, push drawer, voice sample pre-caching, role uploaders, and emoji-free SVG icons (by `@antigravity`)
 - feat(api): allow tailnet .ts.net Host and Origin headers for Tailscale Serve access (by `@antigravity`)
+- feat(studio): align DATA_DIR role layout, split routes, harden env/host guards, and expand MCP tools (by `@Antigravity`)
 
 ### Changed
 - refactor(adapters): migrate and conform openwebui tool and runner (TASK-001) (`TASK-001`, by `@antigravity`)

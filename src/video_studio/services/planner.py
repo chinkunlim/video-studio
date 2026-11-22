@@ -146,7 +146,7 @@ def build_plan_prompt(
     return "\n".join(
         [
             f"請為 video-studio 工作 `{job.type}/{job.name}`（標題：{job.title}）規劃分鏡草稿。",
-            f"工作目錄：{job.dir}",
+            f"設定目錄：{job.dir}",
             f"輸出目標檔案（寫入 review/，勿直接改 input/）：{target_file}",
             (
                 f"目標影片解析度：{out_w}x{out_h}（若輸出 index.html，請於 <html> 設定 "
@@ -426,7 +426,7 @@ def start_agy_plan(
             "prompt": prompt,
             "error": "找不到 agy CLI，請複製提示詞到 Antigravity App 執行。",
         }
-    run = PlanRun(run_id=run_id, job_name=job_name, prompt=prompt, model=model, job_dir=J.find(job_name).dir)
+    run = PlanRun(run_id=run_id, job_name=job_name, prompt=prompt, model=model, job_dir=J.workspace())
     with _LOCK:
         _RUNS[run_id] = run
     threading.Thread(target=_run_agy_worker, args=(run, agy_bin), daemon=True).start()

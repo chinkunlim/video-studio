@@ -507,6 +507,11 @@
             <button class="btn btn-ghost" id="checkVideoBtn" type="button">執行成品驗收</button>
           </div>
           <div class="row">
+            <select id="releaseVersionSelect" aria-label="選擇定稿版本" style="width:auto;min-width:110px;"></select>
+            <button class="btn btn-soft" id="publishReleaseBtn" type="button">發布定稿至 releases/</button>
+            <span class="pill" id="publishedReleaseBadge">尚未發布定稿</span>
+          </div>
+          <div class="row">
             <button class="btn btn-soft btn-sm" id="previewAvatarAbBtn" type="button">10 秒講者頭像試看</button>
             <button class="btn btn-soft btn-sm" id="applyAvatarBtn" type="button">合成講者頭像至影片</button>
             <button class="btn btn-ghost btn-sm" type="button" onclick="switchView('narrate')">回 Step 3 修改動畫</button>
@@ -607,6 +612,7 @@
 <script src="/studio-layout-tune.js"></script>
 <script src="/studio-prosody.js"></script>
 <script src="/studio-ux.js"></script>
+<script src="/studio-release.js"></script>
 <script src="/studio.js"></script>
 </body>
 </html>

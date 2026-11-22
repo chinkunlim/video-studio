@@ -240,6 +240,7 @@ async function loadJobDetail(name) {
       ? `已產出最新影片 (${d.latest_version})：\n${d.latest_files.join(', ')}`
       : '尚未渲染';
   }
+  if (typeof updateReleaseUI === 'function') updateReleaseUI(d);
   if (typeof resumeActivePlanIfAny === 'function') {
     resumeActivePlanIfAny(name);
   }

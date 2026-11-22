@@ -159,7 +159,7 @@ def check_job_toml(job: Job, r: Report) -> None:
     if t not in TYPES:
         r.err(f, f"[job] type 要是 {' / '.join(TYPES)} 其中一个，现在是「{t}」")
         return
-    if job.dir.parent.name != t:
+    if job.dir.parent.name not in ("state", t):
         r.err(f, f"[job] type 是「{t}」，但这份工作放在 {job.dir.parent.name}/ 底下；两者要一致")
     if not c.get("job", {}).get("title"):
         r.warn(f, "[job] title 是空的，成品标题会用资料夹名称")

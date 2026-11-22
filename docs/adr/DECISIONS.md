@@ -16,4 +16,5 @@
 | [ADR-002](002-workspace-isolation-and-review.md) | 工作區結構隔離與素材審核（Review/Approve）機制 | Accepted | 2026-10-22 | `services/common/job.py` |
 | [ADR-003](003-dual-video-rendering-engines.md) | 影片合成渲染引擎之雙模式設計（PowerPoint 動畫與海報鏡頭動畫） | Accepted | 2026-10-22 | `services/video/engine/` |
 | [ADR-004](004-dual-tts-and-html-render.md) | 雙 TTS 配音引擎（Voicebox + edge-tts）與 HTML/GSAP/HyperFrames 渲染模式 | Accepted | 2026-11-16 | `services/narrate/`, `services/video/engine/html_render.py` |
-| [ADR-005](005-dual-avatar-script-bilingual.md) | Dual-Engine Avatar Presenter, AI Script Drafting, and Bilingual Subtitles | Accepted | 2026-11-16 | TODO |
+| [ADR-005](005-dual-avatar-script-bilingual.md) | Dual-Engine Avatar Presenter, AI Script Drafting, and Bilingual Subtitles | Accepted | 2026-11-16 | `services/video/engine/avatar_engine.py`, `services/script_drafter.py`, `services/narrate/core/bilingual.py` |
+| [ADR-006](006-data-dir-role-layout-and-releases.md) | DATA_DIR 角色分層結構與 output/<job>/releases 定稿發布 | Accepted | 2026-11-20 | `config/settings.py`, `services/common/job.py`, `services/video/release.py` |

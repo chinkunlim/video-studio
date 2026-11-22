@@ -56,8 +56,7 @@ class TestWorkflowOpenWebUI(unittest.TestCase):
         self.assertIn("已建立", create_res)
 
         # 檢查檔案是否生成
-        job_dir = self.workspace / "generate" / "owui-job"
-        self.assertTrue((job_dir / "input" / "script.md").exists())
+        self.assertTrue((self.workspace / "input" / "owui-job" / "script.md").exists())
 
         # 列出工作
         list_res = asyncio.run(self.tools.list_jobs())
@@ -85,12 +84,13 @@ class TestWorkflowOpenWebUI(unittest.TestCase):
                 title="審查核准測試",
             )
         )
-        job_dir = self.workspace / "generate" / "app-job"
-        (job_dir / "review" / "scenes.toml").write_text('visual = "poster"\n', encoding="utf-8")
+        (self.workspace / "needs_review" / "app-job" / "scenes.toml").write_text(
+            'visual = "poster"\n', encoding="utf-8"
+        )
 
         res = asyncio.run(self.tools.approve_review("app-job", "scenes.toml"))
         self.assertIn("已确认", res)
-        self.assertTrue((job_dir / "input" / "scenes.toml").exists())
+        self.assertTrue((self.workspace / "input" / "app-job" / "scenes.toml").exists())
 
 
 if __name__ == "__main__":

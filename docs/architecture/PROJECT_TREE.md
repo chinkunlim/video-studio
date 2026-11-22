@@ -78,7 +78,8 @@ video-studio/
 │   │   ├── TASK-011-upgrade-web-ui-with-full-voice-l.json
 │   │   ├── TASK-012-implement-ai-script-drafting-bil.json
 │   │   ├── TASK-013-add-10s-avatar-a-b-preview-10s-v.json
-│   │   └── TASK-014-add-visual-prosody-highlight-edi.json
+│   │   ├── TASK-014-add-visual-prosody-highlight-edi.json
+│   │   └── TASK-015-align-data-dir-role-layout-and-a.json
 │   ├── framework.lock                      # [框架鎖定檔] 框架版本與檔案雜湊，供 update_framework 判斷是否被修改
 │   ├── mcp_config.json                     # [AI 工具] Antigravity 的專案 MCP 設定
 │   └── project.toml                        # [專案設定・各專案自訂] 語言、分層、品質門檻、指令、業務規則
@@ -105,6 +106,7 @@ video-studio/
 │   │   ├── 003-dual-video-rendering-engines.md
 │   │   ├── 004-dual-tts-and-html-render.md
 │   │   ├── 005-dual-avatar-script-bilingual.md
+│   │   ├── 006-data-dir-role-layout-and-releases.md
 │   │   ├── _TEMPLATE.md                    # ADR 範本 (tracker_cli 會套用)
 │   │   └── DECISIONS.md                    # 架構決策總表
 │   ├── architecture/                       # [系統架構與資料模型]
@@ -168,16 +170,24 @@ video-studio/
 │       │   └── openwebui_video_mixin.py
 │       ├── config/
 │       │   ├── __init__.py
+│       │   ├── env_store.py
 │       │   ├── logging_setup.py
 │       │   └── settings.py
 │       ├── domain/
 │       │   ├── __init__.py
 │       │   └── models.py
 │       ├── entrypoints/
+│       │   ├── routes/
+│       │   │   ├── __init__.py
+│       │   │   ├── ai_media.py
+│       │   │   ├── jobs.py
+│       │   │   ├── schemas.py
+│       │   │   └── settings_logs.py
 │       │   ├── static/
 │       │   │   ├── index.html
 │       │   │   ├── studio-layout-tune.js
 │       │   │   ├── studio-prosody.js
+│       │   │   ├── studio-release.js
 │       │   │   ├── studio-theme.css
 │       │   │   ├── studio-ux.js
 │       │   │   ├── studio.css
@@ -234,6 +244,7 @@ video-studio/
 │       │   │   ├── __init__.py
 │       │   │   ├── avatar_overlay.py
 │       │   │   ├── config.toml
+│       │   │   ├── release.py
 │       │   │   └── video.py
 │       │   ├── __init__.py
 │       │   ├── planner.py

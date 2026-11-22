@@ -25,7 +25,7 @@ def _history_dir(job: J.Job) -> Path:
     Returns:
         Path to the job's review_history directory.
     """
-    return job.dir / "review_history"
+    return job.review / "review_history"
 
 
 def _meta_path(job: J.Job) -> Path:
