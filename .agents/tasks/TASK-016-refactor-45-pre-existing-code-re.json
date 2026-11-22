@@ -1,0 +1,35 @@
+{
+  "id": "TASK-016",
+  "title": "Refactor 45 pre-existing Code Review Guard IMPORTANT warnings",
+  "status": "handed_off",
+  "agent": "antigravity",
+  "handed_off_from": "antigravity",
+  "handed_off_to": "any",
+  "paths": [
+    "src/video_studio/adapters/openwebui_tool.py",
+    "src/video_studio/entrypoints/api.py",
+    "src/video_studio/entrypoints/mcp_server.py",
+    "src/video_studio/services/video"
+  ],
+  "done_items": "Completed v3.6.0 framework update and compliance audit (scan 92/100; 0 CRITICAL, 45 pre-existing IMPORTANT warnings)",
+  "todo_items": "Run review_guard.py and refactor the 45 pre-existing [IMPORTANT] size/params warnings (api.py route registrars, mcp_server.py tool registrars, services/video/engine/{media,overlay}.py, release.py; evaluate openwebui_tool.py signatures carefully to preserve Open WebUI tool contract). Re-verify agentctl check, agentctl scan (target 100/100), and full unittest suite.",
+  "blockers": "",
+  "created_at": "2026-11-22 13:26 UTC",
+  "updated_at": "2026-11-22 13:26 UTC",
+  "history": [
+    {
+      "timestamp": "2026-11-22 13:26 UTC",
+      "action": "created_and_claimed",
+      "agent": "antigravity"
+    },
+    {
+      "timestamp": "2026-11-22 13:26 UTC",
+      "action": "handed_off",
+      "from_agent": "antigravity",
+      "to_agent": "any",
+      "done_items": "Completed v3.6.0 framework update and compliance audit (scan 92/100; 0 CRITICAL, 45 pre-existing IMPORTANT warnings)",
+      "todo_items": "Run review_guard.py and refactor the 45 pre-existing [IMPORTANT] size/params warnings (api.py route registrars, mcp_server.py tool registrars, services/video/engine/{media,overlay}.py, release.py; evaluate openwebui_tool.py signatures carefully to preserve Open WebUI tool contract). Re-verify agentctl check, agentctl scan (target 100/100), and full unittest suite.",
+      "blockers": ""
+    }
+  ]
+}

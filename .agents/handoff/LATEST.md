@@ -5,18 +5,29 @@
 <!-- LIVE_STATE_START -->
 ## 📊 即時狀態看板 (Live Snapshot)
 
-- **最後更新時間**: `2026-11-22 03:31 UTC`
-- **最近操作 Agent**: `Antigravity`
+- **最後更新時間**: `2026-11-22 13:26 UTC`
+- **最近操作 Agent**: `antigravity`
 - **目前 Git 分支**: `main`
-- **最新 Git Commit**: `d63ee05 feat(api): allow tailnet .ts.net Host and Origin headers for Tailscale Serve access [agent:antigravity]`
+- **最新 Git Commit**: `dd8cb81 chore(compliance): align AGENTS rules, skills config, and feedback status with v3.6.0 [agent:antigravity]`
 
 ### 🎯 進行中 / 待接手任務 (Active & Handed-Off Tasks)
 
-> 目前無進行中或待接手任務。可執行 `python3 scripts/agentctl.py task create "任務名稱" --agent <name>` 建立任務。
+| 任務 | 狀態 | 目前/上一位 Agent | 建議接手 | 相關範圍 | 已完成 | 待辦與卡點 |
+|---|---|---|---|---|---|---|
+| **TASK-016**<br/>Refactor 45 pre-existing Code Review Guard IMPORTANT warnings | 🟠 `handed_off` (待接手) | `antigravity` | `any` | `src/video_studio/adapters/openwebui_tool.py`, `src/video_studio/entrypoints/api.py`, `src/video_studio/entrypoints/mcp_server.py`, `src/video_studio/services/video` | Completed v3.6.0 framework update and compliance audit (scan 92/100; 0 CRITICAL, 45 pre-existing IMPORTANT warnings) | **TODO**: Run review_guard.py and refactor the 45 pre-existing [IMPORTANT] size/params warnings (api.py route registrars, mcp_server.py tool registrars, services/video/engine/{media,overlay}.py, release.py; evaluate openwebui_tool.py signatures carefully to preserve Open WebUI tool contract). Re-verify agentctl check, agentctl scan (target 100/100), and full unittest suite. |
 
 <!-- LIVE_STATE_END -->
 
 ## 📜 交接與活動時間軸 (Handoff & Activity Timeline)
+
+### [2026-11-22 13:26 UTC] 任務交接 `TASK-016` — Refactor 45 pre-existing Code Review Guard IMPORTANT warnings (by `antigravity`)
+- **交接狀態**: 🟠 `handed_off` (`antigravity` ➔ `any`)
+- **已完成進度 (Done)**: Completed v3.6.0 framework update and compliance audit (scan 92/100; 0 CRITICAL, 45 pre-existing IMPORTANT warnings)
+- **待接手事項 (TODO)**: Run review_guard.py and refactor the 45 pre-existing [IMPORTANT] size/params warnings (api.py route registrars, mcp_server.py tool registrars, services/video/engine/{media,overlay}.py, release.py; evaluate openwebui_tool.py signatures carefully to preserve Open WebUI tool contract). Re-verify agentctl check, agentctl scan (target 100/100), and full unittest suite.
+
+### [2026-11-22 13:26 UTC] 建立任務 `TASK-016`: Refactor 45 pre-existing Code Review Guard IMPORTANT warnings (by `antigravity`)
+- **狀態**: `in_progress`
+- **相關範圍**: `src/video_studio/adapters/openwebui_tool.py, src/video_studio/entrypoints/api.py, src/video_studio/entrypoints/mcp_server.py, src/video_studio/services/video`
 
 ### [2026-11-22 03:31 UTC] 完成任務 `TASK-015` — Align DATA_DIR role layout and add output releases publishing (by `Antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
@@ -89,11 +100,3 @@
 ### [2026-11-16 03:36 UTC] 完成任務 `TASK-009` — Add edge-tts dual TTS engine and HTML/GSAP/HyperFrames rendering mode (by `antigravity`)
 - **狀態**: ✅ 已完成 (`done`)
 - **完成摘要**: Integrated edge-tts (uv) alongside Voicebox and HyperFrames+GSAP HTML rendering (pnpm) across CLI, FastAPI, MCP, and Open WebUI, with ADR-004, SPEC-005, and 41/41 passing tests.
-
-### [2026-11-16 03:24 UTC] 認領任務 `TASK-009` (Add edge-tts dual TTS engine and HTML/GSAP/HyperFrames rendering mode) (by `antigravity`)
-- **相關範圍**: `-`
-- **接棒自**: `antigravity`
-
-### [2026-11-16 03:24 UTC] 建立任務 `TASK-009`: Add edge-tts dual TTS engine and HTML/GSAP/HyperFrames rendering mode (by `antigravity`)
-- **狀態**: `in_progress`
-- **相關範圍**: `-`
