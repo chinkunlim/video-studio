@@ -5,6 +5,8 @@ All notable changes to **video-studio** are documented here
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-22
+
 ### Added
 - feat(api): add FastAPI HTTP API, MCP server, Web UI, and tool configs (TASK-008) (`TASK-008`, by `@antigravity`)
 - feat(render): integrate edge-tts dual TTS and pnpm HyperFrames HTML rendering (TASK-009) (`TASK-009`, by `@antigravity`)
