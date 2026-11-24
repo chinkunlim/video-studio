@@ -47,7 +47,7 @@ python3 scripts/agentctl.py closeout --agent <你的名字> --model <模型> \
 
 步驟：
 1. 執行 `[commands] test` 與 `code-review-guard`，失敗就停止（先修好再收尾）。
-2. 更新入口檔與目錄樹。
+2. 更新入口檔、目錄樹、AST 依賴圖（`build_graph.py`）與 Graphify 知識圖譜（`graphify update .`，同步執行確保完成）。
 3. **文件檢查**：列出這次（未 commit 的修改＋還沒推送的 commit）已更新的文件，以及**沒有修改**的文件。同時自動檢驗：
    - 若填寫了 `--issues`，檢查 `docs/known-issues/` 是否有新增/更新記錄；
    - 若填寫了架構決策 `--decisions` 或異動架構檔，檢查 `docs/adr/` 是否有新增/更新 ADR；

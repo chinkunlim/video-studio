@@ -35,6 +35,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -124,6 +125,65 @@ def refresh_generated_docs(root: Path) -> None:
         script = root / ".agents" / "bin" / name
         if script.exists():
             subprocess.run([sys.executable, str(script)], cwd=root, check=False)
+
+
+def _resolve_graphify() -> str | None:
+    """Locate the global `graphify` CLI executable across PATH and standard install dirs.
+
+    Returns:
+        Absolute executable path if installed, otherwise None.
+    """
+    found = shutil.which("graphify")
+    if found:
+        return found
+    for candidate in (
+        Path.home() / ".local" / "bin" / "graphify",
+        Path("/opt/homebrew/bin/graphify"),
+        Path("/usr/local/bin/graphify"),
+    ):
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
+
+
+def refresh_knowledge_graphs(root: Path) -> None:
+    """Run AST dependency graph and Graphify knowledge-graph refresh synchronously on closeout (Refs: ISSUE-006).
+
+    Args:
+        root: Project root directory.
+    """
+    build_graph = root / ".agents" / "bin" / "build_graph.py"
+    if build_graph.exists():
+        subprocess.run([sys.executable, str(build_graph)], cwd=root, check=False)
+    if os.environ.get("SKIP_GRAPHIFY") == "1":
+        return
+    graphify_bin = _resolve_graphify()
+    if not graphify_bin:
+        print("ℹ️ 未安裝 graphify CLI，略過知識圖譜更新（可執行 uv tool install graphifyy）。")
+        return
+    hook_lock = root / "graphify-out" / ".hook.lock"
+    if hook_lock.is_dir():
+        try:
+            hook_lock.rmdir()
+        except OSError:
+            pass
+    try:
+        res = subprocess.run(
+            [graphify_bin, "update", "."],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(f"⚠️ Graphify 同步更新失敗（不阻斷收尾）：{exc}")
+        return
+    if res.returncode == 0:
+        print("   ✅ Graphify 知識圖譜已同步更新（graphify-out/）")
+        return
+    tail = (res.stderr or res.stdout).strip().splitlines()[-3:]
+    print(f"⚠️ Graphify 同步更新返回碼 {res.returncode}（不阻斷收尾）：{' | '.join(tail)}")
 
 
 def git_lines(root: Path, *args: str) -> list[str]:
@@ -458,7 +518,7 @@ def commit_and_report(root: Path, agent: str, model: str, paths: list[str] | Non
     else:
         task = active_task_of(root, agent)
         cmd += ["--task", task] if task else []
-    return subprocess.run(cmd, cwd=root, check=False).returncode
+    return subprocess.run(cmd, cwd=root, check=False, env={**os.environ, "SKIP_GRAPHIFY_HOOK": "1"}).returncode
 
 
 def _guard_foreign_tasks(root: Path, agent: str, lib, args: argparse.Namespace) -> int:
@@ -511,8 +571,9 @@ def run_closeout(root: Path, args: argparse.Namespace) -> int:
         print("❌ Code Review Guard 偵測到 CRITICAL 違規，已中止收尾。", file=sys.stderr)
         return 1
 
-    print("\n[2/7] 🌳 更新入口檔與目錄樹...")
+    print("\n[2/7] 🌳 更新入口檔、目錄樹與知識圖譜...")
     refresh_generated_docs(root)
+    refresh_knowledge_graphs(root)
 
     print("\n[3/7] 📚 檢查 Markdown 文件...")
     doc_notes = {"goal": args.goal, "decisions": args.decisions, "issues": args.issues}
