@@ -103,11 +103,13 @@ def apply_avatar_to_job(
     overlay_avatar_pip(main_video, avatar_clip, composited, position=position)
     # Replace video.mp4 and re-burn subtitles if video_subtitled.mp4 exists
     composited.replace(main_video)
-    ass_path = out_v / "subtitles_vlc.ass"
-    if ass_path.is_file():
+    srt_path = out_v / "subtitles_youtube.srt"
+    if not srt_path.is_file():
+        srt_path = out_v / "subtitles_vlc.srt"
+    if srt_path.is_file():
         burn_subtitles(
             main_video,
-            ass_path,
+            srt_path,
             out_v / "video_subtitled.mp4",
             SubtitleBurnOptions(cfg=job.cfg, work=job.work),
         )

@@ -416,6 +416,7 @@ def build_narration(job: J.Job) -> str:
     missing = [ln for ln in lines if not takes.get(getattr(ln, "tts", ""))]
     if missing:
         _generate_missing_takes(job, missing, cfg)
+        takes = takes_of(job)
     items = _prepare_concat_items(job, lines, takes)
     out = job.next_output()
     out.mkdir(parents=True, exist_ok=True)

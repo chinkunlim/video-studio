@@ -7,6 +7,7 @@ All notable changes to **video-studio** are documented here
 
 ### Fixed
 - fix(avatar): auto-fill RGBA portraits and pass PyTorch/MPS env with --still to SadTalker (by `@Antigravity`)
+- fix(narrate,avatar): refresh takes after generation and burn SRT subtitles after avatar overlay (by `@Antigravity`)
 
 ## [0.2.0] - 2026-11-22
 
