@@ -182,6 +182,23 @@ class TestDualTTSAndHTMLRender(unittest.TestCase):
 
         _ = SimpleNamespace(slide=1)
 
+    def test_edge_tts_inline_voice_segments(self) -> None:
+        """Verify split_voice_segments switches voices cleanly for French and Latin phrases."""
+        from video_studio.services.narrate.core.edge_tts_client import split_voice_segments
+
+        segs = split_voice_segments(
+            "笛卡兒寫下 [voice=fr-FR-HenriNeural]Je pense, donc je suis[/voice] 時",
+            "zh-CN-YunxiNeural",
+        )
+        self.assertEqual(
+            segs,
+            [
+                ("zh-CN-YunxiNeural", "笛卡兒寫下"),
+                ("fr-FR-HenriNeural", "Je pense, donc je suis"),
+                ("zh-CN-YunxiNeural", "時"),
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

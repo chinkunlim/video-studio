@@ -449,3 +449,16 @@ class TestAvatarScriptBilingual(unittest.TestCase):
         assert isinstance(env_dict, dict)
         self.assertEqual(env_dict.get("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"), "1")
         self.assertEqual(env_dict.get("PYTORCH_ENABLE_MPS_FALLBACK"), "1")
+
+    def test_bilingual_clause_split_preserves_english_words(self) -> None:
+        """Verify English secondary translation never splits mid-word (e.g. 17th-century)."""
+        from video_studio.services.narrate.core.subtitles import _split_zh_clauses
+
+        sentence = (
+            "Yet both readings are almost the exact opposite of what 17th-century Descartes set out to solve."
+        )
+        parts = _split_zh_clauses(sentence, 3)
+        self.assertEqual(len(parts), 3)
+        joined = " ".join(parts)
+        self.assertIn("17th-century", joined)
+        self.assertNotIn("17th-cen ", joined)

@@ -5,6 +5,9 @@ All notable changes to **video-studio** are documented here
 
 ## [Unreleased]
 
+### Added
+- feat(narrate,avatar): add inline multi-voice TTS, word-safe bilingual splits, and transparent frameless avatar overlay (by `@Antigravity`)
+
 ### Fixed
 - fix(avatar): auto-fill RGBA portraits and pass PyTorch/MPS env with --still to SadTalker (by `@Antigravity`)
 - fix(narrate,avatar): refresh takes after generation and burn SRT subtitles after avatar overlay (by `@Antigravity`)

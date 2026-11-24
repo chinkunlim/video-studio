@@ -11,6 +11,7 @@ from video_studio.services.common import job as J
 from video_studio.services.video.engine.avatar_engine import (
     AvatarResult,
     avatar_environment_status,
+    has_alpha_channel,
     overlay_avatar_pip,
     render_lightweight_avatar,
     render_sadtalker_avatar,
@@ -92,15 +93,17 @@ def apply_avatar_to_job(
 
     portrait = find_avatar_image(job, image_name)
     app_cfg = load_app_config()
-    avatar_clip = job.work / f"avatar_{engine}.mp4"
+    ext = ".mov" if (engine != "sadtalker" and has_alpha_channel(portrait)) else ".mp4"
+    avatar_clip = job.work / f"avatar_{engine}{ext}"
     if engine == "sadtalker":
         assert app_cfg.sadtalker_dir is not None
         render_sadtalker_avatar(portrait, audio_path, avatar_clip, app_cfg.sadtalker_dir)
     else:
         render_lightweight_avatar(portrait, audio_path, avatar_clip)
 
+    scale = float(job.cfg.get("avatar", {}).get("scale", 0.22) or 0.22)
     composited = out_v / "video_avatar.mp4"
-    overlay_avatar_pip(main_video, avatar_clip, composited, position=position)
+    overlay_avatar_pip(main_video, avatar_clip, composited, position=position, scale=scale)
     # Replace video.mp4 and re-burn subtitles if video_subtitled.mp4 exists
     composited.replace(main_video)
     srt_path = out_v / "subtitles_youtube.srt"

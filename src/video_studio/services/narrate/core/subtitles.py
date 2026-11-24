@@ -289,21 +289,21 @@ def _build_ass(cues: list[tuple[float, float, str]], cfg: dict[str, Any], title:
 
 
 def _split_zh_clauses(sec: str, n: int) -> list[str]:
-    """Split a Chinese translation into n proportional, punctuation-aware clauses.
+    """Split a secondary translation into n proportional, word/punctuation-aware clauses.
 
     Args:
-        sec: Full Chinese sentence translation.
-        n: Target number of clauses matching English sub-cues.
+        sec: Full secondary sentence translation (Chinese or English).
+        n: Target number of clauses matching primary sub-cues.
 
     Returns:
-        List of n non-empty Chinese clause strings.
+        List of n non-empty clause strings without splitting English words mid-token.
     """
     if n <= 1 or len(sec) <= 4:
         return [sec] * n
     parts = [p.strip("，；、： ") for p in re.split(r"(?<=[，；、：—])", sec) if p.strip("，；、： ")]
     if len(parts) == n:
         return parts
-    # Proportional character split snapping near punctuation when possible.
+    is_spaced = " " in sec
     total = len(sec)
     out: list[str] = []
     pos = 0
@@ -312,16 +312,33 @@ def _split_zh_clauses(sec: str, n: int) -> list[str]:
             out.append(sec[pos:].strip("，；、： "))
             break
         target = int(round(total * (i + 1) / n))
-        best = target
-        for offset in range(-4, 5):
-            cand = target + offset
-            if pos < cand < total and sec[cand - 1] in "，；、：— ":
-                best = cand
-                break
+        best = _snap_split_pos(sec, pos, target, is_spaced)
         best = max(pos + 1, min(best, total - (n - 1 - i)))
         out.append(sec[pos:best].strip("，；、： "))
         pos = best
     return [c or sec for c in out]
+
+
+def _snap_split_pos(sec: str, pos: int, target: int, is_spaced: bool) -> int:
+    """Snap a proportional split index to nearby punctuation or whitespace.
+
+    Args:
+        sec: Full text string.
+        pos: Current start offset.
+        target: Ideal proportional split offset.
+        is_spaced: True when text uses spaces between words (e.g. English/Latin).
+
+    Returns:
+        Adjusted split index.
+    """
+    total = len(sec)
+    max_off = 18 if is_spaced else 4
+    break_chars = " " if is_spaced else "，；、：— "
+    for step in range(max_off + 1):
+        for cand in (target - step, target + step):
+            if pos < cand < total and sec[cand - 1] in break_chars:
+                return cand
+    return target
 
 
 def attach_bilingual(

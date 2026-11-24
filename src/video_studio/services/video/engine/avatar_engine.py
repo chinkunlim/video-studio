@@ -63,6 +63,52 @@ def avatar_environment_status(sadtalker_dir: Path | None) -> dict[str, Any]:
     }
 
 
+def has_alpha_channel(image_path: Path) -> bool:
+    """Return True if an image file has a non-opaque alpha channel.
+
+    Args:
+        image_path: Path to portrait image file.
+
+    Returns:
+        True when alpha band exists and contains transparent pixels.
+    """
+    with Image.open(image_path) as raw:
+        if "A" not in raw.getbands():
+            return False
+        min_alpha = raw.getchannel("A").getextrema()[0]
+        return not (isinstance(min_alpha, int) and min_alpha == 255)
+
+
+def _video_has_alpha(video_path: Path) -> bool:
+    """Return True when a video stream carries an alpha pixel format (e.g. rgba, yuva420p).
+
+    Args:
+        video_path: Path to video clip.
+
+    Returns:
+        True if ffprobe reports an alpha-capable pixel format.
+    """
+    proc = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=pix_fmt",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(video_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    pix_fmt = proc.stdout.strip().lower()
+    return "rgba" in pix_fmt or "yuva" in pix_fmt or "bgra" in pix_fmt
+
+
 def ensure_opaque_portrait(
     image_path: Path,
     work_dir: Path,
@@ -160,13 +206,16 @@ def render_lightweight_avatar(
     duration = _probe_duration(audio_path)
     frames = max(1, int(round(duration * fps)))
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
-    src_img = ensure_opaque_portrait(image_path, out_mp4.parent)
+    alpha_mode = out_mp4.suffix.lower() == ".mov" and has_alpha_channel(image_path)
+    src_img = image_path if alpha_mode else ensure_opaque_portrait(image_path, out_mp4.parent)
+    pix_fmt = "rgba" if alpha_mode else "yuv420p"
+    v_codec = "png" if alpha_mode else "libx264"
     vf = (
         "scale=512:512:force_original_aspect_ratio=increase,"
         "crop=512:512,"
         f"zoompan=z='1.0+0.025*sin(2*PI*on/{fps}/4)':"
         f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=512x512:fps={fps},"
-        "format=yuv420p"
+        f"format={pix_fmt}"
     )
     cmd = [
         "ffmpeg",
@@ -180,7 +229,7 @@ def render_lightweight_avatar(
         "-vf",
         vf,
         "-c:v",
-        "libx264",
+        v_codec,
         "-c:a",
         "aac",
         "-shortest",
@@ -274,16 +323,23 @@ def overlay_avatar_pip(
         ProviderError: If ffmpeg fails during overlay compositing.
     """
     coords = {
-        "bottom-right": "W-w-36:H-h-36",
-        "bottom-left": "36:H-h-36",
-        "top-right": "W-w-36:36",
-        "top-left": "36:36",
-    }.get(position, "W-w-36:H-h-36")
-    filter_complex = (
-        f"[1:v][0:v]scale2ref=w=iw*{scale}:h=ow/mdar[pip][base];"
-        f"[pip]drawbox=x=0:y=0:w=iw:h=ih:color=white@0.85:t=4[pip_framed];"
-        f"[base][pip_framed]overlay={coords}:shortest=1[v]"
-    )
+        "bottom-right": "W-w-24:H-h-12",
+        "bottom-left": "24:H-h-12",
+        "top-right": "W-w-24:24",
+        "top-left": "24:24",
+    }.get(position, "W-w-24:H-h-12")
+    if _video_has_alpha(avatar_video):
+        filter_complex = (
+            f"[1:v][0:v]scale2ref=w=iw*{scale}:h=ow/mdar[pip][base];"
+            f"[pip]format=rgba[pip_a];"
+            f"[base][pip_a]overlay={coords}:shortest=1[v]"
+        )
+    else:
+        filter_complex = (
+            f"[1:v][0:v]scale2ref=w=iw*{scale}:h=ow/mdar[pip][base];"
+            f"[pip]drawbox=x=0:y=0:w=iw:h=ih:color=white@0.85:t=4[pip_framed];"
+            f"[base][pip_framed]overlay={coords}:shortest=1[v]"
+        )
     cmd = [
         "ffmpeg",
         "-y",
