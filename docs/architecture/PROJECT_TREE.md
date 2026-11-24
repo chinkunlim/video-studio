@@ -150,9 +150,11 @@ video-studio/
 │   │   │   └── install_and_update.md
 │   │   ├── testing/
 │   │   │   ├── empirical_evidence.md
+│   │   │   ├── sdd_bdd_tdd.md
 │   │   │   └── virtual_testing.md
 │   │   ├── web/
 │   │   │   ├── fastapi_mcp.md
+│   │   │   ├── modern_web_guidance.md
 │   │   │   └── taste_design.md
 │   │   ├── ARCHITECTURE_RULES.md           # 分層依賴與系統架構守則
 │   │   ├── CODING_PRINCIPLES.md            # 註解規範、Karpathy 原則、SOLID、DRY、Atomic

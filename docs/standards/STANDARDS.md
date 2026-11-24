@@ -18,6 +18,8 @@
 | **流程對齊與圖譜純淨** | [`architecture/workflow_parity.md`](architecture/workflow_parity.md) | 端到端流程一致性、.graphifyignore、Graphify Hooks 與局部讀檔 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) 守則 11-12 |
 | **Web API 與 MCP 整合** | [`web/fastapi_mcp.md`](web/fastapi_mcp.md) | FastAPI/MCP 三入口、Request DB Scope、NoCache/路徑防穿越、埠號預檢 | [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md) §3-§4 |
 | **前端品味與原型審批** | [`web/taste_design.md`](web/taste_design.md) | Step 0 原型審批、標準開發流程、跨裝置觸控與 Zero-Build 規範 | - |
+| **現代 Web 標準 (Baseline)** | [`web/modern_web_guidance.md`](web/modern_web_guidance.md) | `<dialog>`、Popover API、Container Queries、Baseline 跨瀏覽器原生標準 | - |
+| **SDD / BDD / TDD 流程** | [`testing/sdd_bdd_tdd.md`](testing/sdd_bdd_tdd.md) | 分級開發流程（Bug 走 TDD；新功能走 SDD ➔ BDD ➔ TDD） | - |
 | **虛擬測試體系** | [`testing/virtual_testing.md`](testing/virtual_testing.md) | 4 層虛擬測試、Web/OpenAPI 靜態契約測試、系統路徑測試硬隔離 | [`TESTING_AND_QUALITY.md`](TESTING_AND_QUALITY.md) §1-§2 |
 | **實證檢驗與完成定義** | [`testing/empirical_evidence.md`](testing/empirical_evidence.md) | 實證檢驗鐵律、DoD 清單、已證實/推測/錯誤三欄交叉審查 | [`TESTING_AND_QUALITY.md`](TESTING_AND_QUALITY.md) §1.1, §3 |
 | **資料目錄規劃** | [`env/data_dir_layout.md`](env/data_dir_layout.md) | DATA_DIR 資料程式分離、releases/模組/archive 隔離劃分 | [`ENVIRONMENT_AND_DEPENDENCIES.md`](ENVIRONMENT_AND_DEPENDENCIES.md) §7 |

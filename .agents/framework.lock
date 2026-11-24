@@ -1,7 +1,7 @@
 {
   "framework_version": "3.6.0",
-  "template_commit": "2e0214f",
-  "installed_at": "2026-11-22T09:22:10Z",
+  "template_commit": "8c52c90",
+  "installed_at": "2026-11-24T06:54:31Z",
   "skills": [
     "adr-issue-tracker",
     "api-adapter-scaffold",
@@ -60,7 +60,7 @@
     "docs/standards/GIT_AND_VERSIONING.md": "18e5d0486e8ca0f3a64207a23ecbc16f4cb7f2cd6998ebc5853b05d68c414216",
     "docs/standards/LOCAL_AI_ENVIRONMENT.md": "bcc06d426e01729937c2dd9f815a82f414ffad249eb8543e43e3e09024b50c83",
     "docs/standards/MULTI_AGENT_COLLABORATION.md": "c96c1a1e1eb14537f489e1b48ec903f264e7a8779d13e816e4e9f7545177df71",
-    "docs/standards/STANDARDS.md": "0874fc515d4945a3bb0e87d19588cc38427afb5bfcdbbd945aa647cf83a1548f",
+    "docs/standards/STANDARDS.md": "68726922c0b63d1b65dc9520aa9fbd5a6fe428cea067cdd672a924dbd2869311",
     "docs/standards/TESTING_AND_QUALITY.md": "6328deab5fb5c9669752768dcff954c83fe1e8026eddc365d79c6b8cc1b0a932",
     "docs/standards/architecture/layers.md": "18427b4f2951673b84dfb02528d0cdce3e461b2cfbb89d27e9600467befb7b8c",
     "docs/standards/architecture/workflow_parity.md": "7cd44ce10b971a2c5a9f573d20e79a5265ad2496dfde63a3c17b1c69dc1c9c0e",
@@ -72,9 +72,11 @@
     "docs/standards/env/icloud_rules.md": "1d522b74f8608a58632c5a3874a89f05e8598b13ff3b027ae14643eac0cfbd3b",
     "docs/standards/env/install_and_update.md": "7d5057b2977e17cf3c507bf7dbb016285601f4fa73928fc040132212d4c7a506",
     "docs/standards/testing/empirical_evidence.md": "59c763f644112ed763ffc60fe06c469c9104ff2a68cc33ceb3f3898a25fb4d25",
+    "docs/standards/testing/sdd_bdd_tdd.md": "cd4347c5281cd8f777eaff4c06348085f8ac7a09a91c44c02ae712ac2cf78095",
     "docs/standards/testing/virtual_testing.md": "530d6c771ec61b79b19872f225e2e4dc46bf28e22f610b9c664a5ee42fa57080",
     "docs/standards/web/fastapi_mcp.md": "f611452f53dc0c1e19efacd6fe909c930c7dae2656fa4b5f061c28d753cd0637",
-    "docs/standards/web/taste_design.md": "1d829335228e4d33e278c00818461c8a88d9f3b08a03e3d20e9f535896931f1e",
+    "docs/standards/web/modern_web_guidance.md": "7ea9f1a0ba26575b421fc24eaee1caaf6ea84c587ef3e23d3337272df94053ef",
+    "docs/standards/web/taste_design.md": "ad75b344880c2b30f5f8217dea21ad71ba8d787f04abff2bc5192a3481825b26",
     "scripts/agentctl.py": "4fa8acea992e928ea976282ec12efc4c6ed77be7995d3d30b8f77c593ce8736c"
   }
 }

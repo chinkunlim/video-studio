@@ -1,6 +1,7 @@
 # 前端品味、UI/UX 與視覺設計審批 (Frontend Taste, UI/UX & Prerequisite Mockup Gate)
 
 > **任務載入時機**：設計網頁前端、元件排版、視覺風格或美化介面時必讀。
+> **互補規範**：底層 HTML / CSS / JS 現代原生 API 選型與 Baseline 相容性，請同步遵循 [`modern_web_guidance.md`](modern_web_guidance.md)。
 
 ---
 
